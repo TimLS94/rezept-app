@@ -13,6 +13,7 @@ import {
 import { router } from 'expo-router';
 import { DIETARY_TAGS, DietaryTag, Ingredient } from '../../data/recipes';
 import { createRecipe } from '../../lib/recipes';
+import { pickAndUploadImage } from '../../lib/storage';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
@@ -44,6 +45,14 @@ export default function UploadRecipeScreen() {
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([emptyIngredient()]);
   const [steps, setSteps] = useState<string[]>(['']);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const chooseImage = async () => {
+    setUploadingImage(true);
+    const url = await pickAndUploadImage('recipes');
+    setUploadingImage(false);
+    if (url) setImage(url);
+  };
 
   const toggleDietary = (tag: DietaryTag) => {
     setDietary(prev => (prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]));
@@ -135,7 +144,14 @@ export default function UploadRecipeScreen() {
           </View>
         )}
         <View style={styles.field}>
-          <Text style={styles.label}>Image URL</Text>
+          <TouchableOpacity style={styles.photoButton} onPress={chooseImage} disabled={uploadingImage}>
+            {uploadingImage ? (
+              <ActivityIndicator color="#FF6B35" />
+            ) : (
+              <Text style={styles.photoButtonText}>📷 Upload photo</Text>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.orLabel}>or paste an image URL</Text>
           <TextInput
             style={styles.input}
             value={image}
@@ -340,6 +356,9 @@ const styles = StyleSheet.create({
   previewEmptyText: { fontSize: 16, color: '#AAA' },
   field: { paddingHorizontal: 20, marginTop: 16 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
+  photoButton: { padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#FF6B35', backgroundColor: '#FFF5F0' },
+  photoButtonText: { color: '#FF6B35', fontSize: 15, fontWeight: '700' },
+  orLabel: { fontSize: 12, color: '#999', textAlign: 'center', marginVertical: 8 },
   input: { backgroundColor: '#FFF', borderRadius: 10, padding: 14, fontSize: 15, borderWidth: 1, borderColor: '#EEE' },
   multiline: { minHeight: 70, textAlignVertical: 'top' },
   row: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 16, gap: 10 },

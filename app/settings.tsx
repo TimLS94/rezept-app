@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { pickAndUploadImage } from '../lib/storage';
 
 const DEFAULT_AVATAR =
   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
@@ -25,6 +26,14 @@ export default function SettingsScreen() {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const chooseAvatar = async () => {
+    setUploadingAvatar(true);
+    const url = await pickAndUploadImage('avatars');
+    setUploadingAvatar(false);
+    if (url) setAvatarUrl(url);
+  };
 
   // Email
   const [email, setEmail] = useState('');
@@ -165,6 +174,13 @@ export default function SettingsScreen() {
             source={{ uri: avatarUrl.trim() || DEFAULT_AVATAR }}
             style={styles.avatar}
           />
+          <TouchableOpacity style={styles.avatarButton} onPress={chooseAvatar} disabled={uploadingAvatar}>
+            {uploadingAvatar ? (
+              <ActivityIndicator color="#FF6B35" />
+            ) : (
+              <Text style={styles.avatarButtonText}>📷 Change photo</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
         <View style={styles.card}>
@@ -287,6 +303,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   avatarWrap: { alignItems: 'center', marginTop: 8, marginBottom: 8 },
   avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: '#FF6B35', backgroundColor: '#EEE' },
+  avatarButton: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#FF6B35', backgroundColor: '#FFF5F0' },
+  avatarButtonText: { color: '#FF6B35', fontSize: 14, fontWeight: '700' },
   card: { backgroundColor: '#FFF', marginHorizontal: 20, marginTop: 16, borderRadius: 16, padding: 18 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 6, marginTop: 8 },

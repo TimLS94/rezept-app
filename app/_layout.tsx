@@ -1,5 +1,14 @@
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 
 export default function RootLayout() {
-  return <Slot />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        // Enable swipe-to-go-back from anywhere on the screen, not just the edge.
+        gestureEnabled: true,
+        fullScreenGestureEnabled: true,
+      }}
+    />
+  );
 }

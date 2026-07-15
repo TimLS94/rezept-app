@@ -15,66 +15,138 @@ import { addRecipesToShoppingList } from '../lib/shopping';
 
 type MealPlan = {
   id: string;
-  day: string;
   recipe: Recipe;
+  done?: boolean;
 };
-
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 // Build a 7-day plan from the real recipe catalogue so every planned meal
 // carries ingredients that can flow into the shopping list.
 const buildPlan = (pool: Recipe[]): MealPlan[] =>
   pool.length === 0
     ? []
-    : DAYS.map((day, i) => ({ id: String(i + 1), day, recipe: pool[i % pool.length] }));
+    : Array.from({ length: 7 }, (_, i) => ({
+        id: `m${i}-${Date.now()}`,
+        recipe: pool[i % pool.length],
+      }));
 
 const shuffled = (list: Recipe[]): Recipe[] =>
   [...list].sort(() => Math.random() - 0.5);
 
+// --- Calendar helpers ---
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const startOfWeek = (d: Date): Date => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const day = (x.getDay() + 6) % 7; // shift so Monday = 0
+  x.setDate(x.getDate() - day);
+  return x;
+};
+const addDays = (d: Date, n: number): Date => {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+};
+const weekKey = (d: Date): string => startOfWeek(d).toISOString().slice(0, 10);
+const fmtDay = (d: Date): string => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+
 export default function BudgetScreen() {
   const [weeklyBudget] = useState(150);
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
-  const [mealPlan, setMealPlan] = useState<MealPlan[]>(() => buildPlan(RECIPES));
+  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
+  const [plansByWeek, setPlansByWeek] = useState<Record<string, MealPlan[]>>(() => ({
+    [weekKey(new Date())]: buildPlan(RECIPES),
+  }));
   const [generating, setGenerating] = useState(false);
   const [adding, setAdding] = useState(false);
+
+  const key = weekKey(weekStart);
+  const mealPlan = plansByWeek[key] ?? [];
+  const isThisWeek = key === weekKey(new Date());
+
+  // Ensure a week has a plan, then make it the active week. New weeks get a
+  // fresh plan (and therefore a fresh budget).
+  const ensureAndGo = (target: Date) => {
+    const t = startOfWeek(target);
+    const k = weekKey(t);
+    setPlansByWeek(prev =>
+      prev[k] ? prev : { ...prev, [k]: buildPlan(shuffled(filterRecipesByDietary(activeFilters))) }
+    );
+    setWeekStart(t);
+  };
+  const goToWeek = (offset: number) => ensureAndGo(addDays(weekStart, offset * 7));
+  const goToToday = () => ensureAndGo(new Date());
+
+  const setPlan = (updater: (plan: MealPlan[]) => MealPlan[]) =>
+    setPlansByWeek(prev => ({ ...prev, [key]: updater(prev[key] ?? []) }));
 
   const toggleFilter = (tag: DietaryTag) => {
     const next = activeFilters.includes(tag)
       ? activeFilters.filter(t => t !== tag)
       : [...activeFilters, tag];
     setActiveFilters(next);
-    setMealPlan(buildPlan(shuffled(filterRecipesByDietary(next))));
+    setPlansByWeek(prev => ({ ...prev, [key]: buildPlan(shuffled(filterRecipesByDietary(next))) }));
   };
 
   const totalCost = mealPlan.reduce((sum, meal) => sum + meal.recipe.cost, 0);
   const remaining = weeklyBudget - totalCost;
-  const avgPerMeal = totalCost / 7;
-  const totalIngredients = mealPlan.reduce((sum, meal) => sum + meal.recipe.ingredients.length, 0);
+  const avgPerMeal = mealPlan.length ? totalCost / mealPlan.length : 0;
+  // Only meals you still need count towards the shopping list.
+  const openMeals = mealPlan.filter(m => !m.done);
+  const doneCount = mealPlan.length - openMeals.length;
+  const allDone = mealPlan.length > 0 && openMeals.length === 0;
+  const totalIngredients = openMeals.reduce((sum, meal) => sum + meal.recipe.ingredients.length, 0);
 
   const regeneratePlan = () => {
     setGenerating(true);
-    // Simulate API call, then reshuffle the week from the catalogue.
+    // Simulate API call, then reshuffle this week from the catalogue.
     setTimeout(() => {
-      setMealPlan(buildPlan(shuffled(filterRecipesByDietary(activeFilters))));
+      setPlansByWeek(prev => ({ ...prev, [key]: buildPlan(shuffled(filterRecipesByDietary(activeFilters))) }));
       setGenerating(false);
-    }, 1500);
+    }, 1200);
   };
 
   const swapMeal = (id: string) => {
-    setMealPlan(plan => {
+    setPlan(plan => {
       const used = plan.map(m => m.recipe.id);
-      const options = RECIPES.filter(r => !used.includes(r.id));
+      const options = filterRecipesByDietary(activeFilters).filter(r => !used.includes(r.id));
       const pick = options.length
         ? options[Math.floor(Math.random() * options.length)]
         : null;
       if (!pick) return plan;
-      return plan.map(m => (m.id === id ? { ...m, recipe: pick } : m));
+      return plan.map(m => (m.id === id ? { ...m, recipe: pick, done: false } : m));
+    });
+  };
+
+  const toggleDone = (id: string) => {
+    setPlan(plan => plan.map(m => (m.id === id ? { ...m, done: !m.done } : m)));
+  };
+
+  const removeMeal = (id: string) => {
+    setPlan(plan => plan.filter(m => m.id !== id));
+  };
+
+  const addMeal = () => {
+    setPlan(plan => {
+      const pool = filterRecipesByDietary(activeFilters);
+      const used = plan.map(m => m.recipe.id);
+      const options = pool.filter(r => !used.includes(r.id));
+      const pick = (options.length ? options : pool)[
+        Math.floor(Math.random() * (options.length || pool.length))
+      ];
+      if (!pick) return plan;
+      return [...plan, { id: `m${Date.now()}`, recipe: pick, done: false }];
     });
   };
 
   const addWeekToShoppingList = async () => {
+    if (openMeals.length === 0) {
+      Alert.alert('Nothing to add', 'All meals are checked off. Uncheck a meal or add one.');
+      return;
+    }
     setAdding(true);
-    const result = await addRecipesToShoppingList(mealPlan.map(m => ({ recipe: m.recipe })));
+    const result = await addRecipesToShoppingList(openMeals.map(m => ({ recipe: m.recipe })));
     setAdding(false);
 
     if ('error' in result) {
@@ -84,7 +156,7 @@ export default function BudgetScreen() {
 
     Alert.alert(
       'Added to Shopping List! 🛒',
-      `${mealPlan.length} meals • ${result.added} new items` +
+      `${openMeals.length} meals • ${result.added} new items` +
         (result.merged ? ` (${result.merged} merged)` : ''),
       [
         { text: 'Keep Planning', style: 'cancel' },
@@ -103,6 +175,22 @@ export default function BudgetScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Meal Planner</Text>
           <View style={{ width: 60 }} />
+        </View>
+
+        {/* Week navigator */}
+        <View style={styles.weekNav}>
+          <TouchableOpacity style={styles.weekArrow} onPress={() => goToWeek(-1)}>
+            <Text style={styles.weekArrowText}>‹</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.weekLabelWrap} onPress={goToToday}>
+            <Text style={styles.weekLabel}>
+              {fmtDay(weekStart)} – {fmtDay(addDays(weekStart, 6))}
+            </Text>
+            <Text style={styles.weekSub}>{isThisWeek ? 'This week' : 'Tap to jump to today'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.weekArrow} onPress={() => goToWeek(1)}>
+            <Text style={styles.weekArrowText}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Budget Overview */}
@@ -171,7 +259,12 @@ export default function BudgetScreen() {
 
         {/* Meal Plan */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>This Week's Meals</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>{isThisWeek ? "This Week's Meals" : 'Meals'}</Text>
+            {mealPlan.length > 0 && (
+              <Text style={styles.cookedCount}>{doneCount}/{mealPlan.length} cooked</Text>
+            )}
+          </View>
 
           {mealPlan.length === 0 && (
             <Text style={styles.emptyPlanText}>
@@ -179,30 +272,59 @@ export default function BudgetScreen() {
             </Text>
           )}
 
-          {mealPlan.map((meal) => (
-            <TouchableOpacity
-              key={meal.id}
-              style={styles.mealCard}
-              onPress={() => router.push(`/recipe/${meal.recipe.id}`)}
-            >
-              <Image source={{ uri: meal.recipe.image }} style={styles.mealImage} />
-              <View style={styles.mealContent}>
-                <Text style={styles.mealDay}>{meal.day}</Text>
-                <Text style={styles.mealTitle} numberOfLines={2}>{meal.recipe.title}</Text>
-                <View style={styles.mealMeta}>
-                  <Text style={styles.mealMetaText}>⏱ {meal.recipe.prepTime + meal.recipe.cookTime}min</Text>
-                  <Text style={styles.mealMetaText}>💰 ${meal.recipe.cost.toFixed(2)}</Text>
-                  <Text style={styles.mealMetaText}>🔥 {meal.recipe.calories}cal</Text>
-                </View>
-              </View>
-              <TouchableOpacity 
-                style={styles.swapButton}
-                onPress={() => swapMeal(meal.id)}
+          {mealPlan.map((meal, i) => (
+            <View key={meal.id} style={[styles.mealCard, meal.done && styles.mealCardDone]}>
+              <TouchableOpacity
+                style={styles.mealMain}
+                activeOpacity={0.8}
+                onPress={() => router.push(`/recipe/${meal.recipe.id}`)}
               >
-                <Text style={styles.swapButtonText}>↻</Text>
+                <Image source={{ uri: meal.recipe.image }} style={styles.mealImage} />
+                <View style={styles.mealContent}>
+                  <Text style={styles.mealDay}>
+                    {WEEKDAYS[i % 7]} · {fmtDay(addDays(weekStart, i))}
+                  </Text>
+                  <Text
+                    style={[styles.mealTitle, meal.done && styles.mealTitleDone]}
+                    numberOfLines={2}
+                  >
+                    {meal.recipe.title}
+                  </Text>
+                  <View style={styles.mealMeta}>
+                    <Text style={styles.mealMetaText}>⏱ {meal.recipe.prepTime + meal.recipe.cookTime}min</Text>
+                    <Text style={styles.mealMetaText}>💰 ${meal.recipe.cost.toFixed(2)}</Text>
+                    <Text style={styles.mealMetaText}>🔥 {meal.recipe.calories}cal</Text>
+                  </View>
+                </View>
               </TouchableOpacity>
-            </TouchableOpacity>
+              <View style={styles.mealActions}>
+                <TouchableOpacity
+                  style={[styles.checkbox, meal.done && styles.checkboxChecked]}
+                  onPress={() => toggleDone(meal.id)}
+                >
+                  {meal.done && <Text style={styles.checkmark}>✓</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.iconButton} onPress={() => swapMeal(meal.id)}>
+                  <Text style={styles.iconButtonText}>↻</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.iconButton} onPress={() => removeMeal(meal.id)}>
+                  <Text style={styles.iconButtonRemove}>×</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           ))}
+
+          {mealPlan.length > 0 && (
+            <TouchableOpacity style={styles.addMealButton} onPress={addMeal}>
+              <Text style={styles.addMealButtonText}>+ Add a meal</Text>
+            </TouchableOpacity>
+          )}
+
+          {allDone && (
+            <TouchableOpacity style={styles.nextWeekButton} onPress={() => goToWeek(1)}>
+              <Text style={styles.nextWeekButtonText}>✅ Week done — start next week →</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Add whole week to the shopping list */}
@@ -351,14 +473,73 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  weekNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  weekArrow: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#EEE',
+  },
+  weekArrowText: {
+    fontSize: 24,
+    color: '#FF6B35',
+    fontWeight: '700',
+    lineHeight: 26,
+  },
+  weekLabelWrap: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  weekLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  weekSub: {
+    fontSize: 12,
+    color: '#FF6B35',
+    marginTop: 2,
+    fontWeight: '600',
+  },
   section: {
     padding: 20,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginBottom: 16,
+  },
+  cookedCount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  nextWeekButton: {
+    backgroundColor: '#4CAF50',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  nextWeekButtonText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   emptyPlanText: {
     fontSize: 14,
@@ -377,6 +558,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
+  },
+  mealCardDone: {
+    opacity: 0.55,
+  },
+  mealMain: {
+    flex: 1,
+    flexDirection: 'row',
   },
   mealImage: {
     width: 100,
@@ -401,6 +589,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
   },
+  mealTitleDone: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
   mealMeta: {
     flexDirection: 'row',
   },
@@ -409,15 +601,60 @@ const styles = StyleSheet.create({
     color: '#888',
     marginRight: 12,
   },
-  swapButton: {
-    width: 44,
+  mealActions: {
+    width: 52,
+    backgroundColor: '#F7F7F7',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    gap: 8,
+    paddingVertical: 8,
   },
-  swapButtonText: {
-    fontSize: 20,
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#CFCFCF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  checkmark: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  iconButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconButtonText: {
+    fontSize: 18,
     color: '#888',
+  },
+  iconButtonRemove: {
+    fontSize: 22,
+    color: '#E53935',
+    fontWeight: '700',
+  },
+  addMealButton: {
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#EEE',
+    borderStyle: 'dashed',
+  },
+  addMealButtonText: {
+    fontSize: 14,
+    color: '#FF6B35',
+    fontWeight: '600',
   },
   addWeekButton: {
     backgroundColor: '#FF6B35',
