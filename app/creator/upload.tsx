@@ -1,0 +1,377 @@
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Image,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { router } from 'expo-router';
+import { DIETARY_TAGS, DietaryTag, Ingredient } from '../../data/recipes';
+import { createRecipe } from '../../lib/recipes';
+
+type Difficulty = 'Easy' | 'Medium' | 'Hard';
+
+const CATEGORIES: { id: Ingredient['category']; icon: string }[] = [
+  { id: 'produce', icon: '🥬' },
+  { id: 'meat', icon: '🥩' },
+  { id: 'dairy', icon: '🧀' },
+  { id: 'bakery', icon: '🍞' },
+  { id: 'pantry', icon: '🥫' },
+  { id: 'frozen', icon: '🧊' },
+  { id: 'other', icon: '📦' },
+];
+
+type IngredientDraft = { name: string; amount: string; unit: string; category: Ingredient['category'] };
+
+const emptyIngredient = (): IngredientDraft => ({ name: '', amount: '', unit: '', category: 'other' });
+
+export default function UploadRecipeScreen() {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [image, setImage] = useState('');
+  const [prepTime, setPrepTime] = useState('');
+  const [cookTime, setCookTime] = useState('');
+  const [servings, setServings] = useState('4');
+  const [calories, setCalories] = useState('');
+  const [cost, setCost] = useState('');
+  const [difficulty, setDifficulty] = useState<Difficulty>('Easy');
+  const [dietary, setDietary] = useState<DietaryTag[]>([]);
+  const [ingredients, setIngredients] = useState<IngredientDraft[]>([emptyIngredient()]);
+  const [steps, setSteps] = useState<string[]>(['']);
+  const [saving, setSaving] = useState(false);
+
+  const toggleDietary = (tag: DietaryTag) => {
+    setDietary(prev => (prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]));
+  };
+
+  const updateIngredient = (i: number, patch: Partial<IngredientDraft>) => {
+    setIngredients(prev => prev.map((ing, idx) => (idx === i ? { ...ing, ...patch } : ing)));
+  };
+  const addIngredient = () => setIngredients(prev => [...prev, emptyIngredient()]);
+  const removeIngredient = (i: number) =>
+    setIngredients(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
+
+  const updateStep = (i: number, value: string) =>
+    setSteps(prev => prev.map((s, idx) => (idx === i ? value : s)));
+  const addStep = () => setSteps(prev => [...prev, '']);
+  const removeStep = (i: number) =>
+    setSteps(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
+
+  const submit = async () => {
+    if (!title.trim()) return Alert.alert('Missing title', 'Please give your recipe a name.');
+    if (!image.trim()) return Alert.alert('Missing image', 'Please paste an image URL.');
+
+    const cleanedIngredients: Ingredient[] = ingredients
+      .filter(i => i.name.trim())
+      .map(i => ({
+        name: i.name.trim(),
+        amount: parseFloat(i.amount) || 0,
+        unit: i.unit.trim(),
+        category: i.category,
+      }));
+    const cleanedSteps = steps.map(s => s.trim()).filter(Boolean);
+
+    if (cleanedIngredients.length === 0)
+      return Alert.alert('Missing ingredients', 'Add at least one ingredient.');
+    if (cleanedSteps.length === 0)
+      return Alert.alert('Missing steps', 'Add at least one step.');
+
+    setSaving(true);
+    const result = await createRecipe({
+      title: title.trim(),
+      description: description.trim(),
+      image: image.trim(),
+      prepTime: parseInt(prepTime) || 0,
+      cookTime: parseInt(cookTime) || 0,
+      servings: parseInt(servings) || 4,
+      calories: parseInt(calories) || 0,
+      cost: parseFloat(cost) || 0,
+      difficulty,
+      dietary,
+      ingredients: cleanedIngredients,
+      steps: cleanedSteps,
+    });
+    setSaving(false);
+
+    if ('error' in result) {
+      Alert.alert(
+        'Could not publish',
+        result.error === 'not-authenticated'
+          ? 'Please log in to upload a recipe.'
+          : result.error
+      );
+      return;
+    }
+
+    Alert.alert('Recipe published! 🎉', 'Your recipe is now live in Discover.', [
+      { text: 'View Recipe', onPress: () => router.replace(`/recipe/${result.id}`) },
+      { text: 'Done', onPress: () => router.back() },
+    ]);
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>New Recipe</Text>
+        <View style={{ width: 60 }} />
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {/* Image preview + URL */}
+        {image.trim() ? (
+          <Image source={{ uri: image.trim() }} style={styles.preview} />
+        ) : (
+          <View style={[styles.preview, styles.previewEmpty]}>
+            <Text style={styles.previewEmptyText}>🖼️ Image preview</Text>
+          </View>
+        )}
+        <View style={styles.field}>
+          <Text style={styles.label}>Image URL</Text>
+          <TextInput
+            style={styles.input}
+            value={image}
+            onChangeText={setImage}
+            placeholder="https://…"
+            placeholderTextColor="#999"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Title</Text>
+          <TextInput
+            style={styles.input}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. Creamy Tuscan Chicken"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Description</Text>
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="A short, tasty pitch…"
+            placeholderTextColor="#999"
+            multiline
+          />
+        </View>
+
+        {/* Numbers */}
+        <View style={styles.row}>
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>Prep (min)</Text>
+            <TextInput style={styles.input} value={prepTime} onChangeText={setPrepTime} keyboardType="numeric" placeholder="10" placeholderTextColor="#999" />
+          </View>
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>Cook (min)</Text>
+            <TextInput style={styles.input} value={cookTime} onChangeText={setCookTime} keyboardType="numeric" placeholder="20" placeholderTextColor="#999" />
+          </View>
+        </View>
+        <View style={styles.row}>
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>Servings</Text>
+            <TextInput style={styles.input} value={servings} onChangeText={setServings} keyboardType="numeric" placeholder="4" placeholderTextColor="#999" />
+          </View>
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>Calories</Text>
+            <TextInput style={styles.input} value={calories} onChangeText={setCalories} keyboardType="numeric" placeholder="450" placeholderTextColor="#999" />
+          </View>
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>Cost ($)</Text>
+            <TextInput style={styles.input} value={cost} onChangeText={setCost} keyboardType="numeric" placeholder="8.50" placeholderTextColor="#999" />
+          </View>
+        </View>
+
+        {/* Difficulty */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Difficulty</Text>
+          <View style={styles.segment}>
+            {(['Easy', 'Medium', 'Hard'] as Difficulty[]).map(d => (
+              <TouchableOpacity
+                key={d}
+                style={[styles.segmentButton, difficulty === d && styles.segmentButtonActive]}
+                onPress={() => setDifficulty(d)}
+              >
+                <Text style={[styles.segmentText, difficulty === d && styles.segmentTextActive]}>{d}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Dietary tags */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Dietary tags</Text>
+          <View style={styles.chipWrap}>
+            {DIETARY_TAGS.map(tag => {
+              const active = dietary.includes(tag.id);
+              return (
+                <TouchableOpacity
+                  key={tag.id}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => toggleDietary(tag.id)}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {tag.icon} {tag.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Ingredients */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Ingredients</Text>
+          {ingredients.map((ing, i) => (
+            <View key={i} style={styles.ingredientCard}>
+              <View style={styles.ingredientTop}>
+                <TextInput
+                  style={[styles.input, styles.ingredientName]}
+                  value={ing.name}
+                  onChangeText={t => updateIngredient(i, { name: t })}
+                  placeholder="Ingredient"
+                  placeholderTextColor="#999"
+                />
+                <TextInput
+                  style={[styles.input, styles.ingredientAmount]}
+                  value={ing.amount}
+                  onChangeText={t => updateIngredient(i, { amount: t })}
+                  placeholder="Qty"
+                  placeholderTextColor="#999"
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={[styles.input, styles.ingredientUnit]}
+                  value={ing.unit}
+                  onChangeText={t => updateIngredient(i, { unit: t })}
+                  placeholder="unit"
+                  placeholderTextColor="#999"
+                />
+                {ingredients.length > 1 && (
+                  <TouchableOpacity onPress={() => removeIngredient(i)} style={styles.removeCircle}>
+                    <Text style={styles.removeCircleText}>×</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catRow}>
+                {CATEGORIES.map(cat => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.catChip, ing.category === cat.id && styles.catChipActive]}
+                    onPress={() => updateIngredient(i, { category: cat.id })}
+                  >
+                    <Text style={styles.catChipText}>{cat.icon} {cat.id}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          ))}
+          <TouchableOpacity style={styles.addRow} onPress={addIngredient}>
+            <Text style={styles.addRowText}>+ Add ingredient</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Steps */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Steps</Text>
+          {steps.map((step, i) => (
+            <View key={i} style={styles.stepRow}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>{i + 1}</Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.stepInput]}
+                value={step}
+                onChangeText={t => updateStep(i, t)}
+                placeholder="Describe this step…"
+                placeholderTextColor="#999"
+                multiline
+              />
+              {steps.length > 1 && (
+                <TouchableOpacity onPress={() => removeStep(i)} style={styles.removeCircle}>
+                  <Text style={styles.removeCircleText}>×</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+          <TouchableOpacity style={styles.addRow} onPress={addStep}>
+            <Text style={styles.addRowText}>+ Add step</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* Publish */}
+      <View style={styles.bottomAction}>
+        <TouchableOpacity style={styles.publishButton} onPress={submit} disabled={saving}>
+          {saving ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.publishButtonText}>Publish Recipe</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
+  backButton: { width: 60 },
+  backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+  preview: { width: '100%', height: 180, backgroundColor: '#EEE' },
+  previewEmpty: { justifyContent: 'center', alignItems: 'center' },
+  previewEmptyText: { fontSize: 16, color: '#AAA' },
+  field: { paddingHorizontal: 20, marginTop: 16 },
+  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
+  input: { backgroundColor: '#FFF', borderRadius: 10, padding: 14, fontSize: 15, borderWidth: 1, borderColor: '#EEE' },
+  multiline: { minHeight: 70, textAlignVertical: 'top' },
+  row: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 16, gap: 10 },
+  rowItem: { flex: 1 },
+  segment: { flexDirection: 'row', backgroundColor: '#F0F0F0', borderRadius: 10, padding: 4 },
+  segmentButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
+  segmentButtonActive: { backgroundColor: '#FFF' },
+  segmentText: { fontSize: 14, color: '#888', fontWeight: '500' },
+  segmentTextActive: { color: '#1A1A1A', fontWeight: '700' },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEE' },
+  chipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
+  chipText: { fontSize: 13, color: '#666', fontWeight: '500' },
+  chipTextActive: { color: '#FFF', fontWeight: '600' },
+  ingredientCard: { backgroundColor: '#F7F7F7', borderRadius: 12, padding: 10, marginBottom: 10 },
+  ingredientTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ingredientName: { flex: 3 },
+  ingredientAmount: { flex: 1 },
+  ingredientUnit: { flex: 1 },
+  catRow: { marginTop: 8 },
+  catChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEE', marginRight: 6 },
+  catChipActive: { backgroundColor: '#FFE0B2', borderColor: '#FFB74D' },
+  catChipText: { fontSize: 12, color: '#666' },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10, gap: 8 },
+  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', marginTop: 8 },
+  stepNumberText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  stepInput: { flex: 1, minHeight: 48, textAlignVertical: 'top' },
+  removeCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFE0E0', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  removeCircleText: { fontSize: 18, color: '#E53935', fontWeight: '700' },
+  addRow: { paddingVertical: 12, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: '#EEE', borderStyle: 'dashed' },
+  addRowText: { fontSize: 14, color: '#FF6B35', fontWeight: '600' },
+  bottomAction: { padding: 16, paddingBottom: 32, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+  publishButton: { backgroundColor: '#FF6B35', padding: 18, borderRadius: 14, alignItems: 'center' },
+  publishButtonText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
+});

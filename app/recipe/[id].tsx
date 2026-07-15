@@ -1,0 +1,438 @@
+import { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView,
+  Image,
+  Alert,
+  Modal,
+  ActivityIndicator
+} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { getRecipeById, Recipe } from '../../data/recipes';
+import { supabase } from '../../lib/supabase';
+import { addRecipesToShoppingList } from '../../lib/shopping';
+import { fetchDbRecipeById } from '../../lib/recipes';
+
+type FamilyMember = {
+  id: string;
+  name: string;
+  age: string;
+  gender: 'male' | 'female';
+  weight: string;
+  portionMultiplier: number;
+};
+
+const calculateBasePortion = (member: FamilyMember): number => {
+  const weight = parseFloat(member.weight) || 150;
+  const age = parseInt(member.age) || 30;
+  const weightKg = weight * 0.453592;
+  let bmr: number;
+  if (member.gender === 'male') {
+    bmr = 10 * weightKg + 6.25 * 170 - 5 * age + 5;
+  } else {
+    bmr = 10 * weightKg + 6.25 * 160 - 5 * age - 161;
+  }
+  return (bmr * 1.5) / 2000;
+};
+
+export default function RecipeDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const localRecipe = getRecipeById(id || '');
+
+  const [recipe, setRecipe] = useState<Recipe | undefined>(localRecipe);
+  const [servings, setServings] = useState(localRecipe?.servings || 4);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [showPortionModal, setShowPortionModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'ingredients' | 'steps'>('ingredients');
+
+  useEffect(() => {
+    loadFamilyMembers();
+  }, []);
+
+  // Uploaded recipes aren't in the local catalogue — fetch them from Supabase.
+  useEffect(() => {
+    if (localRecipe || !id) return;
+    fetchDbRecipeById(id).then(r => {
+      if (r) {
+        setRecipe(r);
+        setServings(r.servings);
+      }
+    });
+  }, [id, localRecipe]);
+
+  const loadFamilyMembers = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('family_members')
+      .select('*')
+      .eq('profile_id', user.id);
+
+    if (data) {
+      setFamilyMembers(data.map(m => ({
+        id: m.id,
+        name: m.name,
+        age: m.age?.toString() || '',
+        gender: m.gender || 'male',
+        weight: m.weight?.toString() || '',
+        portionMultiplier: m.portion_multiplier || 1.0,
+      })));
+    }
+  };
+
+  const calculateFamilyPortions = () => {
+    const members = selectedMembers.length > 0 
+      ? familyMembers.filter(m => selectedMembers.includes(m.id))
+      : familyMembers;
+    
+    return members.reduce((total, member) => {
+      const base = calculateBasePortion(member);
+      return total + (base * member.portionMultiplier);
+    }, 0);
+  };
+
+  const applyFamilyPortions = () => {
+    const portions = calculateFamilyPortions();
+    const newServings = Math.ceil(portions);
+    setServings(newServings);
+    setShowPortionModal(false);
+  };
+
+  const toggleMember = (id: string) => {
+    if (selectedMembers.includes(id)) {
+      setSelectedMembers(selectedMembers.filter(m => m !== id));
+    } else {
+      setSelectedMembers([...selectedMembers, id]);
+    }
+  };
+
+  const getScaledAmount = (amount: number): string => {
+    const scale = servings / (recipe?.servings || 4);
+    const scaled = amount * scale;
+    
+    // Format nicely
+    if (scaled === Math.floor(scaled)) return scaled.toString();
+    if (scaled < 1) {
+      // Convert to fractions
+      if (Math.abs(scaled - 0.25) < 0.05) return '¼';
+      if (Math.abs(scaled - 0.33) < 0.05) return '⅓';
+      if (Math.abs(scaled - 0.5) < 0.05) return '½';
+      if (Math.abs(scaled - 0.66) < 0.05) return '⅔';
+      if (Math.abs(scaled - 0.75) < 0.05) return '¾';
+    }
+    return scaled.toFixed(1).replace('.0', '');
+  };
+
+  const addToShoppingList = async () => {
+    if (!recipe) return;
+
+    const result = await addRecipesToShoppingList([{ recipe, servings }]);
+    if ('error' in result) {
+      Alert.alert('Error', 'Please log in to add to shopping list');
+      return;
+    }
+
+    Alert.alert(
+      'Added to Shopping List! 🛒',
+      `${recipe.ingredients.length} ingredients added for ${servings} servings`,
+      [
+        { text: 'Keep Browsing', style: 'cancel' },
+        { text: 'View List', onPress: () => router.push('/shopping') }
+      ]
+    );
+  };
+
+  if (!recipe) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator color="#FF6B35" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Hero Image */}
+        <View style={styles.heroContainer}>
+          <Image source={{ uri: recipe.image }} style={styles.heroImage} />
+          <View style={styles.heroOverlay} />
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.heroContent}>
+            <View style={styles.badges}>
+              {recipe.kidApproved && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>👶 Kid Approved</Text>
+                </View>
+              )}
+              <View style={[styles.badge, { backgroundColor: '#4CAF50' }]}>
+                <Text style={styles.badgeText}>{recipe.difficulty}</Text>
+              </View>
+            </View>
+            <Text style={styles.heroTitle}>{recipe.title}</Text>
+            <View style={styles.heroMeta}>
+              <Text style={styles.metaItem}>⏱ {recipe.prepTime + recipe.cookTime} min</Text>
+              <Text style={styles.metaItem}>🔥 {recipe.calories} cal</Text>
+              <Text style={styles.metaItem}>💰 ${recipe.cost.toFixed(2)}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Influencer */}
+        <View style={styles.influencerBar}>
+          <Image source={{ uri: recipe.influencer.avatar }} style={styles.influencerAvatar} />
+          <View>
+            <Text style={styles.influencerName}>{recipe.influencer.name}</Text>
+            <Text style={styles.influencerHandle}>{recipe.influencer.handle}</Text>
+          </View>
+        </View>
+
+        {/* Servings Adjuster */}
+        <View style={styles.servingsCard}>
+          <View style={styles.servingsLeft}>
+            <Text style={styles.servingsLabel}>Servings</Text>
+            <View style={styles.servingsControl}>
+              <TouchableOpacity 
+                style={styles.servingsButton}
+                onPress={() => setServings(Math.max(1, servings - 1))}
+              >
+                <Text style={styles.servingsButtonText}>−</Text>
+              </TouchableOpacity>
+              <Text style={styles.servingsNumber}>{servings}</Text>
+              <TouchableOpacity 
+                style={styles.servingsButton}
+                onPress={() => setServings(servings + 1)}
+              >
+                <Text style={styles.servingsButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.familyButton}
+            onPress={() => setShowPortionModal(true)}
+          >
+            <Text style={styles.familyButtonText}>👨‍👩‍👧‍👦 Calculate for Family</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tabs */}
+        <View style={styles.tabs}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'ingredients' && styles.tabActive]}
+            onPress={() => setActiveTab('ingredients')}
+          >
+            <Text style={[styles.tabText, activeTab === 'ingredients' && styles.tabTextActive]}>
+              Ingredients ({recipe.ingredients.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'steps' && styles.tabActive]}
+            onPress={() => setActiveTab('steps')}
+          >
+            <Text style={[styles.tabText, activeTab === 'steps' && styles.tabTextActive]}>
+              Steps ({recipe.steps.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
+        {activeTab === 'ingredients' ? (
+          <View style={styles.ingredientsList}>
+            {recipe.ingredients.map((ing, index) => (
+              <View key={index} style={styles.ingredientRow}>
+                <View style={styles.ingredientAmount}>
+                  <Text style={styles.ingredientAmountText}>
+                    {getScaledAmount(ing.amount)} {ing.unit}
+                  </Text>
+                </View>
+                <Text style={styles.ingredientName}>{ing.name}</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.stepsList}>
+            {recipe.steps.map((step, index) => (
+              <View key={index} style={styles.stepRow}>
+                <View style={styles.stepNumber}>
+                  <Text style={styles.stepNumberText}>{index + 1}</Text>
+                </View>
+                <Text style={styles.stepText}>{step}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+
+      {/* Bottom Action */}
+      <View style={styles.bottomAction}>
+        <TouchableOpacity style={styles.addToCartButton} onPress={addToShoppingList}>
+          <Text style={styles.addToCartText}>🛒 Add to Shopping List</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Family Portion Modal */}
+      <Modal visible={showPortionModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Calculate for Family</Text>
+            <Text style={styles.modalSubtitle}>
+              Select who's eating (or leave empty for everyone)
+            </Text>
+
+            {familyMembers.length === 0 ? (
+              <View style={styles.emptyFamily}>
+                <Text style={styles.emptyFamilyText}>No family members yet</Text>
+                <TouchableOpacity 
+                  style={styles.addFamilyButton}
+                  onPress={() => {
+                    setShowPortionModal(false);
+                    router.push('/profile');
+                  }}
+                >
+                  <Text style={styles.addFamilyButtonText}>+ Add Family Members</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {familyMembers.map((member) => (
+                  <TouchableOpacity
+                    key={member.id}
+                    style={[
+                      styles.memberOption,
+                      selectedMembers.includes(member.id) && styles.memberOptionSelected
+                    ]}
+                    onPress={() => toggleMember(member.id)}
+                  >
+                    <Text style={styles.memberOptionEmoji}>
+                      {member.gender === 'male' ? '👨' : '👩'}
+                    </Text>
+                    <View style={styles.memberOptionInfo}>
+                      <Text style={styles.memberOptionName}>{member.name}</Text>
+                      <Text style={styles.memberOptionDetails}>
+                        {(calculateBasePortion(member) * member.portionMultiplier).toFixed(1)}x portion
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.memberCheckbox,
+                      selectedMembers.includes(member.id) && styles.memberCheckboxChecked
+                    ]}>
+                      {selectedMembers.includes(member.id) && (
+                        <Text style={styles.memberCheckmark}>✓</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+
+                <View style={styles.portionResult}>
+                  <Text style={styles.portionResultLabel}>Calculated Servings:</Text>
+                  <Text style={styles.portionResultValue}>
+                    {Math.ceil(calculateFamilyPortions())} servings
+                  </Text>
+                </View>
+              </>
+            )}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalCancelButton}
+                onPress={() => setShowPortionModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              {familyMembers.length > 0 && (
+                <TouchableOpacity 
+                  style={styles.modalApplyButton}
+                  onPress={applyFamilyPortions}
+                >
+                  <Text style={styles.modalApplyText}>Apply</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  heroContainer: { height: 300, position: 'relative' },
+  heroImage: { width: '100%', height: '100%' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' },
+  backButton: { position: 'absolute', top: 50, left: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
+  backButtonText: { fontSize: 20, color: '#1A1A1A' },
+  heroContent: { position: 'absolute', bottom: 20, left: 20, right: 20 },
+  badges: { flexDirection: 'row', marginBottom: 10 },
+  badge: { backgroundColor: '#FF6B35', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginRight: 8 },
+  badgeText: { color: '#FFF', fontSize: 12, fontWeight: '600' },
+  heroTitle: { fontSize: 24, fontWeight: '700', color: '#FFF', marginBottom: 10 },
+  heroMeta: { flexDirection: 'row' },
+  metaItem: { color: 'rgba(255,255,255,0.9)', fontSize: 14, marginRight: 16 },
+  influencerBar: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  influencerAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
+  influencerName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
+  influencerHandle: { fontSize: 12, color: '#888' },
+  servingsCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF', margin: 16, padding: 16, borderRadius: 16 },
+  servingsLeft: {},
+  servingsLabel: { fontSize: 12, color: '#888', marginBottom: 8 },
+  servingsControl: { flexDirection: 'row', alignItems: 'center' },
+  servingsButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
+  servingsButtonText: { fontSize: 20, color: '#1A1A1A' },
+  servingsNumber: { fontSize: 24, fontWeight: '700', color: '#1A1A1A', marginHorizontal: 20 },
+  familyButton: { backgroundColor: '#FFE0B2', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 },
+  familyButtonText: { fontSize: 13, fontWeight: '600', color: '#FF6B35' },
+  tabs: { flexDirection: 'row', marginHorizontal: 16, backgroundColor: '#F5F5F5', borderRadius: 12, padding: 4 },
+  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10 },
+  tabActive: { backgroundColor: '#FFF' },
+  tabText: { fontSize: 14, color: '#888', fontWeight: '500' },
+  tabTextActive: { color: '#1A1A1A', fontWeight: '600' },
+  ingredientsList: { padding: 16 },
+  ingredientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  ingredientAmount: { width: 80, backgroundColor: '#F5F5F5', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginRight: 12 },
+  ingredientAmountText: { fontSize: 13, fontWeight: '600', color: '#FF6B35', textAlign: 'center' },
+  ingredientName: { fontSize: 16, color: '#1A1A1A', flex: 1 },
+  stepsList: { padding: 16 },
+  stepRow: { flexDirection: 'row', marginBottom: 20 },
+  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  stepNumberText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  stepText: { flex: 1, fontSize: 15, color: '#1A1A1A', lineHeight: 22 },
+  bottomSpacer: { height: 100 },
+  bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 32, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+  addToCartButton: { backgroundColor: '#FF6B35', padding: 18, borderRadius: 14, alignItems: 'center' },
+  addToCartText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A', marginBottom: 4 },
+  modalSubtitle: { fontSize: 14, color: '#888', marginBottom: 20 },
+  emptyFamily: { alignItems: 'center', padding: 24 },
+  emptyFamilyText: { fontSize: 16, color: '#888', marginBottom: 16 },
+  addFamilyButton: { backgroundColor: '#FF6B35', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
+  addFamilyButtonText: { color: '#FFF', fontWeight: '600' },
+  memberOption: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#F5F5F5', borderRadius: 12, marginBottom: 10 },
+  memberOptionSelected: { backgroundColor: '#FFE0B2' },
+  memberOptionEmoji: { fontSize: 28, marginRight: 14 },
+  memberOptionInfo: { flex: 1 },
+  memberOptionName: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
+  memberOptionDetails: { fontSize: 13, color: '#888' },
+  memberCheckbox: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#DDD', justifyContent: 'center', alignItems: 'center' },
+  memberCheckboxChecked: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
+  memberCheckmark: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+  portionResult: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 16, borderRadius: 12, marginTop: 10 },
+  portionResultLabel: { fontSize: 14, color: '#2E7D32' },
+  portionResultValue: { fontSize: 18, fontWeight: '700', color: '#2E7D32' },
+  modalButtons: { flexDirection: 'row', marginTop: 20 },
+  modalCancelButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#F5F5F5', alignItems: 'center', marginRight: 8 },
+  modalCancelText: { fontSize: 16, fontWeight: '600', color: '#666' },
+  modalApplyButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#FF6B35', alignItems: 'center' },
+  modalApplyText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
+});
