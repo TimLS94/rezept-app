@@ -20,11 +20,13 @@ import {
 } from '../data/recipes';
 import { fetchDbRecipes } from '../lib/recipes';
 import { addRecipesToShoppingList } from '../lib/shopping';
+import { useMealPlan, thisWeekKey } from '../lib/mealPlan';
 
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25;
 
 export default function DiscoverScreen() {
+  const { addRecipeToWeek } = useMealPlan();
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [index, setIndex] = useState(0);
   const [liked, setLiked] = useState<Recipe[]>([]);
@@ -60,7 +62,12 @@ export default function DiscoverScreen() {
   };
 
   const advance = (recipe: Recipe, direction: 'like' | 'skip') => {
-    if (direction === 'like') setLiked(prev => [...prev, recipe]);
+    if (direction === 'like') {
+      // A right-swipe match lands in this week's plan (and is remembered so it
+      // can also be pushed to the shopping list at the end).
+      addRecipeToWeek(thisWeekKey(), recipe);
+      setLiked(prev => [...prev, recipe]);
+    }
     position.setValue({ x: 0, y: 0 });
     setIndex(i => i + 1);
   };
@@ -116,7 +123,10 @@ export default function DiscoverScreen() {
   const addLikedToShoppingList = async () => {
     const result = await addRecipesToShoppingList(liked.map(recipe => ({ recipe })));
     if ('error' in result) {
-      Alert.alert('Please log in', 'You need to be logged in to build a shopping list.');
+      Alert.alert('Sign in required', 'Sign in to save your shopping list.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Sign in', onPress: () => router.push('/login') },
+      ]);
       return;
     }
     Alert.alert(
@@ -188,12 +198,19 @@ export default function DiscoverScreen() {
             <Text style={styles.emptyIcon}>🎉</Text>
             <Text style={styles.emptyText}>That's everyone!</Text>
             <Text style={styles.emptySubtext}>
-              You liked {liked.length} {liked.length === 1 ? 'recipe' : 'recipes'}
+              {liked.length > 0
+                ? `${liked.length} ${liked.length === 1 ? 'meal' : 'meals'} added to this week`
+                : 'No matches this time'}
             </Text>
             {liked.length > 0 && (
-              <TouchableOpacity style={styles.primaryButton} onPress={addLikedToShoppingList}>
-                <Text style={styles.primaryButtonText}>🛒 Add liked to Shopping List</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/budget')}>
+                  <Text style={styles.primaryButtonText}>📅 View Weekly Plan</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.secondaryButton} onPress={addLikedToShoppingList}>
+                  <Text style={styles.secondaryButtonText}>🛒 Add to Shopping List</Text>
+                </TouchableOpacity>
+              </>
             )}
             <TouchableOpacity style={styles.secondaryButton} onPress={restart}>
               <Text style={styles.secondaryButtonText}>↻ Start over</Text>

@@ -11,6 +11,7 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { RECIPES, getRecipesByCategory } from '../data/recipes';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth';
 
 const { width } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ const categories = [
 ];
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState<string>('kids');
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
 
@@ -60,13 +62,19 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>Good evening!</Text>
             <Text style={styles.headerTitle}>What's for dinner?</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/profile')}>
+          <TouchableOpacity style={styles.profileButton} onPress={() => router.push(user ? '/profile' : '/login')}>
             <Image
               source={{ uri: avatar }}
               style={styles.profileImage}
             />
           </TouchableOpacity>
         </View>
+
+        {/* Search entry */}
+        <TouchableOpacity style={styles.searchBar} onPress={() => router.push('/search')}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchPlaceholder}>Search recipes, creators…</Text>
+        </TouchableOpacity>
 
         {/* Tonight's Pick - Hero Card */}
         <View style={styles.section}>
@@ -140,8 +148,8 @@ export default function HomeScreen() {
             <Text style={styles.mealPlannerIconText}>📅</Text>
           </View>
           <View style={styles.mealPlannerContent}>
-            <Text style={styles.mealPlannerTitle}>Meal Planner & Budget</Text>
-            <Text style={styles.mealPlannerSubtitle}>Plan your week • Track spending</Text>
+            <Text style={styles.mealPlannerTitle}>Meal Planner</Text>
+            <Text style={styles.mealPlannerSubtitle}>Plan your week • Build your list</Text>
           </View>
           <Text style={styles.mealPlannerArrow}>→</Text>
         </TouchableOpacity>
@@ -261,6 +269,26 @@ const styles = StyleSheet.create({
   profileImage: {
     width: '100%',
     height: '100%',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#EEE',
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchPlaceholder: {
+    fontSize: 16,
+    color: '#999',
   },
   section: {
     paddingHorizontal: 20,

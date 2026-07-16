@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { FEATURES } from '../lib/features';
 
 type FamilyMember = {
   id: string;
@@ -302,28 +303,34 @@ export default function ProfileScreen() {
             <Text style={styles.statNumber}>{getTotalPortions().toFixed(1)}x</Text>
             <Text style={styles.statLabel}>Portions</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>${weeklyBudget}</Text>
-            <Text style={styles.statLabel}>Weekly</Text>
-          </View>
+          {FEATURES.budget && (
+            <>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>${weeklyBudget}</Text>
+                <Text style={styles.statLabel}>Weekly</Text>
+              </View>
+            </>
+          )}
         </View>
 
-        {/* Budget */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Weekly Food Budget</Text>
-          <View style={styles.budgetInput}>
-            <Text style={styles.dollarSign}>$</Text>
-            <TextInput
-              style={styles.budgetTextInput}
-              value={weeklyBudget}
-              onChangeText={saveBudget}
-              keyboardType="numeric"
-              placeholder="150"
-            />
-            <Text style={styles.perWeek}>/ week</Text>
+        {/* Budget — roadmap V2, hidden behind the budget feature flag */}
+        {FEATURES.budget && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Weekly Food Budget</Text>
+            <View style={styles.budgetInput}>
+              <Text style={styles.dollarSign}>$</Text>
+              <TextInput
+                style={styles.budgetTextInput}
+                value={weeklyBudget}
+                onChangeText={saveBudget}
+                keyboardType="numeric"
+                placeholder="150"
+              />
+              <Text style={styles.perWeek}>/ week</Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Family Members */}
         <View style={styles.section}>

@@ -108,12 +108,14 @@ export default function UploadRecipeScreen() {
     setSaving(false);
 
     if ('error' in result) {
-      Alert.alert(
-        'Could not publish',
-        result.error === 'not-authenticated'
-          ? 'Please log in to upload a recipe.'
-          : result.error
-      );
+      if (result.error === 'not-authenticated') {
+        Alert.alert('Sign in required', 'Sign in to publish a recipe.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Sign in', onPress: () => router.push('/login') },
+        ]);
+      } else {
+        Alert.alert('Could not publish', result.error);
+      }
       return;
     }
 

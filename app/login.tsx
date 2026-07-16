@@ -21,6 +21,11 @@ export default function LoginScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  // Passwordless email-code mode (more robust on mobile than a magic-link deep link).
+  const [mode, setMode] = useState<'password' | 'code'>('password');
+  const [otpSent, setOtpSent] = useState(false);
+  const [code, setCode] = useState('');
+
   const handleAuth = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -28,7 +33,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    
+
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
@@ -51,6 +56,47 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const sendCode = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
+    setLoading(false);
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+    setOtpSent(true);
+    Alert.alert('Check your email', `We sent a 6-digit code to ${email}.`);
+  };
+
+  const verifyCode = async () => {
+    if (code.length < 6) {
+      Alert.alert('Error', 'Enter the 6-digit code from your email');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
+    setLoading(false);
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+    router.replace('/home');
+  };
+
+  const socialNotReady = () => {
+    Alert.alert(
+      'Coming soon',
+      'Sign in with Apple and Google need provider setup and a dev build. Use email for now.'
+    );
   };
 
   return (
@@ -99,37 +145,80 @@ export default function LoginScreen() {
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              placeholderTextColor="#999"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
+          {mode === 'password' ? (
+            <>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#999"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+              </View>
 
-          {isLogin && (
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.forgotPassword}
+                onPress={() => { setMode('code'); setOtpSent(false); }}
+              >
+                <Text style={styles.forgotPasswordText}>Email me a login code instead</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                onPress={handleAuth}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>
+                    {isLogin ? 'Sign In' : 'Create Account'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              {otpSent && (
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>6-digit code</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="123456"
+                    placeholderTextColor="#999"
+                    value={code}
+                    onChangeText={setCode}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                  />
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                onPress={otpSent ? verifyCode : sendCode}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>
+                    {otpSent ? 'Verify & Sign In' : 'Send me a code'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.forgotPassword}
+                onPress={() => { setMode('password'); setCode(''); }}
+              >
+                <Text style={styles.forgotPasswordText}>Use password instead</Text>
+              </TouchableOpacity>
+            </>
           )}
-
-          <TouchableOpacity 
-            style={[styles.primaryButton, loading && styles.primaryButtonDisabled]} 
-            onPress={handleAuth}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <Text style={styles.primaryButtonText}>
-                {isLogin ? 'Sign In' : 'Create Account'}
-              </Text>
-            )}
-          </TouchableOpacity>
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
@@ -138,24 +227,31 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.socialButtons}>
-            <TouchableOpacity style={styles.socialButton}>
+            <TouchableOpacity style={styles.socialButton} onPress={socialNotReady}>
               <Text style={styles.socialButtonText}>Google</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
+            <TouchableOpacity style={styles.socialButton} onPress={socialNotReady}>
               <Text style={styles.socialButtonText}>Apple</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={styles.switchAuth} 
-            onPress={() => setIsLogin(!isLogin)}
-          >
-            <Text style={styles.switchAuthText}>
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <Text style={styles.switchAuthLink}>
-                {isLogin ? 'Sign Up' : 'Sign In'}
+          {mode === 'password' && (
+            <TouchableOpacity
+              style={styles.switchAuth}
+              onPress={() => setIsLogin(!isLogin)}
+            >
+              <Text style={styles.switchAuthText}>
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                <Text style={styles.switchAuthLink}>
+                  {isLogin ? 'Sign Up' : 'Sign In'}
+                </Text>
               </Text>
-            </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Continue as guest */}
+          <TouchableOpacity style={styles.guestLink} onPress={() => router.replace('/home')}>
+            <Text style={styles.guestLinkText}>Continue browsing as guest</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -302,6 +398,16 @@ const styles = StyleSheet.create({
   },
   switchAuthLink: {
     color: '#FF6B35',
+    fontWeight: '600',
+  },
+  guestLink: {
+    alignItems: 'center',
+    marginTop: 20,
+    paddingVertical: 8,
+  },
+  guestLinkText: {
+    fontSize: 15,
+    color: '#999',
     fontWeight: '600',
   },
 });

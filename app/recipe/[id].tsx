@@ -15,6 +15,7 @@ import { getRecipeById, Recipe } from '../../data/recipes';
 import { supabase } from '../../lib/supabase';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { fetchDbRecipeById } from '../../lib/recipes';
+import { FEATURES } from '../../lib/features';
 
 type FamilyMember = {
   id: string;
@@ -180,7 +181,9 @@ export default function RecipeDetailScreen() {
             <View style={styles.heroMeta}>
               <Text style={styles.metaItem}>⏱ {recipe.prepTime + recipe.cookTime} min</Text>
               <Text style={styles.metaItem}>🔥 {recipe.calories} cal</Text>
-              <Text style={styles.metaItem}>💰 ${recipe.cost.toFixed(2)}</Text>
+              {FEATURES.budget && (
+                <Text style={styles.metaItem}>💰 ${recipe.cost.toFixed(2)}</Text>
+              )}
             </View>
           </View>
         </View>

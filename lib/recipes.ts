@@ -127,8 +127,12 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
 
   if (error || !data) return { error: error?.message || 'insert-failed' };
 
-  // Mark the author as a creator so their profile can promote uploads.
-  await supabase.from('profiles').update({ is_creator: true }).eq('id', user.id);
+  // Promote a plain user to the creator role (don't demote admins).
+  await supabase
+    .from('profiles')
+    .update({ role: 'creator', is_creator: true })
+    .eq('id', user.id)
+    .eq('role', 'user');
 
   return { id: data.id };
 }

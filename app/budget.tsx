@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,18 +10,15 @@ import {
   Alert
 } from 'react-native';
 import { router } from 'expo-router';
-import { RECIPES, Recipe, DietaryTag, DIETARY_TAGS, filterRecipesByDietary } from '../data/recipes';
+import { Recipe, DietaryTag, DIETARY_TAGS, filterRecipesByDietary } from '../data/recipes';
 import { addRecipesToShoppingList } from '../lib/shopping';
-
-type MealPlan = {
-  id: string;
-  recipe: Recipe;
-  done?: boolean;
-};
+import { FEATURES } from '../lib/features';
+import { useMealPlan, PlannedMeal } from '../lib/mealPlan';
+import { WEEKDAYS, startOfWeek, addDays, weekKey, fmtDay } from '../lib/week';
 
 // Build a 7-day plan from the real recipe catalogue so every planned meal
 // carries ingredients that can flow into the shopping list.
-const buildPlan = (pool: Recipe[]): MealPlan[] =>
+const buildPlan = (pool: Recipe[]): PlannedMeal[] =>
   pool.length === 0
     ? []
     : Array.from({ length: 7 }, (_, i) => ({
@@ -32,32 +29,11 @@ const buildPlan = (pool: Recipe[]): MealPlan[] =>
 const shuffled = (list: Recipe[]): Recipe[] =>
   [...list].sort(() => Math.random() - 0.5);
 
-// --- Calendar helpers ---
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-const startOfWeek = (d: Date): Date => {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  const day = (x.getDay() + 6) % 7; // shift so Monday = 0
-  x.setDate(x.getDate() - day);
-  return x;
-};
-const addDays = (d: Date, n: number): Date => {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-};
-const weekKey = (d: Date): string => startOfWeek(d).toISOString().slice(0, 10);
-const fmtDay = (d: Date): string => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
-
 export default function BudgetScreen() {
+  const { plansByWeek, setWeekPlan, updateWeekPlan } = useMealPlan();
   const [weeklyBudget] = useState(150);
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
-  const [plansByWeek, setPlansByWeek] = useState<Record<string, MealPlan[]>>(() => ({
-    [weekKey(new Date())]: buildPlan(RECIPES),
-  }));
   const [generating, setGenerating] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -65,28 +41,26 @@ export default function BudgetScreen() {
   const mealPlan = plansByWeek[key] ?? [];
   const isThisWeek = key === weekKey(new Date());
 
-  // Ensure a week has a plan, then make it the active week. New weeks get a
-  // fresh plan (and therefore a fresh budget).
-  const ensureAndGo = (target: Date) => {
-    const t = startOfWeek(target);
-    const k = weekKey(t);
-    setPlansByWeek(prev =>
-      prev[k] ? prev : { ...prev, [k]: buildPlan(shuffled(filterRecipesByDietary(activeFilters))) }
-    );
-    setWeekStart(t);
-  };
-  const goToWeek = (offset: number) => ensureAndGo(addDays(weekStart, offset * 7));
-  const goToToday = () => ensureAndGo(new Date());
+  // Seed the visible week with a starter plan if it has none yet. Weeks that
+  // swipe-discovery already filled are left untouched.
+  useEffect(() => {
+    if (!plansByWeek[key]) {
+      setWeekPlan(key, buildPlan(shuffled(filterRecipesByDietary(activeFilters))));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
-  const setPlan = (updater: (plan: MealPlan[]) => MealPlan[]) =>
-    setPlansByWeek(prev => ({ ...prev, [key]: updater(prev[key] ?? []) }));
+  const goToWeek = (offset: number) => setWeekStart(startOfWeek(addDays(weekStart, offset * 7)));
+  const goToToday = () => setWeekStart(startOfWeek(new Date()));
+
+  const setPlan = (updater: (plan: PlannedMeal[]) => PlannedMeal[]) => updateWeekPlan(key, updater);
 
   const toggleFilter = (tag: DietaryTag) => {
     const next = activeFilters.includes(tag)
       ? activeFilters.filter(t => t !== tag)
       : [...activeFilters, tag];
     setActiveFilters(next);
-    setPlansByWeek(prev => ({ ...prev, [key]: buildPlan(shuffled(filterRecipesByDietary(next))) }));
+    setWeekPlan(key, buildPlan(shuffled(filterRecipesByDietary(next))));
   };
 
   const totalCost = mealPlan.reduce((sum, meal) => sum + meal.recipe.cost, 0);
@@ -102,7 +76,7 @@ export default function BudgetScreen() {
     setGenerating(true);
     // Simulate API call, then reshuffle this week from the catalogue.
     setTimeout(() => {
-      setPlansByWeek(prev => ({ ...prev, [key]: buildPlan(shuffled(filterRecipesByDietary(activeFilters))) }));
+      setWeekPlan(key, buildPlan(shuffled(filterRecipesByDietary(activeFilters))));
       setGenerating(false);
     }, 1200);
   };
@@ -150,7 +124,10 @@ export default function BudgetScreen() {
     setAdding(false);
 
     if ('error' in result) {
-      Alert.alert('Please log in', 'You need to be logged in to build a shopping list.');
+      Alert.alert('Sign in required', 'Sign in to save your shopping list.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Sign in', onPress: () => router.push('/login') },
+      ]);
       return;
     }
 
@@ -193,34 +170,36 @@ export default function BudgetScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Budget Overview */}
-        <View style={styles.budgetCard}>
-          <View style={styles.budgetHeader}>
-            <Text style={styles.budgetLabel}>Weekly Budget</Text>
-            <Text style={styles.budgetAmount}>${weeklyBudget}</Text>
-          </View>
-          
-          <View style={styles.budgetProgress}>
-            <View style={[styles.budgetBar, { width: `${Math.min((totalCost / weeklyBudget) * 100, 100)}%` }]} />
-          </View>
-          
-          <View style={styles.budgetStats}>
-            <View style={styles.budgetStat}>
-              <Text style={styles.budgetStatValue}>${totalCost.toFixed(2)}</Text>
-              <Text style={styles.budgetStatLabel}>Planned</Text>
+        {/* Budget Overview — roadmap V2, hidden behind the budget feature flag */}
+        {FEATURES.budget && (
+          <View style={styles.budgetCard}>
+            <View style={styles.budgetHeader}>
+              <Text style={styles.budgetLabel}>Weekly Budget</Text>
+              <Text style={styles.budgetAmount}>${weeklyBudget}</Text>
             </View>
-            <View style={styles.budgetStat}>
-              <Text style={[styles.budgetStatValue, { color: remaining >= 0 ? '#4CAF50' : '#E53935' }]}>
-                ${Math.abs(remaining).toFixed(2)}
-              </Text>
-              <Text style={styles.budgetStatLabel}>{remaining >= 0 ? 'Remaining' : 'Over Budget'}</Text>
+
+            <View style={styles.budgetProgress}>
+              <View style={[styles.budgetBar, { width: `${Math.min((totalCost / weeklyBudget) * 100, 100)}%` }]} />
             </View>
-            <View style={styles.budgetStat}>
-              <Text style={styles.budgetStatValue}>${avgPerMeal.toFixed(2)}</Text>
-              <Text style={styles.budgetStatLabel}>Avg/Meal</Text>
+
+            <View style={styles.budgetStats}>
+              <View style={styles.budgetStat}>
+                <Text style={styles.budgetStatValue}>${totalCost.toFixed(2)}</Text>
+                <Text style={styles.budgetStatLabel}>Planned</Text>
+              </View>
+              <View style={styles.budgetStat}>
+                <Text style={[styles.budgetStatValue, { color: remaining >= 0 ? '#4CAF50' : '#E53935' }]}>
+                  ${Math.abs(remaining).toFixed(2)}
+                </Text>
+                <Text style={styles.budgetStatLabel}>{remaining >= 0 ? 'Remaining' : 'Over Budget'}</Text>
+              </View>
+              <View style={styles.budgetStat}>
+                <Text style={styles.budgetStatValue}>${avgPerMeal.toFixed(2)}</Text>
+                <Text style={styles.budgetStatLabel}>Avg/Meal</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Dietary Filters */}
         <ScrollView
@@ -292,7 +271,9 @@ export default function BudgetScreen() {
                   </Text>
                   <View style={styles.mealMeta}>
                     <Text style={styles.mealMetaText}>⏱ {meal.recipe.prepTime + meal.recipe.cookTime}min</Text>
-                    <Text style={styles.mealMetaText}>💰 ${meal.recipe.cost.toFixed(2)}</Text>
+                    {FEATURES.budget && (
+                      <Text style={styles.mealMetaText}>💰 ${meal.recipe.cost.toFixed(2)}</Text>
+                    )}
                     <Text style={styles.mealMetaText}>🔥 {meal.recipe.calories}cal</Text>
                   </View>
                 </View>
@@ -347,7 +328,9 @@ export default function BudgetScreen() {
           </View>
           <View style={styles.shoppingListContent}>
             <Text style={styles.shoppingListTitle}>Shopping List</Text>
-            <Text style={styles.shoppingListSubtitle}>{totalIngredients} items • Est. ${totalCost.toFixed(2)}</Text>
+            <Text style={styles.shoppingListSubtitle}>
+              {totalIngredients} items{FEATURES.budget ? ` • Est. $${totalCost.toFixed(2)}` : ''}
+            </Text>
           </View>
           <Text style={styles.shoppingListArrow}>→</Text>
         </TouchableOpacity>
