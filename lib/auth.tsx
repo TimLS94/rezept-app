@@ -1,8 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { FEATURES } from './features';
 
 export type Role = 'user' | 'creator' | 'admin';
+
+// Who may upload recipes: creators/admins always; everyone only if the public
+// uploads flag is on. Guests (role null) can never upload.
+export const canUploadRecipes = (role: Role | null): boolean =>
+  role === 'creator' || role === 'admin' || (FEATURES.publicRecipeUploads && role != null);
 
 type AuthValue = {
   user: User | null;

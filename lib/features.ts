@@ -11,4 +11,8 @@ export const FEATURES = {
   // Paid subscription / Premium gating (Apple/Google IAP).
   // Off until in-app purchases are wired up.
   payments: false,
+
+  // Open recipe uploads to every signed-in user. Off for now — only accounts
+  // with the 'creator' (or 'admin') role can upload. Marketplace opens in V1.5.
+  publicRecipeUploads: false,
 } as const;

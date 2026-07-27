@@ -17,16 +17,16 @@ import {
   Recipe,
   DietaryTag,
   DIETARY_TAGS,
-} from '../data/recipes';
-import { fetchDbRecipes } from '../lib/recipes';
-import { addRecipesToShoppingList } from '../lib/shopping';
-import { useMealPlan, thisWeekKey } from '../lib/mealPlan';
+} from '../../data/recipes';
+import { fetchDbRecipes } from '../../lib/recipes';
+import { useFavorites } from '../../lib/favorites';
+import { addRecipesToShoppingList } from '../../lib/shopping';
 
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25;
 
 export default function DiscoverScreen() {
-  const { addRecipeToWeek } = useMealPlan();
+  const { addFavorite } = useFavorites();
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [index, setIndex] = useState(0);
   const [liked, setLiked] = useState<Recipe[]>([]);
@@ -63,13 +63,35 @@ export default function DiscoverScreen() {
 
   const advance = (recipe: Recipe, direction: 'like' | 'skip') => {
     if (direction === 'like') {
-      // A right-swipe match lands in this week's plan (and is remembered so it
-      // can also be pushed to the shopping list at the end).
-      addRecipeToWeek(thisWeekKey(), recipe);
+      // A right-swipe saves the recipe to Favorites; from there the user adds
+      // it to the weekly plan themselves.
+      addFavorite(recipe);
       setLiked(prev => [...prev, recipe]);
     }
     position.setValue({ x: 0, y: 0 });
     setIndex(i => i + 1);
+  };
+
+  // Push everything swiped in this session straight to the shopping list,
+  // grouped by ingredient category / recipe on the Shopping screen.
+  const addLikedToShoppingList = async () => {
+    const result = await addRecipesToShoppingList(liked.map(recipe => ({ recipe })));
+    if ('error' in result) {
+      Alert.alert('Sign in required', 'Sign in to save your shopping list.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Sign in', onPress: () => router.push('/login') },
+      ]);
+      return;
+    }
+    Alert.alert(
+      'Added to Shopping List! 🛒',
+      `${liked.length} meals • ${result.added} new items` +
+        (result.merged ? ` (${result.merged} merged)` : ''),
+      [
+        { text: 'Done', style: 'cancel' },
+        { text: 'View List', onPress: () => router.push('/shopping') },
+      ]
+    );
   };
 
   const forceSwipe = (direction: 'like' | 'skip') => {
@@ -120,26 +142,6 @@ export default function DiscoverScreen() {
     extrapolate: 'clamp',
   });
 
-  const addLikedToShoppingList = async () => {
-    const result = await addRecipesToShoppingList(liked.map(recipe => ({ recipe })));
-    if ('error' in result) {
-      Alert.alert('Sign in required', 'Sign in to save your shopping list.', [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Sign in', onPress: () => router.push('/login') },
-      ]);
-      return;
-    }
-    Alert.alert(
-      'Added to Shopping List! 🛒',
-      `${liked.length} meals • ${result.added} new items` +
-        (result.merged ? ` (${result.merged} merged)` : ''),
-      [
-        { text: 'Done', style: 'cancel' },
-        { text: 'View List', onPress: () => router.push('/shopping') },
-      ]
-    );
-  };
-
   const restart = () => {
     position.setValue({ x: 0, y: 0 });
     setIndex(0);
@@ -152,13 +154,11 @@ export default function DiscoverScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
+        <View style={styles.backButton} />
         <Text style={styles.headerTitle}>Discover</Text>
-        <View style={styles.likedBadge}>
+        <TouchableOpacity style={styles.likedBadge} onPress={() => router.push('/favorites')}>
           <Text style={styles.likedBadgeText}>❤️ {liked.length}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Pre-filters */}
@@ -199,13 +199,13 @@ export default function DiscoverScreen() {
             <Text style={styles.emptyText}>That's everyone!</Text>
             <Text style={styles.emptySubtext}>
               {liked.length > 0
-                ? `${liked.length} ${liked.length === 1 ? 'meal' : 'meals'} added to this week`
+                ? `${liked.length} ${liked.length === 1 ? 'recipe' : 'recipes'} saved to Favorites`
                 : 'No matches this time'}
             </Text>
             {liked.length > 0 && (
               <>
-                <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/budget')}>
-                  <Text style={styles.primaryButtonText}>📅 View Weekly Plan</Text>
+                <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/favorites')}>
+                  <Text style={styles.primaryButtonText}>❤️ View Favorites</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.secondaryButton} onPress={addLikedToShoppingList}>
                   <Text style={styles.secondaryButtonText}>🛒 Add to Shopping List</Text>

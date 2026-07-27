@@ -10,11 +10,11 @@ import {
   Alert
 } from 'react-native';
 import { router } from 'expo-router';
-import { Recipe, DietaryTag, DIETARY_TAGS, filterRecipesByDietary } from '../data/recipes';
-import { addRecipesToShoppingList } from '../lib/shopping';
-import { FEATURES } from '../lib/features';
-import { useMealPlan, PlannedMeal } from '../lib/mealPlan';
-import { WEEKDAYS, startOfWeek, addDays, weekKey, fmtDay } from '../lib/week';
+import { Recipe, DietaryTag, DIETARY_TAGS, filterRecipesByDietary } from '../../data/recipes';
+import { addRecipesToShoppingList } from '../../lib/shopping';
+import { FEATURES } from '../../lib/features';
+import { useMealPlan, PlannedMeal } from '../../lib/mealPlan';
+import { WEEKDAYS, startOfWeek, addDays, weekKey, fmtDay } from '../../lib/week';
 
 // Build a 7-day plan from the real recipe catalogue so every planned meal
 // carries ingredients that can flow into the shopping list.
@@ -30,7 +30,7 @@ const shuffled = (list: Recipe[]): Recipe[] =>
   [...list].sort(() => Math.random() - 0.5);
 
 export default function BudgetScreen() {
-  const { plansByWeek, setWeekPlan, updateWeekPlan } = useMealPlan();
+  const { plansByWeek, setWeekPlan, updateWeekPlan, loaded } = useMealPlan();
   const [weeklyBudget] = useState(150);
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
@@ -42,13 +42,15 @@ export default function BudgetScreen() {
   const isThisWeek = key === weekKey(new Date());
 
   // Seed the visible week with a starter plan if it has none yet. Weeks that
-  // swipe-discovery already filled are left untouched.
+  // swipe-discovery already filled are left untouched. Wait for the persisted
+  // plan to load first, otherwise a starter plan would clobber the saved one.
   useEffect(() => {
+    if (!loaded) return;
     if (!plansByWeek[key]) {
       setWeekPlan(key, buildPlan(shuffled(filterRecipesByDietary(activeFilters))));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, loaded]);
 
   const goToWeek = (offset: number) => setWeekStart(startOfWeek(addDays(weekStart, offset * 7)));
   const goToToday = () => setWeekStart(startOfWeek(new Date()));
@@ -147,9 +149,7 @@ export default function BudgetScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <View style={styles.backButton} />
           <Text style={styles.headerTitle}>Meal Planner</Text>
           <View style={{ width: 60 }} />
         </View>

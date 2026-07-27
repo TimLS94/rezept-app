@@ -16,6 +16,7 @@ import { supabase } from '../../lib/supabase';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { fetchDbRecipeById } from '../../lib/recipes';
 import { FEATURES } from '../../lib/features';
+import { useFavorites } from '../../lib/favorites';
 
 type FamilyMember = {
   id: string;
@@ -43,6 +44,7 @@ export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const localRecipe = getRecipeById(id || '');
 
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [recipe, setRecipe] = useState<Recipe | undefined>(localRecipe);
   const [servings, setServings] = useState(localRecipe?.servings || 4);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
@@ -191,10 +193,18 @@ export default function RecipeDetailScreen() {
         {/* Influencer */}
         <View style={styles.influencerBar}>
           <Image source={{ uri: recipe.influencer.avatar }} style={styles.influencerAvatar} />
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.influencerName}>{recipe.influencer.name}</Text>
             <Text style={styles.influencerHandle}>{recipe.influencer.handle}</Text>
           </View>
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={() => toggleFavorite(recipe)}
+          >
+            <Text style={[styles.favoriteIcon, isFavorite(recipe.id) && styles.favoriteIconActive]}>
+              {isFavorite(recipe.id) ? '♥' : '♡'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Servings Adjuster */}
@@ -385,6 +395,9 @@ const styles = StyleSheet.create({
   influencerAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
   influencerName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
   influencerHandle: { fontSize: 12, color: '#888' },
+  favoriteButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF5F0' },
+  favoriteIcon: { fontSize: 24, color: '#FFB39C' },
+  favoriteIconActive: { color: '#FF6B35' },
   servingsCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF', margin: 16, padding: 16, borderRadius: 16 },
   servingsLeft: {},
   servingsLabel: { fontSize: 12, color: '#888', marginBottom: 8 },

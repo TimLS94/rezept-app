@@ -10,8 +10,9 @@ import {
   Modal
 } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '../lib/supabase';
-import { FEATURES } from '../lib/features';
+import { supabase } from '../../lib/supabase';
+import { FEATURES } from '../../lib/features';
+import { useAuth, canUploadRecipes } from '../../lib/auth';
 
 type FamilyMember = {
   id: string;
@@ -55,6 +56,7 @@ const calculateBasePortion = (member: FamilyMember): number => {
 };
 
 export default function ProfileScreen() {
+  const { role } = useAuth();
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [showAddMember, setShowAddMember] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
@@ -285,9 +287,7 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <View style={styles.backButton} />
           <Text style={styles.headerTitle}>Family Profile</Text>
           <View style={{ width: 60 }} />
         </View>
@@ -401,17 +401,19 @@ export default function ProfileScreen() {
           <Text style={styles.settingsArrow}>→</Text>
         </TouchableOpacity>
 
-        {/* Creator */}
-        <TouchableOpacity style={styles.creatorCard} onPress={() => router.push('/creator/upload')}>
-          <View style={styles.creatorIcon}>
-            <Text style={styles.creatorIconText}>👨‍🍳</Text>
-          </View>
-          <View style={styles.creatorContent}>
-            <Text style={styles.creatorTitle}>Upload a Recipe</Text>
-            <Text style={styles.creatorSubtitle}>Share your recipe with the community</Text>
-          </View>
-          <Text style={styles.creatorArrow}>→</Text>
-        </TouchableOpacity>
+        {/* Creator — only visible to creator/admin accounts */}
+        {canUploadRecipes(role) && (
+          <TouchableOpacity style={styles.creatorCard} onPress={() => router.push('/creator/upload')}>
+            <View style={styles.creatorIcon}>
+              <Text style={styles.creatorIconText}>👨‍🍳</Text>
+            </View>
+            <View style={styles.creatorContent}>
+              <Text style={styles.creatorTitle}>Upload a Recipe</Text>
+              <Text style={styles.creatorSubtitle}>Share your recipe with the community</Text>
+            </View>
+            <Text style={styles.creatorArrow}>→</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

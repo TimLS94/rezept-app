@@ -127,12 +127,7 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
 
   if (error || !data) return { error: error?.message || 'insert-failed' };
 
-  // Promote a plain user to the creator role (don't demote admins).
-  await supabase
-    .from('profiles')
-    .update({ role: 'creator', is_creator: true })
-    .eq('id', user.id)
-    .eq('role', 'user');
-
+  // Note: uploading no longer promotes a user to 'creator'. The creator role is
+  // assigned deliberately (by an admin), so uploads stay gated to real creators.
   return { id: data.id };
 }

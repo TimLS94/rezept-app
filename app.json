@@ -7,14 +7,46 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.feedfamily.app",
+      "associatedDomains": ["applinks:feedfamily.app"],
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": ["instagram", "instagram-stories"]
+      }
     },
     "android": {
+      "package": "com.feedfamily.app",
       "adaptiveIcon": {
         "backgroundColor": "#FF6B35",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
-      }
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "*.instagram.com",
+              "pathPrefix": "/reel"
+            },
+            {
+              "scheme": "https",
+              "host": "*.instagram.com",
+              "pathPrefix": "/p"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [
+            { "mimeType": "text/plain" }
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -26,7 +58,8 @@
         {
           "photosPermission": "Allow FeedFamily to access your photos to upload recipe and profile images."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "scheme": "feedfamily",
     "newArchEnabled": true

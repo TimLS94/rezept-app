@@ -15,16 +15,25 @@ import {
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 
-export default function LoginScreen() {
+export default function InfluencerLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Passwordless email-code mode (more robust on mobile than a magic-link deep link).
   const [mode, setMode] = useState<'password' | 'code'>('password');
   const [otpSent, setOtpSent] = useState(false);
   const [code, setCode] = useState('');
+
+  const promoteToCreator = async (userId: string) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: 'creator' })
+      .eq('id', userId);
+    if (error) {
+      console.warn('Could not set creator role:', error.message);
+    }
+  };
 
   const handleAuth = async () => {
     if (!email || !password) {
@@ -36,17 +45,19 @@ export default function LoginScreen() {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        if (data.user) await promoteToCreator(data.user.id);
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
+        if (data.user) await promoteToCreator(data.user.id);
         Alert.alert('Success', 'Check your email for verification link!');
         return;
       }
@@ -83,20 +94,15 @@ export default function LoginScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
-    setLoading(false);
+    const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
     if (error) {
+      setLoading(false);
       Alert.alert('Error', error.message);
       return;
     }
+    if (data.user) await promoteToCreator(data.user.id);
+    setLoading(false);
     router.replace('/home');
-  };
-
-  const socialNotReady = () => {
-    Alert.alert(
-      'Coming soon',
-      'Sign in with Apple and Google need provider setup and a dev build. Use email for now.'
-    );
   };
 
   return (
@@ -108,28 +114,29 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Image */}
+        {/* Hero Image - Creator themed */}
         <View style={styles.heroContainer}>
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=800' }}
+            source={{ uri: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800' }}
             style={styles.heroImage}
           />
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
+            <Text style={styles.badge}>👨‍🍳 CREATOR</Text>
             <Text style={styles.logo}>FeedFamily</Text>
-            <Text style={styles.tagline}>What's the best way to feed{'\n'}your family tonight?</Text>
+            <Text style={styles.tagline}>Share your recipes{'\n'}with thousands of families</Text>
           </View>
         </View>
 
         {/* Auth Form */}
         <View style={styles.formContainer}>
           <Text style={styles.formTitle}>
-            {isLogin ? 'Welcome Back!' : 'Create Account'}
+            {isLogin ? 'Creator Login' : 'Become a Creator'}
           </Text>
           <Text style={styles.formSubtitle}>
             {isLogin 
-              ? 'Sign in to discover family-friendly meals' 
-              : 'Join thousands of happy families'}
+              ? 'Sign in to manage and upload your recipes' 
+              : 'Join our community of food creators'}
           </Text>
 
           <View style={styles.inputContainer}>
@@ -175,7 +182,7 @@ export default function LoginScreen() {
                   <ActivityIndicator color="#FFF" />
                 ) : (
                   <Text style={styles.primaryButtonText}>
-                    {isLogin ? 'Sign In' : 'Create Account'}
+                    {isLogin ? 'Sign In as Creator' : 'Create Creator Account'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -220,28 +227,13 @@ export default function LoginScreen() {
             </>
           )}
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.socialButtons}>
-            <TouchableOpacity style={styles.socialButton} onPress={socialNotReady}>
-              <Text style={styles.socialButtonText}>Google</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={socialNotReady}>
-              <Text style={styles.socialButtonText}>Apple</Text>
-            </TouchableOpacity>
-          </View>
-
           {mode === 'password' && (
             <TouchableOpacity
               style={styles.switchAuth}
               onPress={() => setIsLogin(!isLogin)}
             >
               <Text style={styles.switchAuthText}>
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                {isLogin ? "Don't have a creator account? " : "Already a creator? "}
                 <Text style={styles.switchAuthLink}>
                   {isLogin ? 'Sign Up' : 'Sign In'}
                 </Text>
@@ -249,14 +241,26 @@ export default function LoginScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Continue as guest */}
-          <TouchableOpacity style={styles.guestLink} onPress={() => router.replace('/home')}>
-            <Text style={styles.guestLinkText}>Continue browsing as guest</Text>
-          </TouchableOpacity>
+          {/* Perks section */}
+          <View style={styles.perksContainer}>
+            <Text style={styles.perksTitle}>Creator Benefits</Text>
+            <View style={styles.perkItem}>
+              <Text style={styles.perkIcon}>📤</Text>
+              <Text style={styles.perkText}>Upload unlimited recipes</Text>
+            </View>
+            <View style={styles.perkItem}>
+              <Text style={styles.perkIcon}>📊</Text>
+              <Text style={styles.perkText}>See how many families cook your dishes</Text>
+            </View>
+            <View style={styles.perkItem}>
+              <Text style={styles.perkIcon}>⭐</Text>
+              <Text style={styles.perkText}>Build your creator profile</Text>
+            </View>
+          </View>
 
-          {/* Creator login */}
-          <TouchableOpacity style={styles.creatorLink} onPress={() => router.push('/influencer-login')}>
-            <Text style={styles.creatorLinkText}>👨‍🍳 Are you a creator? Sign in here</Text>
+          {/* Back to regular login */}
+          <TouchableOpacity style={styles.guestLink} onPress={() => router.back()}>
+            <Text style={styles.guestLinkText}>← Back to regular login</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -282,13 +286,25 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(139, 69, 19, 0.5)',
   },
   heroContent: {
     position: 'absolute',
     bottom: 30,
     left: 24,
     right: 24,
+  },
+  badge: {
+    backgroundColor: '#FFD700',
+    color: '#1A1A1A',
+    fontSize: 12,
+    fontWeight: '800',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+    overflow: 'hidden',
   },
   logo: {
     fontSize: 36,
@@ -343,11 +359,11 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: '#FF6B35',
+    color: '#8B4513',
     fontWeight: '600',
   },
   primaryButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#8B4513',
     borderRadius: 14,
     padding: 18,
     alignItems: 'center',
@@ -361,70 +377,51 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E0E0E0',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#999',
-    fontSize: 14,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 32,
-  },
-  socialButton: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginHorizontal: 6,
-  },
-  socialButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
   switchAuth: {
     alignItems: 'center',
+    marginBottom: 32,
   },
   switchAuthText: {
     fontSize: 15,
     color: '#666',
   },
   switchAuthLink: {
-    color: '#FF6B35',
+    color: '#8B4513',
     fontWeight: '600',
+  },
+  perksContainer: {
+    backgroundColor: '#FFF8F0',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+  },
+  perksTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 16,
+  },
+  perkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  perkIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  perkText: {
+    fontSize: 14,
+    color: '#333',
   },
   guestLink: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 8,
     paddingVertical: 8,
   },
   guestLinkText: {
     fontSize: 15,
     color: '#999',
-    fontWeight: '600',
-  },
-  creatorLink: {
-    alignItems: 'center',
-    marginTop: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFF8F0',
-    borderRadius: 12,
-  },
-  creatorLinkText: {
-    fontSize: 15,
-    color: '#8B4513',
     fontWeight: '600',
   },
 });

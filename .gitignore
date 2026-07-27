@@ -7,6 +7,9 @@ node_modules/
 .expo/
 .env
 dist/
+
+# Supabase CLI local state
+supabase/.temp/
 web-build/
 expo-env.d.ts
 

@@ -9,9 +9,9 @@ import {
   Dimensions
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { RECIPES, getRecipesByCategory } from '../data/recipes';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../lib/auth';
+import { RECIPES, getRecipesByCategory } from '../../data/recipes';
+import { supabase } from '../../lib/supabase';
+import { useAuth, canUploadRecipes } from '../../lib/auth';
 
 const { width } = Dimensions.get('window');
 
@@ -27,7 +27,7 @@ const categories = [
 ];
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [activeCategory, setActiveCategory] = useState<string>('kids');
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
 
@@ -137,10 +137,36 @@ export default function HomeScreen() {
           </View>
           <View style={styles.discoverContent}>
             <Text style={styles.discoverTitle}>Discover Recipes</Text>
-            <Text style={styles.discoverSubtitle}>Swipe to find your next meal</Text>
+            <Text style={styles.discoverSubtitle}>Swipe to save your favorites</Text>
           </View>
           <Text style={styles.discoverArrow}>→</Text>
         </TouchableOpacity>
+
+        {/* Favorites Card */}
+        <TouchableOpacity style={styles.favoritesCard} onPress={() => router.push('/favorites')}>
+          <View style={styles.discoverIcon}>
+            <Text style={styles.discoverIconText}>❤️</Text>
+          </View>
+          <View style={styles.discoverContent}>
+            <Text style={styles.discoverTitle}>Favorites</Text>
+            <Text style={styles.favoritesSubtitle}>Your saved recipes → add to plan or cart</Text>
+          </View>
+          <Text style={styles.favoritesArrow}>→</Text>
+        </TouchableOpacity>
+
+        {/* My Cookbook Card — recipe creation is creator-only for now */}
+        {canUploadRecipes(role) && (
+          <TouchableOpacity style={styles.cookbookCard} onPress={() => router.push('/cookbook')}>
+            <View style={styles.cookbookIcon}>
+              <Text style={styles.cookbookIconText}>📚</Text>
+            </View>
+            <View style={styles.cookbookContent}>
+              <Text style={styles.cookbookTitle}>My Cookbook</Text>
+              <Text style={styles.cookbookSubtitle}>Import from Instagram • Your own recipes</Text>
+            </View>
+            <Text style={styles.cookbookArrow}>→</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Meal Planner Card */}
         <TouchableOpacity style={styles.mealPlannerCard} onPress={() => router.push('/budget')}>
@@ -453,6 +479,25 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#FF6B35',
   },
+  favoritesCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FFE0D0',
+  },
+  favoritesSubtitle: {
+    fontSize: 13,
+    color: '#888',
+  },
+  favoritesArrow: {
+    fontSize: 20,
+    color: '#FF6B35',
+  },
   mealPlannerCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -617,5 +662,43 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 40,
+  },
+  cookbookCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3E5F5',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 16,
+  },
+  cookbookIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  cookbookIconText: {
+    fontSize: 24,
+  },
+  cookbookContent: {
+    flex: 1,
+  },
+  cookbookTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
+  cookbookSubtitle: {
+    fontSize: 13,
+    color: '#7B1FA2',
+  },
+  cookbookArrow: {
+    fontSize: 20,
+    color: '#7B1FA2',
   },
 });

@@ -10,8 +10,8 @@ import {
   Image
 } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '../lib/supabase';
-import { getRecipeById } from '../data/recipes';
+import { supabase } from '../../lib/supabase';
+import { getRecipeById } from '../../data/recipes';
 
 type ShoppingItem = {
   id: string;
@@ -184,9 +184,7 @@ export default function ShoppingScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
+        <View style={styles.backButton} />
         <Text style={styles.headerTitle}>Shopping List</Text>
         <TouchableOpacity onPress={clearChecked}>
           <Text style={styles.clearText}>Clear ✓</Text>

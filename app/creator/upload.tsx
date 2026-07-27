@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import { DIETARY_TAGS, DietaryTag, Ingredient } from '../../data/recipes';
 import { createRecipe } from '../../lib/recipes';
 import { pickAndUploadImage } from '../../lib/storage';
+import { useAuth, canUploadRecipes } from '../../lib/auth';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
@@ -32,6 +33,7 @@ type IngredientDraft = { name: string; amount: string; unit: string; category: I
 const emptyIngredient = (): IngredientDraft => ({ name: '', amount: '', unit: '', category: 'other' });
 
 export default function UploadRecipeScreen() {
+  const { role } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
@@ -125,6 +127,29 @@ export default function UploadRecipeScreen() {
     ]);
   };
 
+  // Uploads are limited to creator/admin accounts (see FEATURES.publicRecipeUploads).
+  if (!canUploadRecipes(role)) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>New Recipe</Text>
+          <View style={{ width: 60 }} />
+        </View>
+        <View style={styles.blockedState}>
+          <Text style={styles.blockedIcon}>👨‍🍳</Text>
+          <Text style={styles.blockedTitle}>Creators only</Text>
+          <Text style={styles.blockedText}>
+            Recipe uploads are open to creator accounts for now. Want to become a
+            creator? Get in touch and we'll set you up.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -137,6 +162,15 @@ export default function UploadRecipeScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {/* Import from Instagram */}
+        <TouchableOpacity style={styles.importBanner} onPress={() => router.push('/creator/import')}>
+          <Text style={styles.importIcon}>📱</Text>
+          <View style={styles.importText}>
+            <Text style={styles.importTitle}>Import from Instagram</Text>
+            <Text style={styles.importSubtitle}>Paste a link and let AI extract the recipe</Text>
+          </View>
+          <Text style={styles.importArrow}>→</Text>
+        </TouchableOpacity>
         {/* Image preview + URL */}
         {image.trim() ? (
           <Image source={{ uri: image.trim() }} style={styles.preview} />
@@ -353,6 +387,10 @@ const styles = StyleSheet.create({
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+  blockedState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  blockedIcon: { fontSize: 64, marginBottom: 16 },
+  blockedTitle: { fontSize: 22, fontWeight: '700', color: '#1A1A1A' },
+  blockedText: { fontSize: 15, color: '#888', textAlign: 'center', marginTop: 10, lineHeight: 22 },
   preview: { width: '100%', height: 180, backgroundColor: '#EEE' },
   previewEmpty: { justifyContent: 'center', alignItems: 'center' },
   previewEmptyText: { fontSize: 16, color: '#AAA' },
@@ -395,4 +433,21 @@ const styles = StyleSheet.create({
   bottomAction: { padding: 16, paddingBottom: 32, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
   publishButton: { backgroundColor: '#FF6B35', padding: 18, borderRadius: 14, alignItems: 'center' },
   publishButtonText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
+  importBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F0',
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FFE0D0',
+  },
+  importIcon: { fontSize: 28, marginRight: 12 },
+  importText: { flex: 1 },
+  importTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
+  importSubtitle: { fontSize: 13, color: '#888', marginTop: 2 },
+  importArrow: { fontSize: 20, color: '#FF6B35', fontWeight: '600' },
 });
