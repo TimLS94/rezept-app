@@ -15,6 +15,7 @@ begin;
 create extension if not exists "uuid-ossp";
 
 -- ── 1. Drop app tables (CASCADE clears FKs, policies, indexes) ──────────────
+drop table if exists public.creator_subscribers cascade;
 drop table if exists public.meal_plan_items   cascade;
 drop table if exists public.favorite_recipes  cascade;
 drop table if exists public.favorites         cascade;  -- legacy, replaced by favorite_recipes
@@ -32,13 +33,14 @@ create table public.profiles (
   avatar_url    text,
   family_size   integer default 2,
   weekly_budget decimal default 150,
-  is_creator    boolean default false,
   username      text,
   bio           text,
   instagram_url text,
   tiktok_url    text,
   website       text,
   role          text not null default 'user' check (role in ('user', 'creator', 'admin')),
+  -- Derived from role so `is_creator` queries always match creators/admins.
+  is_creator    boolean generated always as (role in ('creator', 'admin')) stored,
   is_premium    boolean not null default false,
   premium_until timestamptz,
   created_at    timestamptz default timezone('utc'::text, now()) not null,
@@ -47,6 +49,9 @@ create table public.profiles (
 alter table public.profiles enable row level security;
 create policy "Users can view their own profile" on public.profiles
   for select using (auth.uid() = id);
+-- Creator profiles are public (needed for search + public creator pages).
+create policy "Anyone can view creator profiles" on public.profiles
+  for select using (is_creator = true);
 create policy "Users can insert their own profile" on public.profiles
   for insert with check (auth.uid() = id);
 create policy "Users can update their own profile" on public.profiles
@@ -64,6 +69,7 @@ create table public.recipes (
   difficulty        text check (difficulty in ('Easy', 'Medium', 'Hard')),
   calories          integer,
   cost              decimal default 0,
+  is_paid           boolean default false,  -- paywall: premium-only content
   kid_approved      boolean default false,
   tags              text[],
   ingredients       jsonb,
@@ -200,7 +206,22 @@ create policy "Users update own plan" on public.meal_plan_items
 create policy "Users remove own plan" on public.meal_plan_items
   for delete using (auth.uid() = user_id);
 
--- ── 9. auto-create a profile row on signup ─────────────────────────────────
+-- ── 9. creator_subscribers (who follows which creator) ─────────────────────
+create table public.creator_subscribers (
+  creator_id    uuid references public.profiles(id) on delete cascade not null,
+  subscriber_id uuid references public.profiles(id) on delete cascade not null,
+  created_at    timestamptz default timezone('utc'::text, now()) not null,
+  primary key (creator_id, subscriber_id)
+);
+alter table public.creator_subscribers enable row level security;
+create policy "Anyone can view subscriber counts" on public.creator_subscribers
+  for select using (true);
+create policy "Users can subscribe" on public.creator_subscribers
+  for insert with check (auth.uid() = subscriber_id);
+create policy "Users can unsubscribe" on public.creator_subscribers
+  for delete using (auth.uid() = subscriber_id);
+
+-- ── 10. auto-create a profile row on signup ────────────────────────────────
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
@@ -216,7 +237,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- ── 10. backfill profiles for existing accounts + promote the test creator ──
+-- ── 11. backfill profiles for existing accounts + promote the test creator ──
 insert into public.profiles (id, email)
 select id, email from auth.users
 on conflict (id) do nothing;

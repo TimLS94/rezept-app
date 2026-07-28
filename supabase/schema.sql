@@ -18,13 +18,14 @@ create table if not exists public.profiles (
   avatar_url    text,
   family_size   integer default 2,
   weekly_budget decimal default 150,
-  is_creator    boolean default false,
   username      text,
   bio           text,
   instagram_url text,
   tiktok_url    text,
   website       text,
   role          text not null default 'user' check (role in ('user', 'creator', 'admin')),
+  -- Derived from role so `is_creator` queries always match creators/admins.
+  is_creator    boolean generated always as (role in ('creator', 'admin')) stored,
   is_premium    boolean not null default false,
   premium_until timestamptz,
   created_at    timestamptz default timezone('utc'::text, now()) not null,
@@ -34,6 +35,10 @@ alter table public.profiles enable row level security;
 drop policy if exists "Users can view their own profile" on public.profiles;
 create policy "Users can view their own profile" on public.profiles
   for select using (auth.uid() = id);
+-- Creator profiles are public (needed for search + public creator pages).
+drop policy if exists "Anyone can view creator profiles" on public.profiles;
+create policy "Anyone can view creator profiles" on public.profiles
+  for select using (is_creator = true);
 drop policy if exists "Users can insert their own profile" on public.profiles;
 create policy "Users can insert their own profile" on public.profiles
   for insert with check (auth.uid() = id);
@@ -53,6 +58,7 @@ create table if not exists public.recipes (
   difficulty        text check (difficulty in ('Easy', 'Medium', 'Hard')),
   calories          integer,
   cost              decimal default 0,
+  is_paid           boolean default false,  -- paywall: premium-only content
   kid_approved      boolean default false,
   tags              text[],
   ingredients       jsonb,
@@ -208,6 +214,24 @@ create policy "Users update own plan" on public.meal_plan_items
 drop policy if exists "Users remove own plan" on public.meal_plan_items;
 create policy "Users remove own plan" on public.meal_plan_items
   for delete using (auth.uid() = user_id);
+
+-- ── creator_subscribers (users subscribing to a creator) ───────────────────
+create table if not exists public.creator_subscribers (
+  creator_id    uuid references public.profiles(id) on delete cascade not null,
+  subscriber_id uuid references public.profiles(id) on delete cascade not null,
+  created_at    timestamptz default timezone('utc'::text, now()) not null,
+  primary key (creator_id, subscriber_id)
+);
+alter table public.creator_subscribers enable row level security;
+drop policy if exists "Anyone can view subscriptions" on public.creator_subscribers;
+create policy "Anyone can view subscriptions" on public.creator_subscribers
+  for select using (true);
+drop policy if exists "Users can subscribe" on public.creator_subscribers;
+create policy "Users can subscribe" on public.creator_subscribers
+  for insert with check (auth.uid() = subscriber_id);
+drop policy if exists "Users can unsubscribe" on public.creator_subscribers;
+create policy "Users can unsubscribe" on public.creator_subscribers
+  for delete using (auth.uid() = subscriber_id);
 
 -- ── auto-create a profile row on signup ────────────────────────────────────
 create or replace function public.handle_new_user()

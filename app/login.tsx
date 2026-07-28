@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -14,12 +14,24 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+
+WebBrowser.maybeCompleteAuthSession();
+import { useAuth, canUploadRecipes } from '../lib/auth';
 
 export default function LoginScreen() {
+  const { refresh } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  // Route by role after auth: creators go to their Studio, everyone else Home.
+  const landAfterAuth = async () => {
+    const role = await refresh();
+    router.replace(canUploadRecipes(role) ? '/creator' : '/home');
+  };
 
   // Passwordless email-code mode (more robust on mobile than a magic-link deep link).
   const [mode, setMode] = useState<'password' | 'code'>('password');
@@ -50,7 +62,7 @@ export default function LoginScreen() {
         Alert.alert('Success', 'Check your email for verification link!');
         return;
       }
-      router.replace('/home');
+      await landAfterAuth();
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -89,14 +101,45 @@ export default function LoginScreen() {
       Alert.alert('Error', error.message);
       return;
     }
-    router.replace('/home');
+    await landAfterAuth();
   };
 
-  const socialNotReady = () => {
-    Alert.alert(
-      'Coming soon',
-      'Sign in with Apple and Google need provider setup and a dev build. Use email for now.'
-    );
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const redirectUrl = AuthSession.makeRedirectUri({ native: 'feedfamily://' });
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        if (result.type === 'success' && result.url) {
+          const params = new URL(result.url).hash.substring(1);
+          const urlParams = new URLSearchParams(params);
+          const accessToken = urlParams.get('access_token');
+          const refreshToken = urlParams.get('refresh_token');
+          
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+            await landAfterAuth();
+          }
+        }
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Google sign in failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = () => {
+    Alert.alert('Coming soon', 'Apple Sign-In will be available in a future update.');
   };
 
   return (
@@ -227,11 +270,11 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.socialButtons}>
-            <TouchableOpacity style={styles.socialButton} onPress={socialNotReady}>
-              <Text style={styles.socialButtonText}>Google</Text>
+            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn}>
+              <Text style={styles.socialButtonText}>🔵 Google</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={socialNotReady}>
-              <Text style={styles.socialButtonText}>Apple</Text>
+            <TouchableOpacity style={styles.socialButton} onPress={handleAppleSignIn}>
+              <Text style={styles.socialButtonText}>🍎 Apple</Text>
             </TouchableOpacity>
           </View>
 

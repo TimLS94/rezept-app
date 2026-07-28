@@ -22,16 +22,14 @@ export default function TabsLayout() {
         tabBarStyle: { paddingTop: 4 },
       }}
     >
-      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tabIcon('🏠') }} />
-      <Tabs.Screen name="discover" options={{ title: 'Discover', tabBarIcon: tabIcon('🔥') }} />
-      <Tabs.Screen name="budget" options={{ title: 'Planner', tabBarIcon: tabIcon('📅') }} />
-      <Tabs.Screen name="shopping" options={{ title: 'Shopping', tabBarIcon: tabIcon('🛒') }} />
-      {/* Creator Studio — only shown for creator/admin accounts. `href: null`
-          hides the tab (and blocks the route) for everyone else. */}
-      <Tabs.Screen
-        name="creator"
-        options={{ title: 'Studio', tabBarIcon: tabIcon('🎬'), href: isCreator ? undefined : null }}
-      />
+      {/* Consumer tabs — hidden for creators, who only create & market.
+          `href: null` hides the tab and blocks the route. */}
+      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tabIcon('🏠'), href: isCreator ? null : undefined }} />
+      <Tabs.Screen name="discover" options={{ title: 'Discover', tabBarIcon: tabIcon('🔥'), href: isCreator ? null : undefined }} />
+      <Tabs.Screen name="budget" options={{ title: 'Planner', tabBarIcon: tabIcon('📅'), href: isCreator ? null : undefined }} />
+      <Tabs.Screen name="shopping" options={{ title: 'Shopping', tabBarIcon: tabIcon('🛒'), href: isCreator ? null : undefined }} />
+      {/* Creator Studio — only for creator/admin accounts. */}
+      <Tabs.Screen name="creator" options={{ title: 'Studio', tabBarIcon: tabIcon('🎬'), href: isCreator ? undefined : null }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: tabIcon('👤') }} />
     </Tabs>
   );

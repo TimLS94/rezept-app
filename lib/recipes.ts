@@ -6,6 +6,9 @@ const DEFAULT_AVATAR =
 
 // Map a Supabase `recipes` row into the app's Recipe shape.
 export function mapDbRecipe(row: any): Recipe {
+  // Handle joined profile data if available
+  const profile = row.profiles || {};
+  
   return {
     id: row.id,
     title: row.title,
@@ -21,12 +24,14 @@ export function mapDbRecipe(row: any): Recipe {
     dietary: (row.tags || []) as DietaryTag[],
     kidApproved: row.kid_approved || false,
     influencer: {
-      name: row.influencer_name || 'Creator',
-      handle: row.influencer_handle || '@creator',
-      avatar: row.influencer_avatar || DEFAULT_AVATAR,
+      id: row.influencer_id || profile.id || '',
+      name: profile.full_name || row.influencer_name || 'Creator',
+      handle: profile.username ? `@${profile.username}` : (row.influencer_handle || '@creator'),
+      avatar: profile.avatar_url || row.influencer_avatar || DEFAULT_AVATAR,
     },
     ingredients: Array.isArray(row.ingredients) ? row.ingredients : [],
     steps: Array.isArray(row.instructions) ? row.instructions : [],
+    isPaid: row.is_paid ?? false,
   };
 }
 
@@ -35,7 +40,7 @@ export function mapDbRecipe(row: any): Recipe {
 export async function fetchDbRecipes(): Promise<Recipe[]> {
   const { data, error } = await supabase
     .from('recipes')
-    .select('*')
+    .select('*, profiles:influencer_id(id, full_name, username, avatar_url)')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
   // Only surface uploads that actually carry ingredients (skips bare seed rows).
@@ -53,7 +58,7 @@ export async function fetchAllRecipes(): Promise<Recipe[]> {
 export async function fetchDbRecipeById(id: string): Promise<Recipe | undefined> {
   const { data, error } = await supabase
     .from('recipes')
-    .select('*')
+    .select('*, profiles:influencer_id(id, full_name, username, avatar_url)')
     .eq('id', id)
     .single();
   if (error || !data) return undefined;
@@ -83,6 +88,7 @@ export type NewRecipeInput = {
   dietary: DietaryTag[];
   ingredients: Ingredient[];
   steps: string[];
+  isPaid?: boolean;
 };
 
 type CreateResult = { id: string } | { error: string };
@@ -117,6 +123,7 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
       tags: input.dietary,
       ingredients: input.ingredients,
       instructions: input.steps,
+      is_paid: input.isPaid ?? false,
       influencer_id: user.id,
       influencer_name: profile?.full_name || 'Creator',
       influencer_handle: `@${handleBase}`,
@@ -130,4 +137,15 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
   // Note: uploading no longer promotes a user to 'creator'. The creator role is
   // assigned deliberately (by an admin), so uploads stay gated to real creators.
   return { id: data.id };
+}
+
+// Toggle a recipe's paywall flag. RLS ("Creators can update their own recipes")
+// restricts this to the recipe's author.
+export async function setRecipePaid(
+  id: string,
+  isPaid: boolean
+): Promise<{ ok: true } | { error: string }> {
+  const { error } = await supabase.from('recipes').update({ is_paid: isPaid }).eq('id', id);
+  if (error) return { error: error.message };
+  return { ok: true };
 }

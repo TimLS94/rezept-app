@@ -7,11 +7,12 @@ import {
   ScrollView,
   Image,
   Linking,
+  Alert,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { getCreatorProfile, CreatorProfile, emptyCreatorProfile } from '../../lib/creatorProfile';
-import { fetchRecipesByCreator } from '../../lib/recipes';
+import { fetchRecipesByCreator, setRecipePaid } from '../../lib/recipes';
 import { Recipe } from '../../data/recipes';
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200';
@@ -69,6 +70,17 @@ export default function CreatorStudioScreen() {
   const openLink = (url: string) => {
     const full = url.startsWith('http') ? url : `https://${url}`;
     Linking.openURL(full).catch(() => {});
+  };
+
+  // Flip a recipe between free and paywalled (optimistic, reverts on error).
+  const togglePaid = async (r: Recipe) => {
+    const next = !r.isPaid;
+    setRecipes(prev => prev.map(x => (x.id === r.id ? { ...x, isPaid: next } : x)));
+    const res = await setRecipePaid(r.id, next);
+    if ('error' in res) {
+      setRecipes(prev => prev.map(x => (x.id === r.id ? { ...x, isPaid: !next } : x)));
+      Alert.alert('Could not update', res.error);
+    }
   };
 
   return (
@@ -129,24 +141,37 @@ export default function CreatorStudioScreen() {
         {/* My recipes */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>My recipes ({recipes.length})</Text>
+          {recipes.length > 0 && (
+            <Text style={styles.sectionHint}>Tap 🔓/🔒 to set a recipe free or behind the paywall.</Text>
+          )}
           {recipes.length === 0 ? (
             <Text style={styles.emptyText}>No published recipes yet. Upload or import your first one above.</Text>
           ) : (
             recipes.map(r => (
-              <TouchableOpacity key={r.id} style={styles.recipeRow} onPress={() => router.push(`/recipe/${r.id}`)}>
-                <Image source={{ uri: r.image }} style={styles.recipeImage} />
-                <View style={styles.recipeBody}>
-                  <Text style={styles.recipeTitle} numberOfLines={1}>{r.title}</Text>
-                  <Text style={styles.recipeMeta}>{r.prepTime + r.cookTime} min · {r.calories} cal</Text>
-                  {r.dietary.length > 0 && (
-                    <View style={styles.tagRow}>
-                      {r.dietary.slice(0, 3).map(t => (
-                        <View key={t} style={styles.tag}><Text style={styles.tagText}>{t}</Text></View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
+              <View key={r.id} style={styles.recipeRow}>
+                <TouchableOpacity style={styles.recipeMain} onPress={() => router.push(`/recipe/${r.id}`)}>
+                  <Image source={{ uri: r.image }} style={styles.recipeImage} />
+                  <View style={styles.recipeBody}>
+                    <Text style={styles.recipeTitle} numberOfLines={1}>{r.title}</Text>
+                    <Text style={styles.recipeMeta}>{r.prepTime + r.cookTime} min · {r.calories} cal</Text>
+                    {r.dietary.length > 0 && (
+                      <View style={styles.tagRow}>
+                        {r.dietary.slice(0, 3).map(t => (
+                          <View key={t} style={styles.tag}><Text style={styles.tagText}>{t}</Text></View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.payToggle, r.isPaid && styles.payToggleOn]}
+                  onPress={() => togglePaid(r)}
+                >
+                  <Text style={[styles.payToggleText, r.isPaid && styles.payToggleTextOn]}>
+                    {r.isPaid ? '🔒 Paid' : '🔓 Free'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             ))
           )}
         </View>
@@ -190,11 +215,17 @@ const styles = StyleSheet.create({
   actionArrow: { fontSize: 20, color: '#FF6B35' },
 
   section: { marginTop: 24, marginHorizontal: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
+  sectionHint: { fontSize: 12, color: '#888', marginBottom: 12 },
   emptyText: { fontSize: 14, color: '#888', lineHeight: 20 },
-  recipeRow: { flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 14, marginBottom: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#F0F0F0' },
+  recipeRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 14, marginBottom: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#F0F0F0' },
+  recipeMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   recipeImage: { width: 84, height: 84 },
   recipeBody: { flex: 1, padding: 10, justifyContent: 'center' },
+  payToggle: { paddingHorizontal: 10, paddingVertical: 7, marginRight: 10, borderRadius: 10, borderWidth: 1, borderColor: '#C8E6C9', backgroundColor: '#E8F5E9' },
+  payToggleOn: { borderColor: '#FFD3C2', backgroundColor: '#FFF0EA' },
+  payToggleText: { fontSize: 12, fontWeight: '700', color: '#2E7D32' },
+  payToggleTextOn: { color: '#FF6B35' },
   recipeTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   recipeMeta: { fontSize: 12, color: '#888', marginTop: 4 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },

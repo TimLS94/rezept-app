@@ -7,7 +7,11 @@ import {
   ScrollView,
   TextInput,
   Alert,
-  Image
+  Image,
+  Share,
+  Linking,
+  Platform,
+  ActionSheetIOS,
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -180,11 +184,95 @@ export default function ShoppingScreen() {
     return unit ? `${formatted} ${unit}` : formatted;
   };
 
+  // Generate shopping list text for sharing
+  const generateListText = (): string => {
+    const uncheckedItems = items.filter(i => !i.checked);
+    return uncheckedItems
+      .map(i => `• ${formatAmount(i.amount, i.unit)} ${i.name}`)
+      .join('\n');
+  };
+
+  // Export options
+  const showExportOptions = () => {
+    const uncheckedItems = items.filter(i => !i.checked);
+    if (uncheckedItems.length === 0) {
+      Alert.alert('Empty List', 'Add some items first');
+      return;
+    }
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', '🛒 Open in Instacart', '🏪 Open in Walmart', '📤 Share List', '📋 Copy to Clipboard'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) openInInstacart();
+          else if (buttonIndex === 2) openInWalmart();
+          else if (buttonIndex === 3) shareList();
+          else if (buttonIndex === 4) copyToClipboard();
+        }
+      );
+    } else {
+      Alert.alert('Export Shopping List', 'Choose where to send your list', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: '🛒 Instacart', onPress: openInInstacart },
+        { text: '🏪 Walmart', onPress: openInWalmart },
+        { text: '📤 Share', onPress: shareList },
+      ]);
+    }
+  };
+
+  const openInInstacart = async () => {
+    // Instacart search URL - opens app if installed, otherwise web
+    const uncheckedItems = items.filter(i => !i.checked);
+    const searchQuery = uncheckedItems.map(i => i.name).join(', ');
+    const instacartUrl = `https://www.instacart.com/store/search/${encodeURIComponent(searchQuery)}`;
+    
+    // Try to open Instacart app first
+    const instacartAppUrl = `instacart://search?query=${encodeURIComponent(searchQuery)}`;
+    const canOpenApp = await Linking.canOpenURL(instacartAppUrl);
+    
+    if (canOpenApp) {
+      await Linking.openURL(instacartAppUrl);
+    } else {
+      await Linking.openURL(instacartUrl);
+    }
+  };
+
+  const openInWalmart = async () => {
+    const uncheckedItems = items.filter(i => !i.checked);
+    const searchQuery = uncheckedItems.map(i => i.name).join(' ');
+    const walmartUrl = `https://www.walmart.com/search?q=${encodeURIComponent(searchQuery)}`;
+    await Linking.openURL(walmartUrl);
+  };
+
+  const shareList = async () => {
+    const listText = generateListText();
+    try {
+      await Share.share({
+        message: `🛒 Shopping List\n\n${listText}\n\nShared from FeedFamily`,
+      });
+    } catch (error) {
+      console.error('Share error:', error);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    const listText = generateListText();
+    // Use native clipboard via Linking workaround or alert
+    Alert.alert('Shopping List', listText, [
+      { text: 'OK' }
+    ]);
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.backButton} />
+        <TouchableOpacity onPress={showExportOptions} style={styles.exportButton}>
+          <Text style={styles.exportText}>📤 Export</Text>
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Shopping List</Text>
         <TouchableOpacity onPress={clearChecked}>
           <Text style={styles.clearText}>Clear ✓</Text>
@@ -367,8 +455,8 @@ export default function ShoppingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
-  backButton: { width: 70 },
-  backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  exportButton: { width: 70 },
+  exportText: { fontSize: 14, color: '#FF6B35', fontWeight: '600' },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   clearText: { fontSize: 14, color: '#888' },
   progressCard: { backgroundColor: '#FFF', marginHorizontal: 20, borderRadius: 16, padding: 16, marginBottom: 12 },

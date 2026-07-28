@@ -14,7 +14,9 @@ import { Recipe, DietaryTag, DIETARY_TAGS, filterRecipesByDietary } from '../../
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { FEATURES } from '../../lib/features';
 import { useMealPlan, PlannedMeal } from '../../lib/mealPlan';
+import { useFavorites } from '../../lib/favorites';
 import { WEEKDAYS, startOfWeek, addDays, weekKey, fmtDay } from '../../lib/week';
+import { Modal } from 'react-native';
 
 // Build a 7-day plan from the real recipe catalogue so every planned meal
 // carries ingredients that can flow into the shopping list.
@@ -30,27 +32,21 @@ const shuffled = (list: Recipe[]): Recipe[] =>
   [...list].sort(() => Math.random() - 0.5);
 
 export default function BudgetScreen() {
-  const { plansByWeek, setWeekPlan, updateWeekPlan, loaded } = useMealPlan();
+  const { plansByWeek, setWeekPlan, updateWeekPlan } = useMealPlan();
+  const { favorites } = useFavorites();
   const [weeklyBudget] = useState(150);
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [generating, setGenerating] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [showFavPicker, setShowFavPicker] = useState(false);
 
   const key = weekKey(weekStart);
   const mealPlan = plansByWeek[key] ?? [];
   const isThisWeek = key === weekKey(new Date());
 
-  // Seed the visible week with a starter plan if it has none yet. Weeks that
-  // swipe-discovery already filled are left untouched. Wait for the persisted
-  // plan to load first, otherwise a starter plan would clobber the saved one.
-  useEffect(() => {
-    if (!loaded) return;
-    if (!plansByWeek[key]) {
-      setWeekPlan(key, buildPlan(shuffled(filterRecipesByDietary(activeFilters))));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, loaded]);
+  // The planner starts empty — the user fills it via "Generate", "Add a meal",
+  // or the favorites picker. (No auto-seeding.)
 
   const goToWeek = (offset: number) => setWeekStart(startOfWeek(addDays(weekStart, offset * 7)));
   const goToToday = () => setWeekStart(startOfWeek(new Date()));
@@ -114,6 +110,15 @@ export default function BudgetScreen() {
       if (!pick) return plan;
       return [...plan, { id: `m${Date.now()}`, recipe: pick, done: false }];
     });
+  };
+
+  // Add a specific recipe from the user's favorites, skipping duplicates.
+  const addFromFavorite = (recipe: Recipe) => {
+    setPlan(plan =>
+      plan.some(m => m.recipe.id === recipe.id)
+        ? plan
+        : [...plan, { id: `m${Date.now()}-${recipe.id}`, recipe, done: false }]
+    );
   };
 
   const addWeekToShoppingList = async () => {
@@ -247,7 +252,7 @@ export default function BudgetScreen() {
 
           {mealPlan.length === 0 && (
             <Text style={styles.emptyPlanText}>
-              No recipes match these filters. Try removing one.
+              Your week is empty. Tap 🎲 Generate for a full plan, or add meals below.
             </Text>
           )}
 
@@ -295,11 +300,14 @@ export default function BudgetScreen() {
             </View>
           ))}
 
-          {mealPlan.length > 0 && (
-            <TouchableOpacity style={styles.addMealButton} onPress={addMeal}>
+          <View style={styles.addRow}>
+            <TouchableOpacity style={[styles.addMealButton, styles.addRowItem]} onPress={addMeal}>
               <Text style={styles.addMealButtonText}>+ Add a meal</Text>
             </TouchableOpacity>
-          )}
+            <TouchableOpacity style={[styles.addFavButton, styles.addRowItem]} onPress={() => setShowFavPicker(true)}>
+              <Text style={styles.addFavButtonText}>❤️ From favorites</Text>
+            </TouchableOpacity>
+          </View>
 
           {allDone && (
             <TouchableOpacity style={styles.nextWeekButton} onPress={() => goToWeek(1)}>
@@ -337,6 +345,47 @@ export default function BudgetScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Favorites picker — add saved recipes straight into the week */}
+      <Modal visible={showFavPicker} animationType="slide" transparent onRequestClose={() => setShowFavPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add from favorites</Text>
+              <TouchableOpacity onPress={() => setShowFavPicker(false)}>
+                <Text style={styles.modalClose}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            {favorites.length === 0 ? (
+              <Text style={styles.modalEmpty}>No favorites yet. Swipe right in Discover to save recipes here.</Text>
+            ) : (
+              <ScrollView style={{ maxHeight: 440 }}>
+                {favorites.map(r => {
+                  const inPlan = mealPlan.some(m => m.recipe.id === r.id);
+                  return (
+                    <View key={r.id} style={styles.favRow}>
+                      <Image source={{ uri: r.image }} style={styles.favImage} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.favTitle} numberOfLines={1}>{r.title}</Text>
+                        <Text style={styles.favMeta}>{r.prepTime + r.cookTime} min · {r.calories} cal</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.favAdd, inPlan && styles.favAddDone]}
+                        onPress={() => addFromFavorite(r)}
+                        disabled={inPlan}
+                      >
+                        <Text style={[styles.favAddText, inPlan && styles.favAddDoneText]}>
+                          {inPlan ? '✓ Added' : '+ Add'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -626,6 +675,8 @@ const styles = StyleSheet.create({
     color: '#E53935',
     fontWeight: '700',
   },
+  addRow: { flexDirection: 'row', gap: 10 },
+  addRowItem: { flex: 1 },
   addMealButton: {
     padding: 14,
     borderRadius: 12,
@@ -634,6 +685,29 @@ const styles = StyleSheet.create({
     borderColor: '#EEE',
     borderStyle: 'dashed',
   },
+  addFavButton: {
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#FFF0EA',
+    borderWidth: 1,
+    borderColor: '#FFD3C2',
+  },
+  addFavButtonText: { fontSize: 14, fontWeight: '700', color: '#FF6B35' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: '#FFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  modalClose: { fontSize: 16, fontWeight: '700', color: '#FF6B35' },
+  modalEmpty: { fontSize: 14, color: '#888', textAlign: 'center', paddingVertical: 30, lineHeight: 20 },
+  favRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
+  favImage: { width: 56, height: 56, borderRadius: 10 },
+  favTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
+  favMeta: { fontSize: 12, color: '#888', marginTop: 2 },
+  favAdd: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: '#FF6B35' },
+  favAddDone: { backgroundColor: '#E8F5E9' },
+  favAddText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+  favAddDoneText: { color: '#2E7D32' },
   addMealButtonText: {
     fontSize: 14,
     color: '#FF6B35',

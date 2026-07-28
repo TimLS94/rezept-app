@@ -8,6 +8,8 @@
     "@supabase/supabase-js": "^2.110.6",
     "base64-arraybuffer": "^1.0.2",
     "expo": "~54.0.0",
+    "expo-auth-session": "~7.0.11",
+    "expo-crypto": "~15.0.9",
     "expo-file-system": "~19.0.23",
     "expo-image-picker": "~17.0.11",
     "expo-linking": "~8.0.12",
@@ -15,6 +17,7 @@
     "expo-secure-store": "~15.0.8",
     "expo-sharing": "~14.0.8",
     "expo-status-bar": "~3.0.9",
+    "expo-web-browser": "~15.0.11",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "^0.81.5",
@@ -30,7 +33,11 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "db:push": "npx supabase db push",
+    "db:migrate": "npx supabase migration up",
+    "db:status": "npx supabase migration list",
+    "db:link": "npx supabase link --project-ref lcjnrpakgyxlagbdigmz"
   },
   "private": true
 }

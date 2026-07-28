@@ -14,12 +14,20 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { useAuth, canUploadRecipes } from '../lib/auth';
 
 export default function InfluencerLoginScreen() {
+  const { refresh } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  // After promotion, creators land in their Studio.
+  const landAfterAuth = async () => {
+    const role = await refresh();
+    router.replace(canUploadRecipes(role) ? '/creator' : '/home');
+  };
 
   const [mode, setMode] = useState<'password' | 'code'>('password');
   const [otpSent, setOtpSent] = useState(false);
@@ -61,7 +69,7 @@ export default function InfluencerLoginScreen() {
         Alert.alert('Success', 'Check your email for verification link!');
         return;
       }
-      router.replace('/home');
+      await landAfterAuth();
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -102,7 +110,7 @@ export default function InfluencerLoginScreen() {
     }
     if (data.user) await promoteToCreator(data.user.id);
     setLoading(false);
-    router.replace('/home');
+    await landAfterAuth();
   };
 
   return (

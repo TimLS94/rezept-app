@@ -7,12 +7,14 @@ import {
   ScrollView,
   TextInput,
   Alert,
-  Modal
+  Modal,
+  Image
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
+import { Recipe } from '../../data/recipes';
 
 type FamilyMember = {
   id: string;
@@ -55,15 +57,35 @@ const calculateBasePortion = (member: FamilyMember): number => {
   return (bmr * 1.5) / 2000;
 };
 
+type CreatorRecipe = {
+  id: string;
+  title: string;
+  image: string;
+  category: string;
+  is_paid: boolean;
+};
+
 export default function ProfileScreen() {
   const { role } = useAuth();
+  const isCreator = canUploadRecipes(role);
+  
+  // Shared state
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Creator state
+  const [bio, setBio] = useState('');
+  const [username, setUsername] = useState('');
+  const [subscriberCount, setSubscriberCount] = useState(0);
+  const [creatorRecipes, setCreatorRecipes] = useState<CreatorRecipe[]>([]);
+  const [editingBio, setEditingBio] = useState(false);
+  
+  // User state (family members)
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [showAddMember, setShowAddMember] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [weeklyBudget, setWeeklyBudget] = useState('150');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -75,7 +97,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     loadProfile();
-  }, []);
+  }, [role]); // Re-load when role changes
 
   const loadProfile = async () => {
     try {
@@ -84,37 +106,81 @@ export default function ProfileScreen() {
       
       setUserId(user.id);
 
-      const { data: members } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('profile_id', user.id);
-
-      if (members) {
-        setFamilyMembers(members.map(m => ({
-          id: m.id,
-          name: m.name,
-          age: m.age?.toString() || '',
-          gender: m.gender || 'male',
-          weight: m.weight?.toString() || '',
-          portionMultiplier: m.portion_multiplier || 1.0,
-          dietaryRestrictions: m.dietary_restrictions || [],
-        })));
-      }
-
+      // Load profile data (bio, username for creators)
       const { data: profile } = await supabase
         .from('profiles')
-        .select('weekly_budget')
+        .select('weekly_budget, bio, username')
         .eq('id', user.id)
         .single();
 
-      if (profile?.weekly_budget) {
-        setWeeklyBudget(profile.weekly_budget.toString());
+      if (profile) {
+        if (profile.weekly_budget) setWeeklyBudget(profile.weekly_budget.toString());
+        if (profile.bio) setBio(profile.bio);
+        if (profile.username) setUsername(profile.username);
+      }
+
+      if (isCreator) {
+        // Load creator's recipes
+        const { data: recipes, error: recipesError } = await supabase
+          .from('recipes')
+          .select('id, title, image_url, is_paid, tags')
+          .eq('influencer_id', user.id)
+          .order('created_at', { ascending: false });
+
+        console.log('Creator recipes:', recipes, 'Error:', recipesError);
+
+        if (recipes) {
+          setCreatorRecipes(recipes.map(r => ({
+            id: r.id,
+            title: r.title,
+            image: r.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400',
+            category: (r.tags && r.tags[0]) || 'Recipe',
+            is_paid: r.is_paid || false,
+          })));
+        }
+
+        // Load subscriber count
+        const { count } = await supabase
+          .from('creator_subscribers')
+          .select('*', { count: 'exact', head: true })
+          .eq('creator_id', user.id);
+
+        setSubscriberCount(count || 0);
+      } else {
+        // Load family members for regular users
+        const { data: members } = await supabase
+          .from('family_members')
+          .select('*')
+          .eq('profile_id', user.id);
+
+        if (members) {
+          setFamilyMembers(members.map(m => ({
+            id: m.id,
+            name: m.name,
+            age: m.age?.toString() || '',
+            gender: m.gender || 'male',
+            weight: m.weight?.toString() || '',
+            portionMultiplier: m.portion_multiplier || 1.0,
+            dietaryRestrictions: m.dietary_restrictions || [],
+          })));
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveBio = async () => {
+    if (!userId) return;
+    setSaving(true);
+    await supabase
+      .from('profiles')
+      .update({ bio })
+      .eq('id', userId);
+    setSaving(false);
+    setEditingBio(false);
   };
 
   const saveBudget = async (budget: string) => {
@@ -282,112 +348,227 @@ export default function ProfileScreen() {
     router.replace('/login');
   };
 
+  // Get unique categories from creator's recipes
+  const getCategories = () => {
+    const cats = [...new Set(creatorRecipes.map(r => r.category))];
+    return cats.slice(0, 5);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.backButton} />
-          <Text style={styles.headerTitle}>Family Profile</Text>
+          <Text style={styles.headerTitle}>{isCreator ? 'Creator Profile' : 'Family Profile'}</Text>
           <View style={{ width: 60 }} />
         </View>
 
-        {/* Stats */}
-        <View style={styles.statsCard}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{familyMembers.length}</Text>
-            <Text style={styles.statLabel}>Members</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{getTotalPortions().toFixed(1)}x</Text>
-            <Text style={styles.statLabel}>Portions</Text>
-          </View>
-          {FEATURES.budget && (
-            <>
+        {isCreator ? (
+          <>
+            {/* Creator Stats */}
+            <View style={styles.statsCard}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{creatorRecipes.length}</Text>
+                <Text style={styles.statLabel}>Recipes</Text>
+              </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>${weeklyBudget}</Text>
-                <Text style={styles.statLabel}>Weekly</Text>
+                <Text style={styles.statNumber}>{subscriberCount}</Text>
+                <Text style={styles.statLabel}>Subscribers</Text>
               </View>
-            </>
-          )}
-        </View>
-
-        {/* Budget — roadmap V2, hidden behind the budget feature flag */}
-        {FEATURES.budget && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Weekly Food Budget</Text>
-            <View style={styles.budgetInput}>
-              <Text style={styles.dollarSign}>$</Text>
-              <TextInput
-                style={styles.budgetTextInput}
-                value={weeklyBudget}
-                onChangeText={saveBudget}
-                keyboardType="numeric"
-                placeholder="150"
-              />
-              <Text style={styles.perWeek}>/ week</Text>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{creatorRecipes.filter(r => r.is_paid).length}</Text>
+                <Text style={styles.statLabel}>Premium</Text>
+              </View>
             </View>
-          </View>
-        )}
 
-        {/* Family Members */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Family Members</Text>
-            <TouchableOpacity style={styles.addButton} onPress={() => setShowAddMember(true)}>
-              <Text style={styles.addButtonText}>+ Add</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Bio Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Bio</Text>
+                <TouchableOpacity onPress={() => setEditingBio(!editingBio)}>
+                  <Text style={styles.editLink}>{editingBio ? 'Cancel' : 'Edit'}</Text>
+                </TouchableOpacity>
+              </View>
+              {editingBio ? (
+                <View>
+                  <TextInput
+                    style={styles.bioInput}
+                    value={bio}
+                    onChangeText={setBio}
+                    placeholder="Tell your followers about yourself..."
+                    multiline
+                    numberOfLines={4}
+                  />
+                  <TouchableOpacity style={styles.saveBioButton} onPress={saveBio} disabled={saving}>
+                    <Text style={styles.saveBioButtonText}>{saving ? 'Saving...' : 'Save Bio'}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={styles.bioText}>{bio || 'No bio yet. Tap Edit to add one!'}</Text>
+              )}
+            </View>
 
-          {/* Quick Add */}
-          <View style={styles.quickAddContainer}>
-            <Text style={styles.quickAddLabel}>Quick Add:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {QUICK_ADD_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.label}
-                  style={styles.quickAddButton}
-                  onPress={() => quickAddMember(option)}
-                  disabled={saving}
+            {/* Categories */}
+            {getCategories().length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Categories</Text>
+                <View style={styles.categoriesRow}>
+                  {getCategories().map((cat) => (
+                    <View key={cat} style={styles.categoryChip}>
+                      <Text style={styles.categoryChipText}>{cat}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Action Buttons */}
+            <View style={styles.creatorActions}>
+              <TouchableOpacity style={styles.creatorActionButton} onPress={() => router.push('/creator/upload')}>
+                <Text style={styles.creatorActionIcon}>✏️</Text>
+                <Text style={styles.creatorActionText}>New Recipe</Text>
+                <Text style={styles.creatorActionHint}>Create manually</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.creatorActionButton} onPress={() => router.push('/creator/import')}>
+                <Text style={styles.creatorActionIcon}>📸</Text>
+                <Text style={styles.creatorActionText}>Import</Text>
+                <Text style={styles.creatorActionHint}>Photo → AI → Recipe</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* My Recipes */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>My Recipes</Text>
+              {creatorRecipes.length === 0 ? (
+                <View style={styles.emptyRecipes}>
+                  <Text style={styles.emptyRecipesText}>No recipes yet</Text>
+                  <Text style={styles.emptyRecipesHint}>Create your first recipe or import one from a photo</Text>
+                </View>
+              ) : (
+                <View style={styles.recipesGrid}>
+                  {creatorRecipes.map((recipe) => (
+                    <TouchableOpacity 
+                      key={recipe.id} 
+                      style={styles.recipeCard}
+                      onPress={() => router.push(`/recipe/${recipe.id}`)}
+                    >
+                      <Image source={{ uri: recipe.image }} style={styles.recipeImage} />
+                      {recipe.is_paid && (
+                        <View style={styles.premiumBadge}>
+                          <Text style={styles.premiumBadgeText}>💎</Text>
+                        </View>
+                      )}
+                      <Text style={styles.recipeTitle} numberOfLines={2}>{recipe.title}</Text>
+                      <Text style={styles.recipeCategory}>{recipe.category}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          </>
+        ) : (
+          <>
+            {/* User Stats */}
+            <View style={styles.statsCard}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{familyMembers.length}</Text>
+                <Text style={styles.statLabel}>Members</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{getTotalPortions().toFixed(1)}x</Text>
+                <Text style={styles.statLabel}>Portions</Text>
+              </View>
+              {FEATURES.budget && (
+                <>
+                  <View style={styles.statDivider} />
+                  <View style={styles.statItem}>
+                    <Text style={styles.statNumber}>${weeklyBudget}</Text>
+                    <Text style={styles.statLabel}>Weekly</Text>
+                  </View>
+                </>
+              )}
+            </View>
+
+            {/* Budget — roadmap V2, hidden behind the budget feature flag */}
+            {FEATURES.budget && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Weekly Food Budget</Text>
+                <View style={styles.budgetInput}>
+                  <Text style={styles.dollarSign}>$</Text>
+                  <TextInput
+                    style={styles.budgetTextInput}
+                    value={weeklyBudget}
+                    onChangeText={saveBudget}
+                    keyboardType="numeric"
+                    placeholder="150"
+                  />
+                  <Text style={styles.perWeek}>/ week</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Family Members */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Family Members</Text>
+                <TouchableOpacity style={styles.addButton} onPress={() => setShowAddMember(true)}>
+                  <Text style={styles.addButtonText}>+ Add</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Quick Add */}
+              <View style={styles.quickAddContainer}>
+                <Text style={styles.quickAddLabel}>Quick Add:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {QUICK_ADD_OPTIONS.map((option) => (
+                    <TouchableOpacity
+                      key={option.label}
+                      style={styles.quickAddButton}
+                      onPress={() => quickAddMember(option)}
+                      disabled={saving}
+                    >
+                      <Text style={styles.quickAddButtonText}>{option.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Members List */}
+              {familyMembers.map((member) => (
+                <TouchableOpacity 
+                  key={member.id} 
+                  style={styles.memberCard}
+                  onPress={() => editMember(member)}
                 >
-                  <Text style={styles.quickAddButtonText}>{option.label}</Text>
+                  <View style={styles.memberAvatar}>
+                    <Text style={styles.memberAvatarText}>
+                      {member.gender === 'male' ? '👨' : '👩'}
+                    </Text>
+                  </View>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>{member.name}</Text>
+                    <Text style={styles.memberDetails}>
+                      {member.age} yrs • {member.weight ? `${member.weight} lbs` : 'No weight'} • {member.gender}
+                    </Text>
+                    <Text style={styles.memberPortion}>
+                      Portion: {(calculateBasePortion(member) * member.portionMultiplier).toFixed(2)}x
+                      {member.portionMultiplier !== 1.0 && (
+                        <Text style={styles.learned}> (learned: {member.portionMultiplier > 1 ? '+' : ''}{((member.portionMultiplier - 1) * 100).toFixed(0)}%)</Text>
+                      )}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => removeMember(member.id)} style={styles.removeButton}>
+                    <Text style={styles.removeButtonText}>×</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
-          </View>
-
-          {/* Members List */}
-          {familyMembers.map((member) => (
-            <TouchableOpacity 
-              key={member.id} 
-              style={styles.memberCard}
-              onPress={() => editMember(member)}
-            >
-              <View style={styles.memberAvatar}>
-                <Text style={styles.memberAvatarText}>
-                  {member.gender === 'male' ? '👨' : '👩'}
-                </Text>
-              </View>
-              <View style={styles.memberInfo}>
-                <Text style={styles.memberName}>{member.name}</Text>
-                <Text style={styles.memberDetails}>
-                  {member.age} yrs • {member.weight ? `${member.weight} lbs` : 'No weight'} • {member.gender}
-                </Text>
-                <Text style={styles.memberPortion}>
-                  Portion: {(calculateBasePortion(member) * member.portionMultiplier).toFixed(2)}x
-                  {member.portionMultiplier !== 1.0 && (
-                    <Text style={styles.learned}> (learned: {member.portionMultiplier > 1 ? '+' : ''}{((member.portionMultiplier - 1) * 100).toFixed(0)}%)</Text>
-                  )}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => removeMember(member.id)} style={styles.removeButton}>
-                <Text style={styles.removeButtonText}>×</Text>
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-        </View>
+            </View>
+          </>
+        )}
 
         {/* Account & Settings */}
         <TouchableOpacity style={styles.settingsCard} onPress={() => router.push('/settings')}>
@@ -400,20 +581,6 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.settingsArrow}>→</Text>
         </TouchableOpacity>
-
-        {/* Creator — only visible to creator/admin accounts */}
-        {canUploadRecipes(role) && (
-          <TouchableOpacity style={styles.creatorCard} onPress={() => router.push('/creator/upload')}>
-            <View style={styles.creatorIcon}>
-              <Text style={styles.creatorIconText}>👨‍🍳</Text>
-            </View>
-            <View style={styles.creatorContent}>
-              <Text style={styles.creatorTitle}>Upload a Recipe</Text>
-              <Text style={styles.creatorSubtitle}>Share your recipe with the community</Text>
-            </View>
-            <Text style={styles.creatorArrow}>→</Text>
-          </TouchableOpacity>
-        )}
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -583,4 +750,31 @@ const styles = StyleSheet.create({
   cancelButtonText: { fontSize: 16, fontWeight: '600', color: '#666' },
   saveButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#FF6B35', alignItems: 'center' },
   saveButtonText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
+  // Creator profile styles
+  editLink: { fontSize: 14, color: '#FF6B35', fontWeight: '600' },
+  bioInput: { backgroundColor: '#F5F5F5', borderRadius: 12, padding: 16, fontSize: 15, minHeight: 100, textAlignVertical: 'top' },
+  saveBioButton: { backgroundColor: '#FF6B35', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 12 },
+  saveBioButtonText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
+  bioText: { fontSize: 15, color: '#666', lineHeight: 22 },
+  categoriesRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 },
+  categoryChip: { backgroundColor: '#FFE0B2', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, marginRight: 8, marginBottom: 8 },
+  categoryChipText: { fontSize: 13, color: '#FF6B35', fontWeight: '600' },
+  emptyRecipes: { alignItems: 'center', padding: 32, backgroundColor: '#FFF', borderRadius: 16 },
+  emptyRecipesText: { fontSize: 16, color: '#888', marginBottom: 16 },
+  uploadFirstButton: { backgroundColor: '#FF6B35', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
+  uploadFirstButtonText: { color: '#FFF', fontWeight: '600', fontSize: 15 },
+  recipesGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 },
+  recipeCard: { width: '47%', backgroundColor: '#FFF', borderRadius: 12, marginHorizontal: '1.5%', marginBottom: 12, overflow: 'hidden' },
+  recipeImage: { width: '100%', height: 120 },
+  premiumBadge: { position: 'absolute', top: 8, right: 8, backgroundColor: '#FFF', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  premiumBadgeText: { fontSize: 14 },
+  recipeTitle: { fontSize: 14, fontWeight: '600', color: '#1A1A1A', padding: 10, paddingBottom: 4 },
+  recipeCategory: { fontSize: 12, color: '#888', paddingHorizontal: 10, paddingBottom: 10 },
+  // Creator action buttons
+  creatorActions: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 8, gap: 12 },
+  creatorActionButton: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#F0F0F0' },
+  creatorActionIcon: { fontSize: 28, marginBottom: 8 },
+  creatorActionText: { fontSize: 15, fontWeight: '600', color: '#1A1A1A', marginBottom: 2 },
+  creatorActionHint: { fontSize: 12, color: '#888' },
+  emptyRecipesHint: { fontSize: 13, color: '#AAA', textAlign: 'center', marginTop: 8 },
 });

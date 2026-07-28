@@ -38,12 +38,16 @@ export type Recipe = {
   dietary: DietaryTag[];
   kidApproved: boolean;
   influencer: {
+    id?: string;
     name: string;
     handle: string;
     avatar: string;
   };
   ingredients: Ingredient[];
   steps: string[];
+  // Paywall: true = premium-only (creator-gated content). Optional so the local
+  // seed catalogue (all free) doesn't need the field.
+  isPaid?: boolean;
 };
 
 export const RECIPES: Recipe[] = [

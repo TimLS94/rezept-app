@@ -21,12 +21,14 @@ import {
 import { fetchDbRecipes } from '../../lib/recipes';
 import { useFavorites } from '../../lib/favorites';
 import { addRecipesToShoppingList } from '../../lib/shopping';
+import { useAuth } from '../../lib/auth';
 
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25;
 
 export default function DiscoverScreen() {
   const { addFavorite } = useFavorites();
+  const { isGuest } = useAuth();
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [index, setIndex] = useState(0);
   const [liked, setLiked] = useState<Recipe[]>([]);
@@ -38,7 +40,8 @@ export default function DiscoverScreen() {
   }, []);
 
   const deck = useMemo(() => {
-    const pool = [...uploaded, ...RECIPES];
+    // Only show free recipes (not behind paywall)
+    const pool = [...uploaded, ...RECIPES].filter(r => !r.isPaid);
     if (activeFilters.length === 0) return pool;
     return pool.filter(r => activeFilters.every(tag => r.dietary.includes(tag)));
   }, [activeFilters, uploaded]);
@@ -63,10 +66,21 @@ export default function DiscoverScreen() {
 
   const advance = (recipe: Recipe, direction: 'like' | 'skip') => {
     if (direction === 'like') {
-      // A right-swipe saves the recipe to Favorites; from there the user adds
-      // it to the weekly plan themselves.
-      addFavorite(recipe);
-      setLiked(prev => [...prev, recipe]);
+      if (isGuest) {
+        // Guests can swipe but likes aren't saved
+        Alert.alert(
+          'Sign in to save',
+          'Create a free account to save recipes to your favorites.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Sign in', onPress: () => router.push('/login') },
+          ]
+        );
+      } else {
+        // A right-swipe saves the recipe to Favorites
+        addFavorite(recipe);
+        setLiked(prev => [...prev, recipe]);
+      }
     }
     position.setValue({ x: 0, y: 0 });
     setIndex(i => i + 1);
@@ -258,10 +272,17 @@ export default function DiscoverScreen() {
                   )}
 
                   <ScrollView style={styles.cardContent} showsVerticalScrollIndicator={false}>
-                    <View style={styles.influencerRow}>
+                    <TouchableOpacity 
+                      style={styles.influencerRow}
+                      onPress={() => router.push(`/creator/${recipe.influencer.id || recipe.influencer.handle.replace('@', '')}`)}
+                    >
                       <Image source={{ uri: recipe.influencer.avatar }} style={styles.influencerAvatar} />
-                      <Text style={styles.influencerHandle}>{recipe.influencer.handle}</Text>
-                    </View>
+                      <View>
+                        <Text style={styles.influencerName}>{recipe.influencer.name}</Text>
+                        <Text style={styles.influencerHandle}>{recipe.influencer.handle}</Text>
+                      </View>
+                      <Text style={styles.viewProfileArrow}>›</Text>
+                    </TouchableOpacity>
                     <Text style={styles.cardTitle}>{recipe.title}</Text>
                     <View style={styles.cardMeta}>
                       <Text style={styles.cardMetaText}>⏱ {recipe.prepTime + recipe.cookTime} min</Text>
@@ -343,7 +364,9 @@ const styles = StyleSheet.create({
   cardContent: { padding: 20 },
   influencerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   influencerAvatar: { width: 28, height: 28, borderRadius: 14, marginRight: 8 },
-  influencerHandle: { fontSize: 13, color: '#FF6B35', fontWeight: '600' },
+  influencerName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
+  influencerHandle: { fontSize: 12, color: '#FF6B35', fontWeight: '500' },
+  viewProfileArrow: { fontSize: 24, color: '#CCC', marginLeft: 'auto', paddingLeft: 12 },
   cardTitle: { fontSize: 24, fontWeight: '800', color: '#1A1A1A', marginBottom: 10 },
   cardMeta: { flexDirection: 'row', marginBottom: 12 },
   cardMetaText: { fontSize: 13, color: '#888', marginRight: 16 },

@@ -49,3 +49,20 @@ export async function pickAndUploadImage(
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
+
+// Upload an already-picked base64 image (e.g. an import screenshot) to Storage
+// and return its public URL. Imported recipes must use a hosted URL — never a
+// device-local file:// path, which only works briefly on the source device.
+export async function uploadBase64Image(
+  base64: string,
+  folder: 'recipes' | 'avatars'
+): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const path = `${folder}/${user.id}/${Date.now()}.jpg`;
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, decode(base64), { contentType: 'image/jpeg', upsert: true });
+  if (error) return null;
+  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+}

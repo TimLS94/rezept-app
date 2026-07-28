@@ -3,19 +3,22 @@
     "name": "FeedFamily",
     "slug": "feedfamily",
     "version": "1.0.0",
+    "runtimeVersion": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.feedfamily.app",
+      "buildNumber": "1",
       "associatedDomains": ["applinks:feedfamily.app"],
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["instagram", "instagram-stories"]
+        "LSApplicationQueriesSchemes": ["instagram", "instagram-stories", "instacart", "walmart"]
       }
     },
     "android": {
       "package": "com.feedfamily.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FF6B35",
         "foregroundImage": "./assets/android-icon-foreground.png",

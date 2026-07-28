@@ -14,8 +14,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe } from '../../data/recipes';
 import { supabase } from '../../lib/supabase';
 import { addRecipesToShoppingList } from '../../lib/shopping';
-import { fetchDbRecipeById } from '../../lib/recipes';
+import { fetchDbRecipeById, setRecipePaid } from '../../lib/recipes';
 import { FEATURES } from '../../lib/features';
+import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { useFavorites } from '../../lib/favorites';
 
 type FamilyMember = {
@@ -45,12 +46,25 @@ export default function RecipeDetailScreen() {
   const localRecipe = getRecipeById(id || '');
 
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isPremium, role, isGuest, user } = useAuth();
   const [recipe, setRecipe] = useState<Recipe | undefined>(localRecipe);
   const [servings, setServings] = useState(localRecipe?.servings || 4);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showPortionModal, setShowPortionModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'steps'>('ingredients');
+  const [togglingPaid, setTogglingPaid] = useState(false);
+  
+  // Check if current user is the recipe owner (can edit)
+  const [isOwner, setIsOwner] = useState(false);
+
+  // Paywall: premium-only recipes are locked for non-subscribers. Creators/admins
+  // always see full content (so they can preview). Billing isn't live yet
+  // (FEATURES.payments === false) — the unlock CTA is a placeholder for now.
+  const locked = !!recipe?.isPaid && !isPremium && !canUploadRecipes(role);
+  
+  // Guest mode: can see preview but not full recipe details
+  const guestLocked = isGuest;
 
   useEffect(() => {
     loadFamilyMembers();
@@ -66,6 +80,37 @@ export default function RecipeDetailScreen() {
       }
     });
   }, [id, localRecipe]);
+
+  // Check if user owns this recipe
+  useEffect(() => {
+    const checkOwnership = async () => {
+      if (!id || !user) {
+        setIsOwner(false);
+        return;
+      }
+      const { data } = await supabase
+        .from('recipes')
+        .select('influencer_id')
+        .eq('id', id)
+        .single();
+      setIsOwner(data?.influencer_id === user.id);
+    };
+    checkOwnership();
+  }, [id, user]);
+
+  const togglePaidStatus = async () => {
+    if (!recipe || !id) return;
+    setTogglingPaid(true);
+    const newStatus = !recipe.isPaid;
+    const result = await setRecipePaid(id, newStatus);
+    if ('ok' in result) {
+      setRecipe({ ...recipe, isPaid: newStatus });
+      Alert.alert('Updated', newStatus ? 'Recipe is now premium' : 'Recipe is now free');
+    } else {
+      Alert.alert('Error', result.error);
+    }
+    setTogglingPaid(false);
+  };
 
   const loadFamilyMembers = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -193,10 +238,13 @@ export default function RecipeDetailScreen() {
         {/* Influencer */}
         <View style={styles.influencerBar}>
           <Image source={{ uri: recipe.influencer.avatar }} style={styles.influencerAvatar} />
-          <View style={{ flex: 1 }}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            onPress={() => router.push(`/creator/${recipe.influencer.id || recipe.influencer.handle.replace(/^@/, '')}`)}
+          >
             <Text style={styles.influencerName}>{recipe.influencer.name}</Text>
-            <Text style={styles.influencerHandle}>{recipe.influencer.handle}</Text>
-          </View>
+            <Text style={styles.influencerHandle}>{recipe.influencer.handle} ›</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.favoriteButton}
             onPress={() => toggleFavorite(recipe)}
@@ -206,6 +254,31 @@ export default function RecipeDetailScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Creator Controls - only visible to recipe owner */}
+        {isOwner && (
+          <View style={styles.creatorControls}>
+            <TouchableOpacity 
+              style={styles.editRecipeButton}
+              onPress={() => router.push(`/creator/edit/${id}`)}
+            >
+              <Text style={styles.editRecipeButtonText}>✏️ Edit Recipe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.paidToggle, recipe.isPaid && styles.paidToggleActive]}
+              onPress={togglePaidStatus}
+              disabled={togglingPaid}
+            >
+              {togglingPaid ? (
+                <ActivityIndicator size="small" color={recipe.isPaid ? '#FFF' : '#FF6B35'} />
+              ) : (
+                <Text style={[styles.paidToggleText, recipe.isPaid && styles.paidToggleTextActive]}>
+                  {recipe.isPaid ? '💎 Premium' : '🆓 Free'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Servings Adjuster */}
         <View style={styles.servingsCard}>
@@ -235,9 +308,46 @@ export default function RecipeDetailScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Guest lock — prompt sign in to see full recipe */}
+        {guestLocked ? (
+          <View style={styles.lockedCard}>
+            <Text style={styles.lockedIcon}>👤</Text>
+            <Text style={styles.lockedTitle}>Sign in to see full recipe</Text>
+            <Text style={styles.lockedText}>
+              Create a free account to view ingredients, cooking steps, and save recipes to your favorites.
+            </Text>
+            <TouchableOpacity
+              style={styles.lockedButton}
+              onPress={() => router.push('/login')}
+            >
+              <Text style={styles.lockedButtonText}>Sign in for free</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.guestContinueLink}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.guestContinueLinkText}>Continue browsing</Text>
+            </TouchableOpacity>
+          </View>
+        ) : locked ? (
+          <View style={styles.lockedCard}>
+            <Text style={styles.lockedIcon}>🔒</Text>
+            <Text style={styles.lockedTitle}>Premium recipe</Text>
+            <Text style={styles.lockedText}>
+              This recipe is available to subscribers. Unlock the full ingredients and step-by-step instructions with a subscription.
+            </Text>
+            <TouchableOpacity
+              style={styles.lockedButton}
+              onPress={() => Alert.alert('Coming soon', 'Subscriptions are not available yet — this recipe will be unlockable once billing goes live.')}
+            >
+              <Text style={styles.lockedButtonText}>Subscribe to unlock</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+        <>
         {/* Tabs */}
         <View style={styles.tabs}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tab, activeTab === 'ingredients' && styles.tabActive]}
             onPress={() => setActiveTab('ingredients')}
           >
@@ -245,7 +355,7 @@ export default function RecipeDetailScreen() {
               Ingredients ({recipe.ingredients.length})
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tab, activeTab === 'steps' && styles.tabActive]}
             onPress={() => setActiveTab('steps')}
           >
@@ -281,16 +391,20 @@ export default function RecipeDetailScreen() {
             ))}
           </View>
         )}
+        </>
+        )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
       {/* Bottom Action */}
-      <View style={styles.bottomAction}>
-        <TouchableOpacity style={styles.addToCartButton} onPress={addToShoppingList}>
-          <Text style={styles.addToCartText}>🛒 Add to Shopping List</Text>
-        </TouchableOpacity>
-      </View>
+      {!locked && !guestLocked && (
+        <View style={styles.bottomAction}>
+          <TouchableOpacity style={styles.addToCartButton} onPress={addToShoppingList}>
+            <Text style={styles.addToCartText}>🛒 Add to Shopping List</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Family Portion Modal */}
       <Modal visible={showPortionModal} animationType="slide" transparent>
@@ -451,4 +565,19 @@ const styles = StyleSheet.create({
   modalCancelText: { fontSize: 16, fontWeight: '600', color: '#666' },
   modalApplyButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#FF6B35', alignItems: 'center' },
   modalApplyText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
+  lockedCard: { backgroundColor: '#FFF', margin: 16, padding: 24, borderRadius: 16, alignItems: 'center' },
+  lockedIcon: { fontSize: 48, marginBottom: 12 },
+  lockedTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
+  lockedText: { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  lockedButton: { backgroundColor: '#FF6B35', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12 },
+  lockedButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  guestContinueLink: { marginTop: 16, paddingVertical: 8 },
+  guestContinueLinkText: { fontSize: 14, color: '#888', fontWeight: '500' },
+  creatorControls: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 10, backgroundColor: '#FFF5F0', borderBottomWidth: 1, borderBottomColor: '#FFE0B2' },
+  editRecipeButton: { flex: 1, backgroundColor: '#FFF', paddingVertical: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#FF6B35' },
+  editRecipeButtonText: { fontSize: 14, fontWeight: '600', color: '#FF6B35' },
+  paidToggle: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#FF6B35' },
+  paidToggleActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
+  paidToggleText: { fontSize: 14, fontWeight: '600', color: '#FF6B35' },
+  paidToggleTextActive: { color: '#FFF' },
 });

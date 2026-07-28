@@ -13,6 +13,7 @@ import {
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { pickAndUploadImage } from '../lib/storage';
+import { VERSION_STRING } from '../lib/version';
 
 const DEFAULT_AVATAR =
   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
@@ -277,6 +278,19 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Legal */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Legal</Text>
+          <TouchableOpacity style={styles.legalLink} onPress={() => router.push('/privacy')}>
+            <Text style={styles.legalLinkText}>Privacy Policy</Text>
+            <Text style={styles.legalArrow}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.legalLink} onPress={() => router.push('/terms')}>
+            <Text style={styles.legalLinkText}>Terms of Service</Text>
+            <Text style={styles.legalArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Danger zone */}
         <View style={[styles.card, styles.dangerCard]}>
           <Text style={styles.dangerTitle}>Danger Zone</Text>
@@ -286,6 +300,11 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.deleteButton} onPress={confirmDelete}>
             <Text style={styles.deleteButtonText}>Delete Account</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Version */}
+        <View style={styles.versionContainer}>
+          <Text style={styles.versionText}>FeedFamily {VERSION_STRING}</Text>
         </View>
 
         <View style={{ height: 40 }} />
@@ -322,4 +341,9 @@ const styles = StyleSheet.create({
   dangerText: { fontSize: 13, color: '#888', marginBottom: 14 },
   deleteButton: { padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: '#E53935' },
   deleteButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  legalLink: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  legalLinkText: { fontSize: 15, color: '#1A1A1A' },
+  legalArrow: { fontSize: 20, color: '#CCC' },
+  versionContainer: { alignItems: 'center', marginTop: 24 },
+  versionText: { fontSize: 13, color: '#AAA' },
 });

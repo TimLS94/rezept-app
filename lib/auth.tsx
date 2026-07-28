@@ -16,7 +16,9 @@ type AuthValue = {
   isPremium: boolean;
   isGuest: boolean;
   loading: boolean;
-  refresh: () => Promise<void>;
+  // Reloads the user + profile and returns the resolved role, so callers can
+  // route by role right after login without waiting for a re-render.
+  refresh: () => Promise<Role | null>;
   signOut: () => Promise<void>;
 };
 
@@ -28,25 +30,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = useCallback(async (u: User | null) => {
+  const loadProfile = useCallback(async (u: User | null): Promise<Role | null> => {
     if (!u) {
       setRole(null);
       setIsPremium(false);
-      return;
+      return null;
     }
     const { data } = await supabase
       .from('profiles')
       .select('role, is_premium')
       .eq('id', u.id)
       .single();
-    setRole((data?.role as Role) ?? 'user');
+    const resolved = (data?.role as Role) ?? 'user';
+    setRole(resolved);
     setIsPremium(!!data?.is_premium);
+    return resolved;
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<Role | null> => {
     const { data: { user: u } } = await supabase.auth.getUser();
     setUser(u);
-    await loadProfile(u);
+    return loadProfile(u);
   }, [loadProfile]);
 
   useEffect(() => {
@@ -86,4 +90,29 @@ export function useAuth(): AuthValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
   return ctx;
+}
+
+// Helper to prompt login for guests
+export function useRequireAuth() {
+  const auth = useAuth();
+  const { Alert } = require('react-native');
+  const { router } = require('expo-router');
+
+  const requireAuth = (action: string, callback?: () => void) => {
+    if (auth.isGuest) {
+      Alert.alert(
+        'Sign in required',
+        `Sign in to ${action}`,
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Sign in', onPress: () => router.push('/login') },
+        ]
+      );
+      return false;
+    }
+    callback?.();
+    return true;
+  };
+
+  return { ...auth, requireAuth };
 }
