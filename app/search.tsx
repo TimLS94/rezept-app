@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Image,
   FlatList,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { RECIPES, Recipe, DietaryTag, DIETARY_TAGS } from '../data/recipes';
 import { fetchDbRecipes } from '../lib/recipes';

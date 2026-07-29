@@ -35,16 +35,40 @@ export function mapDbRecipe(row: any): Recipe {
   };
 }
 
+// Shared in-memory cache so Discover/Search/Home don't re-hit the network on
+// every mount. Short TTL; invalidated when a recipe is created/changed.
+let recipeCache: { data: Recipe[]; at: number } | null = null;
+const RECIPE_CACHE_TTL = 60_000; // 1 minute
+
+export function invalidateRecipeCache() {
+  recipeCache = null;
+}
+
 // Uploaded recipes from Supabase. Returns [] on error so callers degrade to the
-// local seed catalogue rather than breaking.
-export async function fetchDbRecipes(): Promise<Recipe[]> {
+// local seed catalogue rather than breaking. Pass force to bypass the cache.
+export async function fetchDbRecipes(force = false): Promise<Recipe[]> {
+  if (!force && recipeCache && Date.now() - recipeCache.at < RECIPE_CACHE_TTL) {
+    return recipeCache.data;
+  }
   const { data, error } = await supabase
     .from('recipes')
     .select('*, profiles:influencer_id(id, full_name, username, avatar_url)')
     .order('created_at', { ascending: false });
-  if (error || !data) return [];
+  if (error || !data) return recipeCache?.data ?? [];
   // Only surface uploads that actually carry ingredients (skips bare seed rows).
-  return data.map(mapDbRecipe).filter(r => r.ingredients.length > 0);
+  const mapped = data.map(mapDbRecipe).filter(r => r.ingredients.length > 0);
+  recipeCache = { data: mapped, at: Date.now() };
+  return mapped;
+}
+
+// "Recipe of the week": the recipe favorited most often across ALL users in the
+// last 7 days. Uses a SECURITY DEFINER RPC so it can aggregate everyone's
+// favorites without exposing individual rows (favorite_recipes is per-user RLS).
+// Returns null if nobody favorited anything this week (caller falls back).
+export async function fetchRecipeOfTheWeek(): Promise<Recipe | null> {
+  const { data, error } = await supabase.rpc('recipe_of_the_week');
+  if (error || !data) return null;
+  return data as Recipe;
 }
 
 // Uploaded recipes first (newest, so they can trend), then the local seed set.
@@ -134,6 +158,7 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
 
   if (error || !data) return { error: error?.message || 'insert-failed' };
 
+  invalidateRecipeCache(); // new recipe should appear immediately in Discover/Search
   // Note: uploading no longer promotes a user to 'creator'. The creator role is
   // assigned deliberately (by an admin), so uploads stay gated to real creators.
   return { id: data.id };
@@ -147,5 +172,6 @@ export async function setRecipePaid(
 ): Promise<{ ok: true } | { error: string }> {
   const { error } = await supabase.from('recipes').update({ is_paid: isPaid }).eq('id', id);
   if (error) return { error: error.message };
+  invalidateRecipeCache();
   return { ok: true };
 }

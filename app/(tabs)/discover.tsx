@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   Animated,
   PanResponder,
   Dimensions,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import {
   RECIPES,
@@ -54,6 +54,8 @@ export default function DiscoverScreen() {
   deckRef.current = deck;
   const indexRef = useRef(index);
   indexRef.current = index;
+  const isGuestRef = useRef(isGuest);
+  isGuestRef.current = isGuest;
 
   const toggleFilter = (tag: DietaryTag) => {
     setActiveFilters(prev =>
@@ -109,6 +111,13 @@ export default function DiscoverScreen() {
   };
 
   const forceSwipe = (direction: 'like' | 'skip') => {
+    // Guests can browse recipes but can't swipe — prompt sign-up, reset to first.
+    if (isGuest) {
+      Animated.spring(position, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+      setIndex(0);
+      router.push('/login');
+      return;
+    }
     const recipe = deckRef.current[indexRef.current];
     if (!recipe) return;
     const x = direction === 'like' ? width * 1.5 : -width * 1.5;
@@ -130,9 +139,18 @@ export default function DiscoverScreen() {
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8,
       onPanResponderMove: (_, g) => {
+        // Guests can't swipe — the card never moves for them.
+        if (isGuestRef.current) return;
         position.setValue({ x: g.dx, y: g.dy });
       },
       onPanResponderRelease: (_, g) => {
+        // Guests: swiping does nothing but prompt sign-up and reset to the first card.
+        if (isGuestRef.current) {
+          resetPosition();
+          setIndex(0);
+          router.push('/login');
+          return;
+        }
         if (g.dx > SWIPE_THRESHOLD) forceSwipe('like');
         else if (g.dx < -SWIPE_THRESHOLD) forceSwipe('skip');
         else resetPosition();

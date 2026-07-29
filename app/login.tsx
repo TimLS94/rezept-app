@@ -13,6 +13,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
@@ -271,10 +272,12 @@ export default function LoginScreen() {
 
           <View style={styles.socialButtons}>
             <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn}>
-              <Text style={styles.socialButtonText}>🔵 Google</Text>
+              <Ionicons name="logo-google" size={18} color="#DB4437" />
+              <Text style={styles.socialButtonText}>Google</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialButton} onPress={handleAppleSignIn}>
-              <Text style={styles.socialButtonText}>🍎 Apple</Text>
+              <Ionicons name="logo-apple" size={20} color="#000" />
+              <Text style={styles.socialButtonText}>Apple</Text>
             </TouchableOpacity>
           </View>
 
@@ -292,8 +295,11 @@ export default function LoginScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Continue as guest */}
-          <TouchableOpacity style={styles.guestLink} onPress={() => router.replace('/home')}>
+          {/* Continue as guest — clear any lingering session so it's a true guest */}
+          <TouchableOpacity
+            style={styles.guestLink}
+            onPress={async () => { await supabase.auth.signOut(); router.replace('/home'); }}
+          >
             <Text style={styles.guestLinkText}>Continue browsing as guest</Text>
           </TouchableOpacity>
 
@@ -426,10 +432,13 @@ const styles = StyleSheet.create({
   },
   socialButton: {
     flex: 1,
+    flexDirection: 'row',
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginHorizontal: 6,
   },
   socialButtonText: {

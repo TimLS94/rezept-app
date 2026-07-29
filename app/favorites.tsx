@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useFavorites } from '../lib/favorites';
 import { useMealPlan, thisWeekKey } from '../lib/mealPlan';

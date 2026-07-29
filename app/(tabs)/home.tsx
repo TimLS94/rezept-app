@@ -5,19 +5,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   Dimensions
 } from 'react-native';
+import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
-import { RECIPES, getRecipesByCategory } from '../../data/recipes';
+import { RECIPES, getRecipesByCategory, Recipe } from '../../data/recipes';
 import { supabase } from '../../lib/supabase';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
+import { fetchRecipeOfTheWeek } from '../../lib/recipes';
 
 const { width } = Dimensions.get('window');
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
-
-const tonightRecipe = RECIPES[0]; // First recipe as tonight's pick
 
 const categories = [
   { id: 'quick', name: 'Quick & Easy', icon: '⚡', color: '#FFE0B2' },
@@ -30,6 +29,7 @@ export default function HomeScreen() {
   const { user, role } = useAuth();
   const [activeCategory, setActiveCategory] = useState<string>('kids');
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
+  const [weekRecipe, setWeekRecipe] = useState<Recipe>(RECIPES[0]);
 
   const filteredRecipes = getRecipesByCategory(activeCategory as any);
 
@@ -38,6 +38,8 @@ export default function HomeScreen() {
     useCallback(() => {
       let active = true;
       (async () => {
+        // Recipe of the week loads for everyone (incl. guests).
+        fetchRecipeOfTheWeek().then(r => { if (active && r) setWeekRecipe(r); });
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const { data } = await supabase
@@ -79,47 +81,47 @@ export default function HomeScreen() {
         {/* Tonight's Pick - Hero Card */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.tonightLabel}>TONIGHT'S PICK</Text>
+            <Text style={styles.tonightLabel}>RECIPE OF THE WEEK</Text>
             <TouchableOpacity>
               <Text style={styles.refreshText}>Refresh</Text>
             </TouchableOpacity>
           </View>
           
-          <TouchableOpacity style={styles.heroCard} onPress={() => router.push(`/recipe/${tonightRecipe.id}`)}>
-            <Image source={{ uri: tonightRecipe.image }} style={styles.heroImage} />
+          <TouchableOpacity style={styles.heroCard} onPress={() => router.push(`/recipe/${weekRecipe.id}`)}>
+            <Image source={{ uri: weekRecipe.image }} style={styles.heroImage} />
             <View style={styles.heroOverlay} />
             
             <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>Chef's Choice</Text>
+              <Text style={styles.heroBadgeText}>❤️ Most loved this week</Text>
             </View>
             
             <View style={styles.heroContent}>
-              <Text style={styles.heroTitle}>{tonightRecipe.title}</Text>
+              <Text style={styles.heroTitle}>{weekRecipe.title}</Text>
               
               <View style={styles.heroMeta}>
                 <View style={styles.metaItem}>
                   <Text style={styles.metaIcon}>⏱</Text>
-                  <Text style={styles.metaText}>{tonightRecipe.prepTime + tonightRecipe.cookTime} min</Text>
+                  <Text style={styles.metaText}>{weekRecipe.prepTime + weekRecipe.cookTime} min</Text>
                 </View>
                 <View style={styles.metaItem}>
                   <Text style={styles.metaIcon}>👥</Text>
-                  <Text style={styles.metaText}>{tonightRecipe.servings} servings</Text>
+                  <Text style={styles.metaText}>{weekRecipe.servings} servings</Text>
                 </View>
                 <View style={styles.metaItem}>
                   <Text style={styles.metaIcon}>📊</Text>
-                  <Text style={styles.metaText}>{tonightRecipe.difficulty}</Text>
+                  <Text style={styles.metaText}>{weekRecipe.difficulty}</Text>
                 </View>
               </View>
               
               <View style={styles.heroFooter}>
                 <View style={styles.influencerInfo}>
                   <Image 
-                    source={{ uri: tonightRecipe.influencer.avatar }} 
+                    source={{ uri: weekRecipe.influencer.avatar }} 
                     style={styles.influencerAvatar} 
                   />
                   <View>
-                    <Text style={styles.influencerName}>{tonightRecipe.influencer.name}</Text>
-                    <Text style={styles.influencerHandle}>{tonightRecipe.influencer.handle}</Text>
+                    <Text style={styles.influencerName}>{weekRecipe.influencer.name}</Text>
+                    <Text style={styles.influencerHandle}>{weekRecipe.influencer.handle}</Text>
                   </View>
                 </View>
                 <TouchableOpacity style={styles.cookButton}>

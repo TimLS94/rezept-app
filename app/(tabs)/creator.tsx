@@ -5,10 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   Linking,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { getCreatorProfile, CreatorProfile, emptyCreatorProfile } from '../../lib/creatorProfile';

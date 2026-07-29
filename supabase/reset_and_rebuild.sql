@@ -78,7 +78,8 @@ create table public.recipes (
   influencer_name   text,
   influencer_handle text,
   influencer_avatar text,
-  created_at        timestamptz default timezone('utc'::text, now()) not null
+  created_at        timestamptz default timezone('utc'::text, now()) not null,
+  updated_at        timestamptz default timezone('utc'::text, now()) not null
 );
 create index recipes_influencer_id_idx on public.recipes(influencer_id);
 alter table public.recipes enable row level security;
@@ -106,6 +107,9 @@ create table public.family_members (
   profile_id          uuid references public.profiles(id) on delete cascade not null,
   name                text not null,
   age                 integer,
+  gender              text,
+  weight              numeric,
+  portion_multiplier  numeric default 1.0,
   portion_size        text default 'medium',
   dietary_restrictions text[],
   created_at          timestamptz default timezone('utc'::text, now()) not null
@@ -244,5 +248,26 @@ on conflict (id) do nothing;
 
 update public.profiles set role = 'creator'
 where email = 'schaefer.l.tim+creator@gmail.com';
+
+-- Recipe of the week: most-favorited recipe across all users (last 7 days).
+create or replace function public.recipe_of_the_week()
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  select recipe
+  from public.favorite_recipes
+  where recipe_id = (
+    select recipe_id
+    from public.favorite_recipes
+    where created_at >= now() - interval '7 days'
+    group by recipe_id
+    order by count(*) desc
+    limit 1
+  )
+  limit 1;
+$$;
+grant execute on function public.recipe_of_the_week() to anon, authenticated;
 
 commit;

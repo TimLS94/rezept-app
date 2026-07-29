@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   ScrollView,
   TextInput,
   Alert,
   Modal,
-  Image
+  Image,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -66,7 +70,7 @@ type CreatorRecipe = {
 };
 
 export default function ProfileScreen() {
-  const { role } = useAuth();
+  const { role, isGuest } = useAuth();
   const isCreator = canUploadRecipes(role);
   
   // Shared state
@@ -354,6 +358,29 @@ export default function ProfileScreen() {
     return cats.slice(0, 5);
   };
 
+  // Guests have no profile — prompt sign-in instead.
+  if (isGuest) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.backButton} />
+          <Text style={styles.headerTitle}>Profile</Text>
+          <View style={{ width: 60 }} />
+        </View>
+        <View style={styles.guestState}>
+          <Text style={styles.guestIcon}>👤</Text>
+          <Text style={styles.guestTitle}>Sign in to your profile</Text>
+          <Text style={styles.guestText}>
+            Create a free account to set up your family, save favorites, and plan your week.
+          </Text>
+          <TouchableOpacity style={styles.guestButton} onPress={() => router.push('/login')}>
+            <Text style={styles.guestButtonText}>Sign in / Register</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -592,7 +619,11 @@ export default function ProfileScreen() {
 
       {/* Add/Edit Modal */}
       <Modal visible={showAddMember} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <KeyboardAvoidingView
+            style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
               {editingMember ? 'Edit Member' : 'Add Family Member'}
@@ -674,7 +705,8 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );
@@ -682,6 +714,12 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
+  guestState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  guestIcon: { fontSize: 64, marginBottom: 16 },
+  guestTitle: { fontSize: 22, fontWeight: '700', color: '#1A1A1A' },
+  guestText: { fontSize: 15, color: '#888', textAlign: 'center', marginTop: 10, lineHeight: 22 },
+  guestButton: { backgroundColor: '#FF6B35', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14, marginTop: 24 },
+  guestButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 },
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },

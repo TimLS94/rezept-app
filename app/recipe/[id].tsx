@@ -5,11 +5,11 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   ScrollView,
-  Image,
   Alert,
   Modal,
   ActivityIndicator
 } from 'react-native';
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe } from '../../data/recipes';
 import { supabase } from '../../lib/supabase';
