@@ -6,21 +6,37 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe } from '../../data/recipes';
 import { fetchDbRecipeById } from '../../lib/recipes';
 import { incrementCooked, awardFor, nextAward } from '../../lib/cookStats';
+import { COLORS, FONTS } from '../../lib/theme';
+
+type Phase = 'intro' | 'countdown' | 'cooking';
 
 export default function CookModeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [recipe, setRecipe] = useState<Recipe | undefined>(getRecipeById(id || ''));
   const [loading, setLoading] = useState(!recipe);
+  const [phase, setPhase] = useState<Phase>('intro');
   const [done, setDone] = useState<Set<number>>(new Set());
   const [finished, setFinished] = useState(false);
   const [cookedCount, setCookedCount] = useState(0);
   const [rating, setRating] = useState(0);
   const counted = useRef(false);
+
+  // Animations
+  const introFade = useRef(new Animated.Value(0)).current;
+  const introLift = useRef(new Animated.Value(30)).current;
+  const pulse = useRef(new Animated.Value(1)).current;
+  const countScale = useRef(new Animated.Value(1)).current;
+  const [countText, setCountText] = useState('3');
+  const awardPop = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (recipe) return;
@@ -31,13 +47,49 @@ export default function CookModeScreen() {
     })();
   }, [id]);
 
+  // Intro reveal + looping pulse behind the "start" badge.
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(introFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(introLift, { toValue: 0, duration: 500, easing: Easing.out(Easing.back(1.4)), useNativeDriver: true }),
+    ]).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.12, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  // Bounce the award in when the finish screen appears.
+  useEffect(() => {
+    if (finished) {
+      awardPop.setValue(0);
+      Animated.spring(awardPop, { toValue: 1, friction: 4, tension: 80, useNativeDriver: true }).start();
+    }
+  }, [finished]);
+
   const total = recipe?.steps.length ?? 0;
+
+  const startCountdown = () => {
+    setPhase('countdown');
+    const seq = ['3', '2', '1', 'GO!'];
+    let i = 0;
+    const tick = () => {
+      setCountText(seq[i]);
+      countScale.setValue(0.4);
+      Animated.spring(countScale, { toValue: 1, friction: 4, tension: 90, useNativeDriver: true }).start();
+      i += 1;
+      if (i < seq.length) setTimeout(tick, 620);
+      else setTimeout(() => setPhase('cooking'), 620);
+    };
+    tick();
+  };
 
   const checkStep = (index: number) => {
     setDone(prev => {
       const next = new Set(prev);
       next.add(index);
-      // Finished when every step is checked off.
       if (next.size === total && total > 0 && !counted.current) {
         counted.current = true;
         incrementCooked().then(setCookedCount);
@@ -50,7 +102,7 @@ export default function CookModeScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#F57C00" />
+        <ActivityIndicator size="large" color={COLORS.orange} />
       </View>
     );
   }
@@ -59,33 +111,34 @@ export default function CookModeScreen() {
     return (
       <View style={styles.container}>
         <Header title="Cook" />
-        <View style={styles.center}>
-          <Text style={styles.emptyText}>Recipe not found</Text>
-        </View>
+        <View style={styles.center}><Text style={styles.muted}>Recipe not found</Text></View>
       </View>
     );
   }
 
-  // Completion screen with award + feedback.
+  // ── Completion / rewards ──────────────────────────────────────────────────
   if (finished) {
     const award = awardFor(cookedCount);
     const next = nextAward(cookedCount);
     return (
-      <View style={styles.container}>
-        <Header title="Done!" />
-        <ScrollView contentContainerStyle={styles.doneWrap}>
+      <View style={[styles.container, styles.center, { padding: 30 }]}>
+        <Animated.View style={{ alignItems: 'center', transform: [{ scale: awardPop }], opacity: awardPop }}>
           <Text style={styles.doneEmoji}>🎉</Text>
-          <Text style={styles.doneTitle}>You cooked {recipe.title}!</Text>
-          <Text style={styles.doneCount}>That's your {cookedCount}. recipe cooked 🍽️</Text>
+          <Text style={styles.doneTitle}>NICE WORK!</Text>
+          <Text style={styles.doneSub}>You cooked {recipe.title}</Text>
+          <Text style={styles.doneCount}>That's your {cookedCount}. recipe cooked</Text>
 
           {award && (
             <View style={styles.awardCard}>
               <Text style={styles.awardIcon}>{award.icon}</Text>
               <Text style={styles.awardTitle}>{award.title}</Text>
               {next && (
-                <Text style={styles.awardNext}>
-                  {next.threshold - cookedCount} more to unlock {next.icon} {next.title}
-                </Text>
+                <View style={styles.awardProgressWrap}>
+                  <View style={styles.awardTrack}>
+                    <View style={[styles.awardFill, { width: `${Math.min((cookedCount / next.threshold) * 100, 100)}%` }]} />
+                  </View>
+                  <Text style={styles.awardNext}>{next.threshold - cookedCount} more → {next.icon} {next.title}</Text>
+                </View>
               )}
             </View>
           )}
@@ -94,28 +147,65 @@ export default function CookModeScreen() {
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map(n => (
               <TouchableOpacity key={n} onPress={() => setRating(n)}>
-                <Text style={styles.star}>{n <= rating ? '★' : '☆'}</Text>
+                <Ionicons name={n <= rating ? 'star' : 'star-outline'} size={32} color={COLORS.orange} />
               </TouchableOpacity>
             ))}
           </View>
+        </Animated.View>
 
-          <TouchableOpacity style={styles.doneButton} onPress={() => router.back()}>
-            <Text style={styles.doneButtonText}>Finish</Text>
-          </TouchableOpacity>
-        </ScrollView>
+        <TouchableOpacity style={styles.primaryBtn} onPress={() => router.back()}>
+          <Text style={styles.primaryBtnText}>FINISH</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
-  const remaining = recipe.steps
-    .map((text, i) => ({ text, i }))
-    .filter(s => !done.has(s.i));
+  // ── Intro ─────────────────────────────────────────────────────────────────
+  if (phase === 'intro') {
+    return (
+      <View style={styles.container}>
+        <Image source={{ uri: recipe.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <View style={styles.introOverlay} />
+        <TouchableOpacity style={styles.introClose} onPress={() => router.back()}>
+          <Ionicons name="close" size={26} color="#FFF" />
+        </TouchableOpacity>
+        <Animated.View style={[styles.introContent, { opacity: introFade, transform: [{ translateY: introLift }] }]}>
+          <Animated.View style={[styles.introBadge, { transform: [{ scale: pulse }] }]}>
+            <Ionicons name="restaurant" size={40} color="#FFF" />
+          </Animated.View>
+          <Text style={styles.introKicker}>COOK MODE</Text>
+          <Text style={styles.introTitle}>{recipe.title}</Text>
+          <View style={styles.introMeta}>
+            <View style={styles.introMetaItem}><Ionicons name="time-outline" size={16} color="#FFF" /><Text style={styles.introMetaText}>{recipe.prepTime + recipe.cookTime} min</Text></View>
+            <View style={styles.introMetaItem}><Ionicons name="list-outline" size={16} color="#FFF" /><Text style={styles.introMetaText}>{recipe.steps.length} steps</Text></View>
+            <View style={styles.introMetaItem}><Ionicons name="people-outline" size={16} color="#FFF" /><Text style={styles.introMetaText}>{recipe.servings}</Text></View>
+          </View>
+          <TouchableOpacity style={styles.startBtn} onPress={startCountdown} activeOpacity={0.9}>
+            <Ionicons name="flame" size={20} color="#FFF" />
+            <Text style={styles.startBtnText}>START COOKING</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    );
+  }
+
+  // ── Countdown ─────────────────────────────────────────────────────────────
+  if (phase === 'countdown') {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <Image source={{ uri: recipe.image }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={8} />
+        <View style={styles.introOverlay} />
+        <Animated.Text style={[styles.countText, { transform: [{ scale: countScale }] }]}>{countText}</Animated.Text>
+      </View>
+    );
+  }
+
+  // ── Cooking ───────────────────────────────────────────────────────────────
+  const remaining = recipe.steps.map((text, i) => ({ text, i })).filter(s => !done.has(s.i));
 
   return (
     <View style={styles.container}>
       <Header title="Cook Mode" />
-
-      {/* Progress */}
       <View style={styles.progressWrap}>
         <Text style={styles.progressText}>{done.size} / {total} steps done</Text>
         <View style={styles.progressTrack}>
@@ -126,27 +216,22 @@ export default function CookModeScreen() {
       <ScrollView contentContainerStyle={styles.stepsWrap} showsVerticalScrollIndicator={false}>
         <Text style={styles.recipeTitle}>{recipe.title}</Text>
 
-        {/* Ingredients quick reference */}
         {recipe.ingredients.length > 0 && (
           <View style={styles.ingredientsCard}>
-            <Text style={styles.ingredientsHeader}>Ingredients</Text>
+            <Text style={styles.cardHeader}>INGREDIENTS</Text>
             {recipe.ingredients.map((ing, i) => (
-              <Text key={i} style={styles.ingredientLine}>
-                • {ing.amount ? `${ing.amount} ${ing.unit} ` : ''}{ing.name}
-              </Text>
+              <Text key={i} style={styles.ingredientLine}>• {ing.amount ? `${ing.amount} ${ing.unit} ` : ''}{ing.name}</Text>
             ))}
           </View>
         )}
 
-        <Text style={styles.stepsHeader}>Steps</Text>
+        <Text style={styles.cardHeader}>STEPS</Text>
         {remaining.map((s, idx) => (
           <View key={s.i} style={[styles.stepCard, idx === 0 && styles.stepCardCurrent]}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>{s.i + 1}</Text>
-            </View>
+            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>{s.i + 1}</Text></View>
             <Text style={styles.stepText}>{s.text}</Text>
             <TouchableOpacity style={styles.stepCheck} onPress={() => checkStep(s.i)}>
-              <Text style={styles.stepCheckText}>✓</Text>
+              <Ionicons name="checkmark" size={20} color="#FFF" />
             </TouchableOpacity>
           </View>
         ))}
@@ -161,57 +246,73 @@ function Header({ title }: { title: string }) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
-        <Text style={styles.headerBtnText}>Close</Text>
+        <Ionicons name="close" size={24} color={COLORS.navy} />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>{title}</Text>
-      <View style={{ width: 56 }} />
+      <View style={{ width: 40 }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF9F2' },
+  container: { flex: 1, backgroundColor: COLORS.cream },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 16, color: '#888' },
+  muted: { fontSize: 16, color: COLORS.warmGray },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 60, paddingBottom: 14,
-    backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
+    backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  headerBtn: { minWidth: 56 },
-  headerBtnText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
-  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
+  headerBtn: { width: 40 },
+  headerTitle: { fontFamily: FONTS.display, fontSize: 18, color: COLORS.navy, letterSpacing: 0.3 },
 
+  // Intro
+  introOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13,43,99,0.72)' },
+  introClose: { position: 'absolute', top: 58, right: 20, zIndex: 5, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  introContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  introBadge: { width: 96, height: 96, borderRadius: 48, backgroundColor: COLORS.orange, justifyContent: 'center', alignItems: 'center', marginBottom: 22 },
+  introKicker: { fontFamily: FONTS.semibold, color: COLORS.orange, fontSize: 13, letterSpacing: 2 },
+  introTitle: { fontFamily: FONTS.display, color: '#FFF', fontSize: 34, textAlign: 'center', marginTop: 6, lineHeight: 36 },
+  introMeta: { flexDirection: 'row', gap: 18, marginTop: 18 },
+  introMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  introMetaText: { fontFamily: FONTS.medium, color: 'rgba(255,255,255,0.92)', fontSize: 13 },
+  startBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.orange, paddingHorizontal: 30, paddingVertical: 16, borderRadius: 30, marginTop: 34 },
+  startBtnText: { fontFamily: FONTS.bold, color: '#FFF', fontSize: 15, letterSpacing: 0.5 },
+
+  // Countdown
+  countText: { fontFamily: FONTS.display, fontSize: 120, color: '#FFF' },
+
+  // Cooking
   progressWrap: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
-  progressText: { fontSize: 13, color: '#888', marginBottom: 8, fontWeight: '600' },
-  progressTrack: { height: 8, borderRadius: 4, backgroundColor: '#EEE', overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#F57C00', borderRadius: 4 },
-
+  progressText: { fontFamily: FONTS.semibold, fontSize: 13, color: COLORS.warmGray, marginBottom: 8 },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: '#EDE4D6', overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: COLORS.orange, borderRadius: 4 },
   stepsWrap: { padding: 20 },
-  recipeTitle: { fontSize: 22, fontWeight: '800', color: '#1A1A1A', marginBottom: 16 },
-  ingredientsCard: { backgroundColor: '#FFF', borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#F0F0F0' },
-  ingredientsHeader: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
-  ingredientLine: { fontSize: 14, color: '#555', lineHeight: 22 },
-  stepsHeader: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
-  stepCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#F0F0F0' },
-  stepCardCurrent: { borderColor: '#F57C00', borderWidth: 2 },
-  stepNumber: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#FFF0EA', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  stepNumberText: { fontSize: 14, fontWeight: '700', color: '#F57C00' },
-  stepText: { flex: 1, fontSize: 15, color: '#333', lineHeight: 22 },
-  stepCheck: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
-  stepCheckText: { color: '#FFF', fontSize: 18, fontWeight: '800' },
+  recipeTitle: { fontFamily: FONTS.display, fontSize: 24, color: COLORS.navy, marginBottom: 16 },
+  cardHeader: { fontFamily: FONTS.semibold, fontSize: 12, color: COLORS.orange, letterSpacing: 1.2, marginBottom: 10 },
+  ingredientsCard: { backgroundColor: COLORS.card, borderRadius: 14, padding: 16, marginBottom: 22, borderWidth: 1, borderColor: COLORS.border },
+  ingredientLine: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.charcoal, lineHeight: 23 },
+  stepCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border },
+  stepCardCurrent: { borderColor: COLORS.orange, borderWidth: 2 },
+  stepNumber: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.navy, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  stepNumberText: { fontFamily: FONTS.bold, fontSize: 14, color: '#FFF' },
+  stepText: { flex: 1, fontFamily: FONTS.body, fontSize: 15, color: COLORS.charcoal, lineHeight: 22 },
+  stepCheck: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.orange, justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
 
-  doneWrap: { alignItems: 'center', padding: 30, paddingTop: 40 },
+  // Completion
   doneEmoji: { fontSize: 72 },
-  doneTitle: { fontSize: 22, fontWeight: '800', color: '#1A1A1A', textAlign: 'center', marginTop: 12 },
-  doneCount: { fontSize: 15, color: '#666', marginTop: 8 },
-  awardCard: { backgroundColor: '#FFF', borderRadius: 18, padding: 24, alignItems: 'center', marginTop: 24, alignSelf: 'stretch', borderWidth: 1, borderColor: '#FFE0D0' },
-  awardIcon: { fontSize: 56 },
-  awardTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A', marginTop: 8 },
-  awardNext: { fontSize: 13, color: '#888', marginTop: 8, textAlign: 'center' },
-  feedbackLabel: { fontSize: 15, fontWeight: '600', color: '#333', marginTop: 28 },
-  starsRow: { flexDirection: 'row', gap: 6, marginTop: 10 },
-  star: { fontSize: 34, color: '#F57C00' },
-  doneButton: { backgroundColor: '#F57C00', borderRadius: 14, paddingVertical: 16, paddingHorizontal: 48, marginTop: 32 },
-  doneButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  doneTitle: { fontFamily: FONTS.display, fontSize: 34, color: COLORS.navy, marginTop: 8 },
+  doneSub: { fontFamily: FONTS.semibold, fontSize: 16, color: COLORS.charcoal, marginTop: 4, textAlign: 'center' },
+  doneCount: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.warmGray, marginTop: 6 },
+  awardCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 22, alignItems: 'center', marginTop: 22, alignSelf: 'stretch', borderWidth: 1, borderColor: COLORS.border },
+  awardIcon: { fontSize: 52 },
+  awardTitle: { fontFamily: FONTS.display, fontSize: 20, color: COLORS.navy, marginTop: 6 },
+  awardProgressWrap: { alignSelf: 'stretch', marginTop: 14 },
+  awardTrack: { height: 8, borderRadius: 4, backgroundColor: '#EDE4D6', overflow: 'hidden' },
+  awardFill: { height: '100%', backgroundColor: COLORS.orange, borderRadius: 4 },
+  awardNext: { fontFamily: FONTS.medium, fontSize: 12.5, color: COLORS.warmGray, marginTop: 8, textAlign: 'center' },
+  feedbackLabel: { fontFamily: FONTS.semibold, fontSize: 15, color: COLORS.charcoal, marginTop: 26 },
+  starsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  primaryBtn: { backgroundColor: COLORS.orange, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 56, marginTop: 30 },
+  primaryBtnText: { fontFamily: FONTS.bold, color: '#FFF', fontSize: 15, letterSpacing: 0.5 },
 });
