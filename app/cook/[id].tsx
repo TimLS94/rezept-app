@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   introContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   introBadge: { width: 96, height: 96, borderRadius: 48, backgroundColor: COLORS.orange, justifyContent: 'center', alignItems: 'center', marginBottom: 22 },
   introKicker: { fontFamily: FONTS.semibold, color: COLORS.orange, fontSize: 13, letterSpacing: 2 },
-  introTitle: { fontFamily: FONTS.display, color: '#FFF', fontSize: 34, textAlign: 'center', marginTop: 6, lineHeight: 36 },
+  introTitle: { fontFamily: FONTS.display, color: '#FFF', fontSize: 34, textAlign: 'center', marginTop: 6, lineHeight: 42, paddingTop: 2 },
   introMeta: { flexDirection: 'row', gap: 18, marginTop: 18 },
   introMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   introMetaText: { fontFamily: FONTS.medium, color: 'rgba(255,255,255,0.92)', fontSize: 13 },

@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   heroBadge: { position: 'absolute', top: 14, left: 14, backgroundColor: COLORS.navy, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 5 },
   heroBadgeText: { fontFamily: FONTS.semibold, color: '#FFF', fontSize: 12 },
   heroContent: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20 },
-  heroTitle: { fontFamily: FONTS.display, fontSize: 30, color: '#FFF', marginBottom: 10, lineHeight: 32 },
+  heroTitle: { fontFamily: FONTS.display, fontSize: 30, color: '#FFF', marginBottom: 10, lineHeight: 38, paddingTop: 2 },
   heroMeta: { flexDirection: 'row', gap: 16, marginBottom: 16 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   heroMetaText: { fontFamily: FONTS.medium, fontSize: 13, color: 'rgba(255,255,255,0.92)' },

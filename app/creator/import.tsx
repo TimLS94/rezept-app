@@ -16,7 +16,8 @@ import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { fetchInstagramContent, isValidInstagramUrl, buildExtractionContent } from '../../lib/instagram';
 import { extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideoAudio, ExtractedRecipe } from '../../lib/openai';
 import { createRecipe } from '../../lib/recipes';
-import { uploadBase64Image } from '../../lib/storage';
+import { uploadBase64Image, pickAndUploadImage } from '../../lib/storage';
+import { Ionicons } from '@expo/vector-icons';
 import { DietaryTag, Ingredient } from '../../data/recipes';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
@@ -37,6 +38,14 @@ export default function ImportRecipeScreen() {
   const [videoUri, setVideoUri] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [recipe, setRecipe] = useState<ExtractedRecipe | null>(null);
+  const [uploadingTitle, setUploadingTitle] = useState(false);
+
+  const changeTitleImage = async () => {
+    setUploadingTitle(true);
+    const url = await pickAndUploadImage('recipes');
+    setUploadingTitle(false);
+    if (url) setThumbnailUrl(url);
+  };
   const [error, setError] = useState('');
 
   const pickScreenshots = async () => {
@@ -437,9 +446,21 @@ export default function ImportRecipeScreen() {
               <Text style={styles.successText}>✓ Recipe extracted — edit if needed</Text>
             </View>
 
-            {thumbnailUrl ? (
-              <Image source={{ uri: thumbnailUrl }} style={styles.previewImage} />
-            ) : null}
+            <View style={styles.titleImageWrap}>
+              {thumbnailUrl ? (
+                <Image source={{ uri: thumbnailUrl }} style={styles.previewImage} />
+              ) : (
+                <View style={[styles.previewImage, styles.titleImageEmpty]}>
+                  <Ionicons name="image-outline" size={32} color="#BBB" />
+                </View>
+              )}
+              <TouchableOpacity style={styles.changePhotoBtn} onPress={changeTitleImage} disabled={uploadingTitle}>
+                <Ionicons name="camera" size={16} color="#FFF" />
+                <Text style={styles.changePhotoText}>
+                  {uploadingTitle ? 'Uploading…' : (thumbnailUrl ? 'Change title photo' : 'Add title photo')}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.reviewCard}>
               <Text style={styles.editLabel}>Title</Text>
@@ -735,6 +756,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
   },
+  titleImageWrap: { position: 'relative', marginBottom: 16 },
+  titleImageEmpty: { backgroundColor: '#F1EADF', justifyContent: 'center', alignItems: 'center', marginBottom: 0 },
+  changePhotoBtn: { position: 'absolute', bottom: 28, right: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(13,43,99,0.85)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
+  changePhotoText: { color: '#FFF', fontSize: 12.5, fontWeight: '600' },
   reviewCard: {
     backgroundColor: '#FFF',
     borderRadius: 16,
