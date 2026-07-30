@@ -17,16 +17,13 @@ import { addRecipesToShoppingList } from '../lib/shopping';
 
 export default function FavoritesScreen() {
   const { favorites, removeFavorite } = useFavorites();
-  const { addRecipeToWeek } = useMealPlan();
-  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const { addRecipeToWeek, plansByWeek, updateWeekPlan } = useMealPlan();
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
 
-  const markAdded = (ids: string[]) =>
-    setAddedIds(prev => {
-      const next = new Set(prev);
-      ids.forEach(id => next.add(id));
-      return next;
-    });
+  // Reflect the real weekly plan so the calendar button can add AND remove.
+  const weekKeyStr = thisWeekKey();
+  const weekPlan = plansByWeek[weekKeyStr] ?? [];
+  const inPlan = (id: string) => weekPlan.some(m => m.recipe.id === id);
 
   const markInCart = (ids: string[]) =>
     setCartIds(prev => {
@@ -35,16 +32,16 @@ export default function FavoritesScreen() {
       return next;
     });
 
-  const addToWeek = (id: string) => {
+  // Toggle a recipe in/out of this week's plan.
+  const toggleWeek = (id: string) => {
     const recipe = favorites.find(r => r.id === id);
     if (!recipe) return;
-    addRecipeToWeek(thisWeekKey(), recipe);
-    markAdded([id]);
+    if (inPlan(id)) updateWeekPlan(weekKeyStr, plan => plan.filter(m => m.recipe.id !== id));
+    else addRecipeToWeek(weekKeyStr, recipe);
   };
 
   const addAllToWeek = () => {
-    favorites.forEach(r => addRecipeToWeek(thisWeekKey(), r));
-    markAdded(favorites.map(r => r.id));
+    favorites.forEach(r => addRecipeToWeek(weekKeyStr, r));
   };
 
   // Push favorites into the shopping cart (a separate place from the meal plan).
@@ -108,7 +105,7 @@ export default function FavoritesScreen() {
           </View>
 
           {favorites.map(recipe => {
-            const added = addedIds.has(recipe.id);
+            const added = inPlan(recipe.id);
             const inCart = cartIds.has(recipe.id);
             return (
               <View key={recipe.id} style={styles.card}>
@@ -133,8 +130,7 @@ export default function FavoritesScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.act, added && styles.actDone]}
-                    onPress={() => addToWeek(recipe.id)}
-                    disabled={added}
+                    onPress={() => toggleWeek(recipe.id)}
                   >
                     <Ionicons name={added ? 'checkmark' : 'calendar-outline'} size={17} color={added ? COLORS.green : COLORS.navy} />
                   </TouchableOpacity>

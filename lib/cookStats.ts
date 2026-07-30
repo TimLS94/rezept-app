@@ -25,12 +25,14 @@ export async function incrementCooked(): Promise<number> {
 
 export type Award = { threshold: number; icon: string; title: string };
 
+// Rank ladder — the more recipes you cook, the higher your title.
 export const AWARDS: Award[] = [
-  { threshold: 1, icon: '🥉', title: 'First cook' },
-  { threshold: 5, icon: '🍳', title: 'Getting started' },
-  { threshold: 10, icon: '🥈', title: 'Home chef' },
-  { threshold: 25, icon: '🥇', title: 'Kitchen pro' },
-  { threshold: 50, icon: '👨‍🍳', title: 'Master chef' },
+  { threshold: 1, icon: '🍳', title: 'Rookie Cook' },
+  { threshold: 5, icon: '🔪', title: 'Line Cook' },
+  { threshold: 15, icon: '🥘', title: 'Home Chef' },
+  { threshold: 30, icon: '👨‍🍳', title: 'Sous Chef' },
+  { threshold: 60, icon: '🏆', title: 'Head Chef' },
+  { threshold: 100, icon: '👑', title: 'Master Chef' },
 ];
 
 // Highest award earned at this count (null before the first cook).

@@ -17,7 +17,7 @@ import { fetchDbRecipeById } from '../../lib/recipes';
 import { incrementCooked, awardFor, nextAward } from '../../lib/cookStats';
 import { COLORS, FONTS } from '../../lib/theme';
 
-type Phase = 'intro' | 'countdown' | 'cooking';
+type Phase = 'intro' | 'cooking';
 
 export default function CookModeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,8 +34,6 @@ export default function CookModeScreen() {
   const introFade = useRef(new Animated.Value(0)).current;
   const introLift = useRef(new Animated.Value(30)).current;
   const pulse = useRef(new Animated.Value(1)).current;
-  const countScale = useRef(new Animated.Value(1)).current;
-  const [countText, setCountText] = useState('3');
   const awardPop = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -71,20 +69,7 @@ export default function CookModeScreen() {
 
   const total = recipe?.steps.length ?? 0;
 
-  const startCountdown = () => {
-    setPhase('countdown');
-    const seq = ['3', '2', '1', 'GO!'];
-    let i = 0;
-    const tick = () => {
-      setCountText(seq[i]);
-      countScale.setValue(0.4);
-      Animated.spring(countScale, { toValue: 1, friction: 4, tension: 90, useNativeDriver: true }).start();
-      i += 1;
-      if (i < seq.length) setTimeout(tick, 620);
-      else setTimeout(() => setPhase('cooking'), 620);
-    };
-    tick();
-  };
+  const startCooking = () => setPhase('cooking');
 
   // Toggle a step done/undone — checking collapses it, tapping again re-opens it.
   const toggleStep = (index: number) => {
@@ -186,22 +171,11 @@ export default function CookModeScreen() {
             <View style={styles.introMetaItem}><Ionicons name="list-outline" size={16} color="#FFF" /><Text style={styles.introMetaText}>{recipe.steps.length} steps</Text></View>
             <View style={styles.introMetaItem}><Ionicons name="people-outline" size={16} color="#FFF" /><Text style={styles.introMetaText}>{recipe.servings}</Text></View>
           </View>
-          <TouchableOpacity style={styles.startBtn} onPress={startCountdown} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.startBtn} onPress={startCooking} activeOpacity={0.9}>
             <Ionicons name="flame" size={20} color="#FFF" />
             <Text style={styles.startBtnText}>START COOKING</Text>
           </TouchableOpacity>
         </Animated.View>
-      </View>
-    );
-  }
-
-  // ── Countdown ─────────────────────────────────────────────────────────────
-  if (phase === 'countdown') {
-    return (
-      <View style={[styles.container, styles.center]}>
-        <Image source={{ uri: recipe.image }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={8} />
-        <View style={styles.introOverlay} />
-        <Animated.Text style={[styles.countText, { transform: [{ scale: countScale }] }]}>{countText}</Animated.Text>
       </View>
     );
   }
