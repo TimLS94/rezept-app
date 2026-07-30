@@ -11,6 +11,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.feedfamily.app",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:feedfamily.app"
       ],
@@ -78,7 +79,8 @@
       ],
       "expo-secure-store",
       "expo-font",
-      "expo-audio"
+      "expo-audio",
+      "expo-apple-authentication"
     ],
     "scheme": "feedfamily",
     "newArchEnabled": true

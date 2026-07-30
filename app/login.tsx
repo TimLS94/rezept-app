@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 WebBrowser.maybeCompleteAuthSession();
 import { useAuth, canUploadRecipes } from '../lib/auth';
@@ -139,8 +140,40 @@ export default function LoginScreen() {
     }
   };
 
-  const handleAppleSignIn = () => {
-    Alert.alert('Coming soon', 'Apple Sign-In will be available in a future update.');
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (!credential.identityToken) throw new Error('No identity token from Apple');
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
+      });
+      if (error) throw error;
+
+      // Apple only sends the name on the very first sign-in — capture it then.
+      const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      if (fullName) {
+        await supabase.auth.updateUser({ data: { full_name: fullName } }).catch(() => {});
+      }
+      await landAfterAuth();
+    } catch (error: any) {
+      // User dismissing the Apple sheet is not an error worth surfacing.
+      if (error?.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Error', error.message || 'Apple sign in failed');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -275,10 +308,12 @@ export default function LoginScreen() {
               <Ionicons name="logo-google" size={18} color="#DB4437" />
               <Text style={styles.socialButtonText}>Google</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={handleAppleSignIn}>
-              <Ionicons name="logo-apple" size={20} color="#000" />
-              <Text style={styles.socialButtonText}>Apple</Text>
-            </TouchableOpacity>
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity style={styles.socialButton} onPress={handleAppleSignIn}>
+                <Ionicons name="logo-apple" size={20} color="#000" />
+                <Text style={styles.socialButtonText}>Apple</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {mode === 'password' && (

@@ -288,4 +288,19 @@ as $$
 $$;
 grant execute on function public.recipe_of_the_week() to anon, authenticated;
 
+-- Self-service account deletion (App Store requirement).
+create or replace function public.delete_account()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from public.recipes where influencer_id = auth.uid();
+  delete from auth.users where id = auth.uid();  -- cascades to profiles + children
+end;
+$$;
+revoke all on function public.delete_account() from public;
+grant execute on function public.delete_account() to authenticated;
+
 commit;
