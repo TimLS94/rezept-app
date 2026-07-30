@@ -44,6 +44,17 @@ export default function ShoppingScreen() {
   const [showChecked, setShowChecked] = useState(true);
   const [newItemName, setNewItemName] = useState('');
   const [viewMode, setViewMode] = useState<'category' | 'recipe'>('category');
+  // Recipe view: collapsed by default; tapping a card expands only that one.
+  const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
+
+  const toggleRecipe = (key: string) => {
+    setExpandedRecipes(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   useEffect(() => {
     loadItems();
@@ -380,12 +391,15 @@ export default function ShoppingScreen() {
           groupedByRecipe.map((group, index) => {
             const recipe = group.recipe_id ? getRecipeById(group.recipe_id) : undefined;
             const doneCount = group.items.filter(i => i.checked).length;
+            const key = group.name;
+            const isExpanded = expandedRecipes.has(key);
             return (
             <View key={index} style={styles.recipeSection}>
               {recipe ? (
                 <TouchableOpacity
                   style={styles.mealHeaderCard}
-                  onPress={() => router.push(`/recipe/${recipe.id}`)}
+                  activeOpacity={0.85}
+                  onPress={() => toggleRecipe(key)}
                 >
                   <Image source={{ uri: recipe.image }} style={styles.mealHeaderImage} />
                   <View style={styles.mealHeaderInfo}>
@@ -395,18 +409,27 @@ export default function ShoppingScreen() {
                       ⏱ {recipe.prepTime + recipe.cookTime} min • {doneCount}/{group.items.length} items
                     </Text>
                   </View>
-                  <Text style={styles.mealHeaderArrow}>→</Text>
+                  <TouchableOpacity
+                    onPress={() => router.push(`/recipe/${recipe.id}`)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.mealHeaderArrow}>→</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.chevron}>{isExpanded ? '▾' : '▸'}</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={styles.recipeHeader}>
+                <TouchableOpacity style={styles.recipeHeader} activeOpacity={0.85} onPress={() => toggleRecipe(key)}>
                   <Text style={styles.recipeName}>{group.name}</Text>
-                  <Text style={styles.recipeCount}>
-                    {group.items.filter(i => !i.checked).length} items
-                  </Text>
-                </View>
+                  <View style={styles.recipeHeaderRight}>
+                    <Text style={styles.recipeCount}>
+                      {group.items.filter(i => !i.checked).length} items
+                    </Text>
+                    <Text style={styles.chevron}>{isExpanded ? '▾' : '▸'}</Text>
+                  </View>
+                </TouchableOpacity>
               )}
 
-              {group.items.map((item) => (
+              {isExpanded && group.items.map((item) => (
                 <TouchableOpacity 
                   key={item.id} 
                   style={[styles.itemRow, item.checked && styles.itemRowChecked]}
@@ -492,7 +515,9 @@ const styles = StyleSheet.create({
   mealHeaderTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginTop: 1 },
   mealHeaderMeta: { fontSize: 12, color: '#888', marginTop: 2 },
   mealHeaderArrow: { fontSize: 18, color: '#CCC', marginLeft: 8 },
+  chevron: { fontSize: 14, color: '#B8AFA2', marginLeft: 10, width: 14, textAlign: 'center' },
   recipeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: '#F57C00', marginBottom: 8 },
+  recipeHeaderRight: { flexDirection: 'row', alignItems: 'center' },
   recipeName: { fontSize: 16, fontWeight: '700', color: '#F57C00' },
   recipeCount: { fontSize: 13, color: '#888' },
   itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 14, borderRadius: 10, marginBottom: 6 },
