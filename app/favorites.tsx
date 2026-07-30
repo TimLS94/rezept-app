@@ -8,7 +8,9 @@ import {
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { COLORS } from '../lib/theme';
 import { useFavorites } from '../lib/favorites';
 import { useMealPlan, thisWeekKey } from '../lib/mealPlan';
 import { addRecipesToShoppingList } from '../lib/shopping';
@@ -126,29 +128,25 @@ export default function FavoritesScreen() {
                 </TouchableOpacity>
 
                 <View style={styles.cardActions}>
-                  <TouchableOpacity style={styles.cookButton} onPress={() => router.push(`/cook/${recipe.id}`)}>
-                    <Text style={styles.cookButtonText}>👨‍🍳 Cook</Text>
+                  <TouchableOpacity style={styles.actCook} onPress={() => router.push(`/cook/${recipe.id}`)}>
+                    <Ionicons name="restaurant" size={17} color="#FFF" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.planButton, added && styles.planButtonAdded]}
+                    style={[styles.act, added && styles.actDone]}
                     onPress={() => addToWeek(recipe.id)}
                     disabled={added}
                   >
-                    <Text style={[styles.planButtonText, added && styles.planButtonTextAdded]}>
-                      {added ? '✓ In plan' : '+ This week'}
-                    </Text>
+                    <Ionicons name={added ? 'checkmark' : 'calendar-outline'} size={17} color={added ? COLORS.green : COLORS.navy} />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.cartButton, inCart && styles.cartButtonAdded]}
+                    style={[styles.act, inCart && styles.actDone]}
                     onPress={() => addToCart([recipe])}
                     disabled={inCart}
                   >
-                    <Text style={[styles.cartButtonText, inCart && styles.cartButtonTextAdded]}>
-                      {inCart ? '✓ In cart' : '🛒 Cart'}
-                    </Text>
+                    <Ionicons name={inCart ? 'checkmark' : 'cart-outline'} size={17} color={inCart ? COLORS.green : COLORS.navy} />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.removeButton} onPress={() => removeFavorite(recipe.id)}>
-                    <Text style={styles.removeButtonText}>♥</Text>
+                  <TouchableOpacity style={styles.act} onPress={() => removeFavorite(recipe.id)}>
+                    <Ionicons name="heart" size={17} color={COLORS.orange} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -179,19 +177,10 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   cardMeta: { fontSize: 12, color: '#888', marginTop: 4 },
   cardHandle: { fontSize: 12, color: '#F57C00', fontWeight: '500', marginTop: 6 },
-  cardActions: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10, gap: 6 },
-  cookButton: { backgroundColor: '#F57C00', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
-  cookButtonText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
-  planButton: { backgroundColor: '#FFF0EA', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: '#FFD3C2' },
-  planButtonAdded: { backgroundColor: '#E8F5E9', borderColor: '#C8E6C9' },
-  planButtonText: { fontSize: 12, fontWeight: '700', color: '#F57C00' },
-  planButtonTextAdded: { color: '#3C8D40' },
-  cartButton: { backgroundColor: '#E9EEF8', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: '#C2D8FF' },
-  cartButtonAdded: { backgroundColor: '#E8F5E9', borderColor: '#C8E6C9' },
-  cartButtonText: { fontSize: 12, fontWeight: '700', color: '#0D2B63' },
-  cartButtonTextAdded: { color: '#3C8D40' },
-  removeButton: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  removeButtonText: { fontSize: 18, color: '#F57C00' },
+  cardActions: { flexDirection: 'row', flexWrap: 'wrap', width: 90, alignItems: 'center', justifyContent: 'center', paddingRight: 8, gap: 6 },
+  act: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F6F1EA', justifyContent: 'center', alignItems: 'center' },
+  actCook: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center' },
+  actDone: { backgroundColor: '#E8F5E9' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIcon: { fontSize: 64, marginBottom: 16 },
   emptyText: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
