@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     padding: 18,
     alignItems: 'center',
   },
-  cartButtonAdded: { backgroundColor: '#4CAF50' },
+  cartButtonAdded: { backgroundColor: '#3C8D40' },
   cartButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 
   emptyIcon: { fontSize: 64, marginBottom: 16 },

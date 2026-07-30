@@ -193,7 +193,7 @@ export default function BudgetScreen() {
                 <Text style={styles.budgetStatLabel}>Planned</Text>
               </View>
               <View style={styles.budgetStat}>
-                <Text style={[styles.budgetStatValue, { color: remaining >= 0 ? '#4CAF50' : '#E53935' }]}>
+                <Text style={[styles.budgetStatValue, { color: remaining >= 0 ? '#3C8D40' : '#E53935' }]}>
                   ${Math.abs(remaining).toFixed(2)}
                 </Text>
                 <Text style={styles.budgetStatLabel}>{remaining >= 0 ? 'Remaining' : 'Over Budget'}</Text>
@@ -560,10 +560,10 @@ const styles = StyleSheet.create({
   cookedCount: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: '#3C8D40',
   },
   nextWeekButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#3C8D40',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -652,8 +652,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: '#3C8D40',
+    borderColor: '#3C8D40',
   },
   checkmark: {
     color: '#FFF',
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
   favAdd: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: '#F57C00' },
   favAddDone: { backgroundColor: '#E8F5E9' },
   favAddText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
-  favAddDoneText: { color: '#2E7D32' },
+  favAddDoneText: { color: '#3C8D40' },
   addMealButtonText: {
     fontSize: 14,
     color: '#F57C00',
@@ -760,12 +760,12 @@ const styles = StyleSheet.create({
   },
   shoppingListSubtitle: {
     fontSize: 13,
-    color: '#4CAF50',
+    color: '#3C8D40',
     marginTop: 2,
   },
   shoppingListArrow: {
     fontSize: 20,
-    color: '#4CAF50',
+    color: '#3C8D40',
   },
   bottomSpacer: {
     height: 40,

@@ -220,7 +220,7 @@ export default function RecipeDetailScreen() {
                   <Text style={styles.badgeText}>👶 Kid Approved</Text>
                 </View>
               )}
-              <View style={[styles.badge, { backgroundColor: '#4CAF50' }]}>
+              <View style={[styles.badge, { backgroundColor: '#3C8D40' }]}>
                 <Text style={styles.badgeText}>{recipe.difficulty}</Text>
               </View>
             </View>
@@ -558,8 +558,8 @@ const styles = StyleSheet.create({
   memberCheckboxChecked: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
   memberCheckmark: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   portionResult: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 16, borderRadius: 12, marginTop: 10 },
-  portionResultLabel: { fontSize: 14, color: '#2E7D32' },
-  portionResultValue: { fontSize: 18, fontWeight: '700', color: '#2E7D32' },
+  portionResultLabel: { fontSize: 14, color: '#3C8D40' },
+  portionResultValue: { fontSize: 18, fontWeight: '700', color: '#3C8D40' },
   modalButtons: { flexDirection: 'row', marginTop: 20 },
   modalCancelButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#F5F5F5', alignItems: 'center', marginRight: 8 },
   modalCancelText: { fontSize: 16, fontWeight: '600', color: '#666' },

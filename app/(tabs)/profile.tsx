@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
   memberName: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
   memberDetails: { fontSize: 13, color: '#888', marginTop: 2 },
   memberPortion: { fontSize: 12, color: '#F57C00', marginTop: 4 },
-  learned: { color: '#4CAF50', fontWeight: '600' },
+  learned: { color: '#3C8D40', fontWeight: '600' },
   removeButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFE0E0', justifyContent: 'center', alignItems: 'center' },
   removeButtonText: { fontSize: 20, color: '#E53935', fontWeight: '600' },
   settingsCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', marginHorizontal: 20, marginBottom: 12, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#EEE' },

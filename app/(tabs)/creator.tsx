@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   recipeBody: { flex: 1, padding: 10, justifyContent: 'center' },
   payToggle: { paddingHorizontal: 10, paddingVertical: 7, marginRight: 10, borderRadius: 10, borderWidth: 1, borderColor: '#C8E6C9', backgroundColor: '#E8F5E9' },
   payToggleOn: { borderColor: '#FFD3C2', backgroundColor: '#FFF0EA' },
-  payToggleText: { fontSize: 12, fontWeight: '700', color: '#2E7D32' },
+  payToggleText: { fontSize: 12, fontWeight: '700', color: '#3C8D40' },
   payToggleTextOn: { color: '#F57C00' },
   recipeTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   recipeMeta: { fontSize: 12, color: '#888', marginTop: 4 },

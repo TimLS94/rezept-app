@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
   },
-  successText: { color: '#2E7D32', fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  successText: { color: '#3C8D40', fontSize: 14, fontWeight: '600', textAlign: 'center' },
   previewImage: {
     width: '100%',
     height: 200,
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: { fontSize: 15, fontWeight: '600', color: '#666' },
   saveButton: {
     flex: 2,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#3C8D40',
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',

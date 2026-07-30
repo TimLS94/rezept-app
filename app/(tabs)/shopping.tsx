@@ -33,8 +33,8 @@ const CATEGORIES = [
   { id: 'meat', name: 'Meat & Fish', icon: '🥩', color: '#FFEBEE' },
   { id: 'dairy', name: 'Dairy', icon: '🧀', color: '#FFF8E1' },
   { id: 'bakery', name: 'Bakery', icon: '🍞', color: '#FBE9E7' },
-  { id: 'pantry', name: 'Pantry', icon: '🥫', color: '#F3E5F5' },
-  { id: 'frozen', name: 'Frozen', icon: '🧊', color: '#E3F2FD' },
+  { id: 'pantry', name: 'Pantry', icon: '🥫', color: '#E9EEF8' },
+  { id: 'frozen', name: 'Frozen', icon: '🧊', color: '#E9EEF8' },
   { id: 'other', name: 'Other', icon: '📦', color: '#F5F5F5' },
 ];
 
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   progressNumber: { fontSize: 24, fontWeight: '700', color: '#F57C00' },
   progressSubtext: { fontSize: 14, color: '#888' },
   progressBarContainer: { height: 8, backgroundColor: '#F0F0F0', borderRadius: 4 },
-  progressBar: { height: '100%', backgroundColor: '#4CAF50', borderRadius: 4 },
+  progressBar: { height: '100%', backgroundColor: '#3C8D40', borderRadius: 4 },
   viewToggle: { flexDirection: 'row', marginHorizontal: 20, backgroundColor: '#F5F5F5', borderRadius: 12, padding: 4, marginBottom: 12 },
   viewToggleButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   viewToggleActive: { backgroundColor: '#FFF' },
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 14, borderRadius: 10, marginBottom: 6 },
   itemRowChecked: { backgroundColor: '#F5F5F5' },
   checkbox: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: '#DDD', marginRight: 14, justifyContent: 'center', alignItems: 'center' },
-  checkboxChecked: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  checkboxChecked: { backgroundColor: '#3C8D40', borderColor: '#3C8D40' },
   checkmark: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   itemInfo: { flex: 1 },
   itemName: { fontSize: 16, color: '#1A1A1A' },

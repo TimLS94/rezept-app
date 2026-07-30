@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   subscribeButton: { backgroundColor: '#F57C00', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 24 },
   subscribedButton: { backgroundColor: '#E8F5E9' },
   subscribeButtonText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-  subscribedButtonText: { color: '#4CAF50' },
+  subscribedButtonText: { color: '#3C8D40' },
   socialRow: { flexDirection: 'row', marginTop: 16, gap: 12 },
   socialButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
   socialIcon: { fontSize: 20 },
