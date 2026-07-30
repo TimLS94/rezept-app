@@ -9,6 +9,7 @@ import {
   PanResponder,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -20,6 +21,7 @@ import {
 } from '../../data/recipes';
 import { fetchDbRecipes } from '../../lib/recipes';
 import { useFavorites } from '../../lib/favorites';
+import { getSeenIds, addSeenId, clearSeenIds } from '../../lib/seen';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { useAuth } from '../../lib/auth';
 
@@ -27,24 +29,33 @@ const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25;
 
 export default function DiscoverScreen() {
-  const { addFavorite } = useFavorites();
+  const { addFavorite, favorites, loaded: favLoaded } = useFavorites();
   const { isGuest } = useAuth();
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [index, setIndex] = useState(0);
   const [liked, setLiked] = useState<Recipe[]>([]);
   const [uploaded, setUploaded] = useState<Recipe[]>([]);
+  // Ids to skip in the deck: already favorited or previously swiped. Captured as
+  // a stable snapshot once favorites load, so the deck doesn't shift mid-session.
+  const [excluded, setExcluded] = useState<Set<string> | null>(null);
 
   // Uploaded (creator) recipes appear first so fresh content can trend.
   useEffect(() => {
     fetchDbRecipes().then(setUploaded);
   }, []);
 
+  useEffect(() => {
+    if (!favLoaded || excluded) return;
+    getSeenIds().then(seen => setExcluded(new Set([...seen, ...favorites.map(f => f.id)])));
+  }, [favLoaded, favorites, excluded]);
+
   const deck = useMemo(() => {
-    // Only show free recipes (not behind paywall)
-    const pool = [...uploaded, ...RECIPES].filter(r => !r.isPaid);
+    if (!excluded) return []; // still loading the exclusion snapshot
+    // Only show free recipes the user hasn't already favorited or swiped.
+    const pool = [...uploaded, ...RECIPES].filter(r => !r.isPaid && !excluded.has(r.id));
     if (activeFilters.length === 0) return pool;
     return pool.filter(r => activeFilters.every(tag => r.dietary.includes(tag)));
-  }, [activeFilters, uploaded]);
+  }, [activeFilters, uploaded, excluded]);
 
   const position = useRef(new Animated.ValueXY()).current;
 
@@ -84,6 +95,8 @@ export default function DiscoverScreen() {
         setLiked(prev => [...prev, recipe]);
       }
     }
+    // Remember this recipe so it won't reappear on a later visit.
+    addSeenId(recipe.id);
     position.setValue({ x: 0, y: 0 });
     setIndex(i => i + 1);
   };
@@ -175,6 +188,9 @@ export default function DiscoverScreen() {
   });
 
   const restart = () => {
+    // Bring every recipe back (except ones you've already favorited).
+    clearSeenIds();
+    setExcluded(new Set(favorites.map(f => f.id)));
     position.setValue({ x: 0, y: 0 });
     setIndex(0);
     setLiked([]);
@@ -189,7 +205,7 @@ export default function DiscoverScreen() {
         <View style={styles.backButton} />
         <Text style={styles.headerTitle}>Discover</Text>
         <TouchableOpacity style={styles.likedBadge} onPress={() => router.push('/favorites')}>
-          <Text style={styles.likedBadgeText}>❤️ {liked.length}</Text>
+          <Text style={styles.likedBadgeText}>❤️ {favorites.length}</Text>
         </TouchableOpacity>
       </View>
 
@@ -219,7 +235,11 @@ export default function DiscoverScreen() {
 
       {/* Card area */}
       <View style={styles.cardArea}>
-        {deck.length === 0 ? (
+        {!excluded ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color="#FF6B35" />
+          </View>
+        ) : deck.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔍</Text>
             <Text style={styles.emptyText}>No recipes match these filters</Text>

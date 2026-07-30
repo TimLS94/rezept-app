@@ -5,6 +5,8 @@ import { supabase } from './supabase';
 
 type FavoritesContextValue = {
   favorites: Recipe[];
+  // False until the user's favorites have loaded (or resolved empty for guests).
+  loaded: boolean;
   isFavorite: (id: string) => boolean;
   // Add a recipe; returns false if it was already a favorite.
   addFavorite: (recipe: Recipe) => boolean;
@@ -17,6 +19,7 @@ const FavoritesContext = createContext<FavoritesContextValue | null>(null);
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState<Recipe[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   // Load the signed-in user's favorites; clear them on sign-out (guests are
   // session-only, in memory).
@@ -25,6 +28,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     (async () => {
       if (!user) {
         setFavorites([]);
+        setLoaded(true);
         return;
       }
       const { data } = await supabase
@@ -32,7 +36,9 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
         .select('recipe')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-      if (active && data) setFavorites(data.map(r => r.recipe as Recipe));
+      if (!active) return;
+      if (data) setFavorites(data.map(r => r.recipe as Recipe));
+      setLoaded(true);
     })();
     return () => {
       active = false;
@@ -87,7 +93,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 
   return (
     <FavoritesContext.Provider
-      value={{ favorites, isFavorite, addFavorite, removeFavorite, toggleFavorite }}
+      value={{ favorites, loaded, isFavorite, addFavorite, removeFavorite, toggleFavorite }}
     >
       {children}
     </FavoritesContext.Provider>

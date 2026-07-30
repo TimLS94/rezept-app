@@ -126,6 +126,9 @@ export default function FavoritesScreen() {
                 </TouchableOpacity>
 
                 <View style={styles.cardActions}>
+                  <TouchableOpacity style={styles.cookButton} onPress={() => router.push(`/cook/${recipe.id}`)}>
+                    <Text style={styles.cookButtonText}>👨‍🍳 Cook</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.planButton, added && styles.planButtonAdded]}
                     onPress={() => addToWeek(recipe.id)}
@@ -176,7 +179,9 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   cardMeta: { fontSize: 12, color: '#888', marginTop: 4 },
   cardHandle: { fontSize: 12, color: '#FF6B35', fontWeight: '500', marginTop: 6 },
-  cardActions: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10, gap: 8 },
+  cardActions: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10, gap: 6 },
+  cookButton: { backgroundColor: '#FF6B35', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
+  cookButtonText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
   planButton: { backgroundColor: '#FFF0EA', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: '#FFD3C2' },
   planButtonAdded: { backgroundColor: '#E8F5E9', borderColor: '#C8E6C9' },
   planButtonText: { fontSize: 12, fontWeight: '700', color: '#FF6B35' },

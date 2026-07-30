@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,12 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { Recipe } from '../../data/recipes';
+import { Recipe, DIETARY_TAGS, DietaryTag } from '../../data/recipes';
 import { mapDbRecipe } from '../../lib/recipes';
 import { useAuth } from '../../lib/auth';
 
@@ -33,6 +34,22 @@ export default function CreatorProfileScreen() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [query, setQuery] = useState('');
+  const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
+
+  const toggleFilter = (tag: DietaryTag) =>
+    setActiveFilters(prev => (prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]));
+
+  // Search + dietary filter within this creator's recipes.
+  const filteredRecipes = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return recipes.filter(r => {
+      const matchesQuery =
+        q === '' || r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q);
+      const matchesFilters = activeFilters.every(tag => r.dietary.includes(tag));
+      return matchesQuery && matchesFilters;
+    });
+  }, [recipes, query, activeFilters]);
 
   useEffect(() => {
     loadCreator();
@@ -236,13 +253,62 @@ export default function CreatorProfileScreen() {
         {/* Recipes */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recipes</Text>
+
+          {recipes.length > 0 && (
+            <>
+              {/* Search within this creator's recipes */}
+              <View style={styles.searchBar}>
+                <Text style={styles.searchIcon}>🔍</Text>
+                <TextInput
+                  style={styles.searchInput}
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search this creator's recipes…"
+                  placeholderTextColor="#999"
+                  autoCapitalize="none"
+                />
+                {query.length > 0 && (
+                  <TouchableOpacity onPress={() => setQuery('')}>
+                    <Text style={styles.searchClear}>×</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Dietary filters */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterRow}
+              >
+                {DIETARY_TAGS.map(tag => {
+                  const active = activeFilters.includes(tag.id);
+                  return (
+                    <TouchableOpacity
+                      key={tag.id}
+                      style={[styles.filterChip, active && styles.filterChipActive]}
+                      onPress={() => toggleFilter(tag.id)}
+                    >
+                      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                        {tag.icon} {tag.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </>
+          )}
+
           {recipes.length === 0 ? (
             <View style={styles.emptyRecipes}>
               <Text style={styles.emptyRecipesText}>No public recipes yet</Text>
             </View>
+          ) : filteredRecipes.length === 0 ? (
+            <View style={styles.emptyRecipes}>
+              <Text style={styles.emptyRecipesText}>No recipes match your search or filters</Text>
+            </View>
           ) : (
             <View style={styles.recipesGrid}>
-              {recipes.map((recipe) => (
+              {filteredRecipes.map((recipe) => (
                 <TouchableOpacity
                   key={recipe.id}
                   style={styles.recipeCard}
@@ -304,6 +370,15 @@ const styles = StyleSheet.create({
   socialIcon: { fontSize: 20 },
   section: { padding: 20 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A', marginBottom: 16 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: '#EEE', marginBottom: 12 },
+  searchIcon: { fontSize: 15, marginRight: 8 },
+  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: '#1A1A1A' },
+  searchClear: { fontSize: 22, color: '#BBB', paddingHorizontal: 4 },
+  filterRow: { gap: 8, paddingBottom: 16 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEE' },
+  filterChipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
+  filterChipText: { fontSize: 13, color: '#666', fontWeight: '500' },
+  filterChipTextActive: { color: '#FFF', fontWeight: '700' },
   emptyRecipes: { alignItems: 'center', padding: 32, backgroundColor: '#FFF', borderRadius: 16 },
   emptyRecipesText: { fontSize: 15, color: '#888' },
   recipesGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 },

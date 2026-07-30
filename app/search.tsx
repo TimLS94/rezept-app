@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   modeButtonActive: { backgroundColor: '#FFF' },
   modeButtonText: { fontSize: 14, color: '#888', fontWeight: '500' },
   modeButtonTextActive: { color: '#1A1A1A', fontWeight: '600' },
-  filterContainer: { minHeight: 52, maxHeight: 52 },
+  filterContainer: { maxHeight: 64 },
   creatorCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, marginHorizontal: 20, marginBottom: 12, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
   creatorAvatar: { width: 56, height: 56, borderRadius: 28, marginRight: 14 },
   creatorInfo: { flex: 1 },

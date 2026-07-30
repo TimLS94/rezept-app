@@ -39,8 +39,8 @@ const QUICK_ADD_OPTIONS = [
   { label: '👶 Baby', name: 'Baby', age: '1', gender: 'male' as const, weight: '22' },
   { label: '🧒 Child', name: 'Child', age: '8', gender: 'male' as const, weight: '55' },
   { label: '👦 Teen', name: 'Teen', age: '15', gender: 'male' as const, weight: '130' },
-  { label: '👩 Woman', name: 'Partner', age: '35', gender: 'female' as const, weight: '140' },
-  { label: '👨 Man', name: 'Partner', age: '35', gender: 'male' as const, weight: '180' },
+  { label: '👩 Woman', name: 'Woman', age: '35', gender: 'female' as const, weight: '140' },
+  { label: '👨 Man', name: 'Man', age: '35', gender: 'male' as const, weight: '180' },
 ];
 
 // Calculate base portion based on weight, age, gender (simplified BMR-based)

@@ -103,7 +103,6 @@ export default function EditRecipeScreen() {
         tags: recipe.tags,
         ingredients: recipe.ingredients,
         instructions: recipe.instructions,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', recipe.id);
 
