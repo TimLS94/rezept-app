@@ -1,12 +1,15 @@
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { RECIPES, getRecipesByCategory, Recipe } from '../../data/recipes';
 import { supabase } from '../../lib/supabase';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { fetchRecipeOfTheWeek } from '../../lib/recipes';
 import { COLORS, FONTS, RADIUS } from '../../lib/theme';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
 
@@ -17,16 +20,16 @@ const categories = [
   { id: 'budget', name: 'Budget', icon: '💰' },
 ];
 
-// Shared shortcut card — one consistent style instead of a rainbow of pastels.
-function NavCard({ icon, title, subtitle, onPress }: { icon: string; title: string; subtitle: string; onPress: () => void }) {
+// Shared shortcut card — one consistent style with a navy icon badge.
+function NavCard({ icon, title, subtitle, onPress }: { icon: IoniconName; title: string; subtitle: string; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.navCard} onPress={onPress} activeOpacity={0.85}>
-      <View style={styles.navIcon}><Text style={styles.navIconText}>{icon}</Text></View>
+      <View style={styles.navIcon}><Ionicons name={icon} size={22} color="#FFF" /></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.navTitle}>{title}</Text>
         <Text style={styles.navSubtitle}>{subtitle}</Text>
       </View>
-      <Text style={styles.navArrow}>→</Text>
+      <Ionicons name="chevron-forward" size={20} color={COLORS.orange} />
     </TouchableOpacity>
   );
 }
@@ -70,7 +73,7 @@ export default function HomeScreen() {
 
         {/* Search */}
         <TouchableOpacity style={styles.searchBar} onPress={() => router.push('/search')}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search" size={17} color={COLORS.warmGray} style={styles.searchIcon} />
           <Text style={styles.searchPlaceholder}>Search recipes, creators…</Text>
         </TouchableOpacity>
 
@@ -81,14 +84,15 @@ export default function HomeScreen() {
             <Image source={{ uri: weekRecipe.image }} style={styles.heroImage} contentFit="cover" />
             <View style={styles.heroOverlay} />
             <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>❤️ Most loved this week</Text>
+              <Ionicons name="heart" size={12} color="#FFF" />
+              <Text style={styles.heroBadgeText}>Most loved this week</Text>
             </View>
             <View style={styles.heroContent}>
               <Text style={styles.heroTitle} numberOfLines={2}>{weekRecipe.title}</Text>
               <View style={styles.heroMeta}>
-                <Text style={styles.heroMetaText}>⏱ {weekRecipe.prepTime + weekRecipe.cookTime} min</Text>
-                <Text style={styles.heroMetaText}>👥 {weekRecipe.servings}</Text>
-                <Text style={styles.heroMetaText}>📊 {weekRecipe.difficulty}</Text>
+                <View style={styles.metaItem}><Ionicons name="time-outline" size={14} color="#FFF" /><Text style={styles.heroMetaText}>{weekRecipe.prepTime + weekRecipe.cookTime} min</Text></View>
+                <View style={styles.metaItem}><Ionicons name="people-outline" size={14} color="#FFF" /><Text style={styles.heroMetaText}>{weekRecipe.servings}</Text></View>
+                <View style={styles.metaItem}><Ionicons name="stats-chart-outline" size={14} color="#FFF" /><Text style={styles.heroMetaText}>{weekRecipe.difficulty}</Text></View>
               </View>
               <View style={styles.heroFooter}>
                 <View style={styles.influencerInfo}>
@@ -105,12 +109,12 @@ export default function HomeScreen() {
 
         {/* Shortcuts */}
         <View style={styles.navGroup}>
-          <NavCard icon="🔥" title="Discover" subtitle="Swipe to save your favorites" onPress={() => router.push('/discover')} />
-          <NavCard icon="❤️" title="Favorites" subtitle="Cook, plan or add to cart" onPress={() => router.push('/favorites')} />
+          <NavCard icon="flame" title="Discover" subtitle="Swipe to save your favorites" onPress={() => router.push('/discover')} />
+          <NavCard icon="heart" title="Favorites" subtitle="Cook, plan or add to cart" onPress={() => router.push('/favorites')} />
           {canUploadRecipes(role) && (
-            <NavCard icon="📚" title="My Cookbook" subtitle="Your own & imported recipes" onPress={() => router.push('/cookbook')} />
+            <NavCard icon="book" title="My Cookbook" subtitle="Your own & imported recipes" onPress={() => router.push('/cookbook')} />
           )}
-          <NavCard icon="📅" title="Meal Planner" subtitle="Plan your week • Build your list" onPress={() => router.push('/budget')} />
+          <NavCard icon="calendar" title="Meal Planner" subtitle="Plan your week • Build your list" onPress={() => router.push('/budget')} />
         </View>
 
         {/* Categories */}
@@ -175,11 +179,12 @@ const styles = StyleSheet.create({
   heroCard: { borderRadius: RADIUS.lg, overflow: 'hidden', height: 320 },
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.overlay },
-  heroBadge: { position: 'absolute', top: 14, left: 14, backgroundColor: COLORS.navy, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
+  heroBadge: { position: 'absolute', top: 14, left: 14, backgroundColor: COLORS.navy, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 5 },
   heroBadgeText: { fontFamily: FONTS.semibold, color: '#FFF', fontSize: 12 },
   heroContent: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20 },
   heroTitle: { fontFamily: FONTS.display, fontSize: 30, color: '#FFF', marginBottom: 10, lineHeight: 32 },
   heroMeta: { flexDirection: 'row', gap: 16, marginBottom: 16 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   heroMetaText: { fontFamily: FONTS.medium, fontSize: 13, color: 'rgba(255,255,255,0.92)' },
   heroFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   influencerInfo: { flexDirection: 'row', alignItems: 'center' },
