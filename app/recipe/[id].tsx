@@ -386,7 +386,12 @@ export default function RecipeDetailScreen() {
                 <View style={styles.stepNumber}>
                   <Text style={styles.stepNumberText}>{index + 1}</Text>
                 </View>
-                <Text style={styles.stepText}>{step}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.stepText}>{step}</Text>
+                  {recipe.stepImages?.[index] ? (
+                    <Image source={{ uri: recipe.stepImages[index]! }} style={styles.stepImage} contentFit="cover" />
+                  ) : null}
+                </View>
               </View>
             ))}
           </View>
@@ -535,7 +540,8 @@ const styles = StyleSheet.create({
   stepRow: { flexDirection: 'row', marginBottom: 20 },
   stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
   stepNumberText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
-  stepText: { flex: 1, fontSize: 15, color: '#1A1A1A', lineHeight: 22 },
+  stepText: { fontSize: 15, color: '#1A1A1A', lineHeight: 22 },
+  stepImage: { width: '100%', height: 170, borderRadius: 12, marginTop: 10 },
   bottomSpacer: { height: 100 },
   bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 32, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
   addToCartButton: { backgroundColor: '#F57C00', padding: 18, borderRadius: 14, alignItems: 'center' },

@@ -30,7 +30,13 @@ export function mapDbRecipe(row: any): Recipe {
       avatar: profile.avatar_url || row.influencer_avatar || DEFAULT_AVATAR,
     },
     ingredients: Array.isArray(row.ingredients) ? row.ingredients : [],
-    steps: Array.isArray(row.instructions) ? row.instructions : [],
+    // Instructions may be plain strings (legacy) or { text, image } objects.
+    steps: (Array.isArray(row.instructions) ? row.instructions : []).map((s: any) =>
+      typeof s === 'string' ? s : (s?.text ?? '')
+    ),
+    stepImages: (Array.isArray(row.instructions) ? row.instructions : []).map((s: any) =>
+      typeof s === 'string' ? null : (s?.image ?? null)
+    ),
     isPaid: row.is_paid ?? false,
   };
 }
@@ -112,6 +118,7 @@ export type NewRecipeInput = {
   dietary: DietaryTag[];
   ingredients: Ingredient[];
   steps: string[];
+  stepImages?: (string | null)[]; // index-aligned with steps
   isPaid?: boolean;
 };
 
@@ -146,7 +153,11 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
       kid_approved: false,
       tags: input.dietary,
       ingredients: input.ingredients,
-      instructions: input.steps,
+      // Store steps as { text, image } when a step has a photo, else a plain
+      // string (keeps legacy recipes and the seed catalogue compatible).
+      instructions: input.steps.map((text, i) =>
+        input.stepImages?.[i] ? { text, image: input.stepImages[i] } : text
+      ),
       is_paid: input.isPaid ?? false,
       influencer_id: user.id,
       influencer_name: profile?.full_name || 'Creator',

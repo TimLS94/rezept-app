@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { DIETARY_TAGS, DietaryTag, Ingredient } from '../../data/recipes';
 import { createRecipe } from '../../lib/recipes';
 import { pickAndUploadImage } from '../../lib/storage';
+import { COLORS } from '../../lib/theme';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
@@ -46,6 +48,8 @@ export default function UploadRecipeScreen() {
   const [dietary, setDietary] = useState<DietaryTag[]>([]);
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([emptyIngredient()]);
   const [steps, setSteps] = useState<string[]>(['']);
+  const [stepImages, setStepImages] = useState<(string | null)[]>([null]);
+  const [uploadingStep, setUploadingStep] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -69,9 +73,19 @@ export default function UploadRecipeScreen() {
 
   const updateStep = (i: number, value: string) =>
     setSteps(prev => prev.map((s, idx) => (idx === i ? value : s)));
-  const addStep = () => setSteps(prev => [...prev, '']);
-  const removeStep = (i: number) =>
+  const addStep = () => { setSteps(prev => [...prev, '']); setStepImages(prev => [...prev, null]); };
+  const removeStep = (i: number) => {
     setSteps(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
+    setStepImages(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
+  };
+  const chooseStepImage = async (i: number) => {
+    setUploadingStep(i);
+    const url = await pickAndUploadImage('recipes');
+    setUploadingStep(null);
+    if (url) setStepImages(prev => prev.map((img, idx) => (idx === i ? url : img)));
+  };
+  const removeStepImage = (i: number) =>
+    setStepImages(prev => prev.map((img, idx) => (idx === i ? null : img)));
 
   const submit = async () => {
     if (!title.trim()) return Alert.alert('Missing title', 'Please give your recipe a name.');
@@ -85,7 +99,12 @@ export default function UploadRecipeScreen() {
         unit: i.unit.trim(),
         category: i.category,
       }));
-    const cleanedSteps = steps.map(s => s.trim()).filter(Boolean);
+    // Keep each step's photo aligned after dropping empty steps.
+    const stepPairs = steps
+      .map((s, i) => ({ text: s.trim(), image: stepImages[i] ?? null }))
+      .filter(p => p.text);
+    const cleanedSteps = stepPairs.map(p => p.text);
+    const cleanedStepImages = stepPairs.map(p => p.image);
 
     if (cleanedIngredients.length === 0)
       return Alert.alert('Missing ingredients', 'Add at least one ingredient.');
@@ -106,6 +125,7 @@ export default function UploadRecipeScreen() {
       dietary,
       ingredients: cleanedIngredients,
       steps: cleanedSteps,
+      stepImages: cleanedStepImages,
     });
     setSaving(false);
 
@@ -340,21 +360,40 @@ export default function UploadRecipeScreen() {
         <View style={styles.field}>
           <Text style={styles.label}>Steps</Text>
           {steps.map((step, i) => (
-            <View key={i} style={styles.stepRow}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>{i + 1}</Text>
+            <View key={i} style={styles.stepItem}>
+              <View style={styles.stepRow}>
+                <View style={styles.stepNumber}>
+                  <Text style={styles.stepNumberText}>{i + 1}</Text>
+                </View>
+                <TextInput
+                  style={[styles.input, styles.stepInput]}
+                  value={step}
+                  onChangeText={t => updateStep(i, t)}
+                  placeholder="Describe this step…"
+                  placeholderTextColor="#999"
+                  multiline
+                />
+                {steps.length > 1 && (
+                  <TouchableOpacity onPress={() => removeStep(i)} style={styles.removeCircle}>
+                    <Text style={styles.removeCircleText}>×</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              <TextInput
-                style={[styles.input, styles.stepInput]}
-                value={step}
-                onChangeText={t => updateStep(i, t)}
-                placeholder="Describe this step…"
-                placeholderTextColor="#999"
-                multiline
-              />
-              {steps.length > 1 && (
-                <TouchableOpacity onPress={() => removeStep(i)} style={styles.removeCircle}>
-                  <Text style={styles.removeCircleText}>×</Text>
+              {stepImages[i] ? (
+                <View style={styles.stepImageWrap}>
+                  <Image source={{ uri: stepImages[i]! }} style={styles.stepImage} />
+                  <TouchableOpacity style={styles.stepImageRemove} onPress={() => removeStepImage(i)}>
+                    <Ionicons name="close" size={14} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.stepPhotoBtn}
+                  onPress={() => chooseStepImage(i)}
+                  disabled={uploadingStep === i}
+                >
+                  <Ionicons name="camera-outline" size={16} color={COLORS.orange} />
+                  <Text style={styles.stepPhotoText}>{uploadingStep === i ? 'Uploading…' : 'Add step photo'}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -422,7 +461,13 @@ const styles = StyleSheet.create({
   catChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEE', marginRight: 6 },
   catChipActive: { backgroundColor: '#FFE0B2', borderColor: '#FFB74D' },
   catChipText: { fontSize: 12, color: '#666' },
-  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10, gap: 8 },
+  stepItem: { marginBottom: 12 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  stepPhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginLeft: 40, marginTop: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#FFD3C2', backgroundColor: '#FFF3EC' },
+  stepPhotoText: { fontFamily: 'Poppins_600SemiBold', fontSize: 12.5, color: '#F57C00' },
+  stepImageWrap: { marginLeft: 40, marginTop: 8, width: 120, height: 90, borderRadius: 10, overflow: 'hidden' },
+  stepImage: { width: '100%', height: '100%' },
+  stepImageRemove: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(13,43,99,0.8)', justifyContent: 'center', alignItems: 'center' },
   stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', marginTop: 8 },
   stepNumberText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
   stepInput: { flex: 1, minHeight: 48, textAlignVertical: 'top' },

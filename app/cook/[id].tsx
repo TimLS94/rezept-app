@@ -219,13 +219,18 @@ export default function CookModeScreen() {
               onPress={() => toggleStep(i)}
               style={[styles.stepCard, isCurrent && styles.stepCardCurrent, isDone && styles.stepCardDone]}
             >
-              <View style={[styles.checkCircle, isDone && styles.checkCircleDone]}>
-                {isDone ? <Ionicons name="checkmark" size={16} color="#FFF" /> : <Text style={styles.checkNum}>{i + 1}</Text>}
+              <View style={styles.stepRowInner}>
+                <View style={[styles.checkCircle, isDone && styles.checkCircleDone]}>
+                  {isDone ? <Ionicons name="checkmark" size={16} color="#FFF" /> : <Text style={styles.checkNum}>{i + 1}</Text>}
+                </View>
+                <Text style={[styles.stepText, isDone && styles.stepTextDone]} numberOfLines={isDone ? 1 : undefined}>
+                  {text}
+                </Text>
+                {isDone && <Ionicons name="chevron-down" size={16} color={COLORS.warmGray} style={{ marginLeft: 8 }} />}
               </View>
-              <Text style={[styles.stepText, isDone && styles.stepTextDone]} numberOfLines={isDone ? 1 : undefined}>
-                {text}
-              </Text>
-              {isDone && <Ionicons name="chevron-down" size={16} color={COLORS.warmGray} style={{ marginLeft: 8 }} />}
+              {!isDone && recipe.stepImages?.[i] ? (
+                <Image source={{ uri: recipe.stepImages[i]! }} style={styles.stepImg} contentFit="cover" />
+              ) : null}
             </TouchableOpacity>
           );
         })}
@@ -293,7 +298,9 @@ const styles = StyleSheet.create({
   cardHeader: { fontFamily: FONTS.semibold, fontSize: 12, color: COLORS.orange, letterSpacing: 1.2, marginBottom: 10 },
   ingredientsCard: { backgroundColor: COLORS.card, borderRadius: 14, padding: 16, marginBottom: 22, borderWidth: 1, borderColor: COLORS.border },
   ingredientLine: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.charcoal, lineHeight: 23 },
-  stepCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border },
+  stepCard: { backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border },
+  stepRowInner: { flexDirection: 'row', alignItems: 'center' },
+  stepImg: { width: '100%', height: 160, borderRadius: 10, marginTop: 12 },
   stepCardCurrent: { borderColor: COLORS.orange, borderWidth: 2 },
   stepCardDone: { backgroundColor: '#F6F1EA', borderColor: COLORS.border },
   checkCircle: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: COLORS.navy, justifyContent: 'center', alignItems: 'center', marginRight: 12 },

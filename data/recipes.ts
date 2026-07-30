@@ -45,6 +45,8 @@ export type Recipe = {
   };
   ingredients: Ingredient[];
   steps: string[];
+  // Optional per-step photo (index-aligned with `steps`). Undefined/null = none.
+  stepImages?: (string | null)[];
   // Paywall: true = premium-only (creator-gated content). Optional so the local
   // seed catalogue (all free) doesn't need the field.
   isPaid?: boolean;
