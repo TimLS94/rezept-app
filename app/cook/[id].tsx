@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe } from '../../data/recipes';
 import { fetchDbRecipeById } from '../../lib/recipes';
@@ -29,7 +30,26 @@ export default function CookModeScreen() {
   const [cookedCount, setCookedCount] = useState(0);
   const [rating, setRating] = useState(0);
   const [logId, setLogId] = useState<string | null>(null);
+  const [timer, setTimer] = useState<{ step: number; left: number } | null>(null);
   const counted = useRef(false);
+
+  // Per-step countdown. Buzzes (haptic) when it reaches zero.
+  useEffect(() => {
+    if (!timer || timer.left <= 0) return;
+    const id = setInterval(() => {
+      setTimer(t => {
+        if (!t) return t;
+        if (t.left <= 1) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          return { ...t, left: 0 };
+        }
+        return { ...t, left: t.left - 1 };
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [timer?.step, timer ? timer.left > 0 : false]);
+
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   // Animations
   const introFade = useRef(new Animated.Value(0)).current;
@@ -231,6 +251,27 @@ export default function CookModeScreen() {
               {!isDone && recipe.stepImages?.[i] ? (
                 <Image source={{ uri: recipe.stepImages[i]! }} style={styles.stepImg} contentFit="cover" />
               ) : null}
+              {!isDone && recipe.stepTimers?.[i] ? (
+                timer?.step === i ? (
+                  <TouchableOpacity
+                    style={[styles.timerActive, timer.left === 0 && styles.timerDone]}
+                    onPress={() => setTimer(null)}
+                  >
+                    <Ionicons name={timer.left === 0 ? 'alarm' : 'timer-outline'} size={16} color="#FFF" />
+                    <Text style={styles.timerActiveText}>
+                      {timer.left === 0 ? "TIME'S UP! · tap to clear" : `${fmtTime(timer.left)} · tap to stop`}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.timerStart}
+                    onPress={() => setTimer({ step: i, left: recipe.stepTimers![i]! })}
+                  >
+                    <Ionicons name="timer-outline" size={16} color={COLORS.orange} />
+                    <Text style={styles.timerStartText}>Start timer · {fmtTime(recipe.stepTimers[i]!)}</Text>
+                  </TouchableOpacity>
+                )
+              ) : null}
             </TouchableOpacity>
           );
         })}
@@ -301,6 +342,11 @@ const styles = StyleSheet.create({
   stepCard: { backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border },
   stepRowInner: { flexDirection: 'row', alignItems: 'center' },
   stepImg: { width: '100%', height: 160, borderRadius: 10, marginTop: 12 },
+  timerStart: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 12, marginLeft: 42, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: '#FFD3C2', backgroundColor: '#FFF3EC' },
+  timerStartText: { fontFamily: FONTS.semibold, fontSize: 13, color: COLORS.orange },
+  timerActive: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 12, marginLeft: 42, paddingVertical: 9, paddingHorizontal: 16, borderRadius: 20, backgroundColor: COLORS.navy },
+  timerDone: { backgroundColor: COLORS.orange },
+  timerActiveText: { fontFamily: FONTS.bold, fontSize: 14, color: '#FFF' },
   stepCardCurrent: { borderColor: COLORS.orange, borderWidth: 2 },
   stepCardDone: { backgroundColor: '#F6F1EA', borderColor: COLORS.border },
   checkCircle: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: COLORS.navy, justifyContent: 'center', alignItems: 'center', marginRight: 12 },

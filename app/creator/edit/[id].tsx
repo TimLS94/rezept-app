@@ -35,6 +35,7 @@ type RecipeData = {
   ingredients: Ingredient[];
   instructions: string[];
   stepImages: (string | null)[];
+  stepTimers: (number | null)[];
 };
 
 export default function EditRecipeScreen() {
@@ -80,6 +81,7 @@ export default function EditRecipeScreen() {
       ingredients: data.ingredients || [],
       instructions: instr.map(s => (typeof s === 'string' ? s : (s?.text ?? ''))),
       stepImages: instr.map(s => (typeof s === 'string' ? null : (s?.image ?? null))),
+      stepTimers: instr.map(s => (typeof s === 'string' ? null : (s?.timer ?? null))),
     });
     setLoading(false);
   };
@@ -107,9 +109,11 @@ export default function EditRecipeScreen() {
         is_paid: recipe.is_paid,
         tags: recipe.tags,
         ingredients: recipe.ingredients,
-        instructions: recipe.instructions.map((text, i) =>
-          recipe.stepImages[i] ? { text, image: recipe.stepImages[i] } : text
-        ),
+        instructions: recipe.instructions.map((text, i) => {
+          const image = recipe.stepImages[i];
+          const timer = recipe.stepTimers[i];
+          return image || timer ? { text, ...(image ? { image } : {}), ...(timer ? { timer } : {}) } : text;
+        }),
       })
       .eq('id', recipe.id);
 
@@ -170,6 +174,7 @@ export default function EditRecipeScreen() {
       ...recipe,
       instructions: [...recipe.instructions, ''],
       stepImages: [...recipe.stepImages, null],
+      stepTimers: [...recipe.stepTimers, null],
     });
   };
 
@@ -179,7 +184,15 @@ export default function EditRecipeScreen() {
       ...recipe,
       instructions: recipe.instructions.filter((_, i) => i !== index),
       stepImages: recipe.stepImages.filter((_, i) => i !== index),
+      stepTimers: recipe.stepTimers.filter((_, i) => i !== index),
     });
+  };
+
+  const setStepTimerMinutes = (index: number, mins: string) => {
+    if (!recipe) return;
+    const m = parseFloat(mins.replace(',', '.'));
+    const secs = isNaN(m) || m <= 0 ? null : Math.round(m * 60);
+    setRecipe({ ...recipe, stepTimers: recipe.stepTimers.map((t, i) => (i === index ? secs : t)) });
   };
 
   const chooseStepImage = async (index: number) => {
@@ -420,6 +433,17 @@ export default function EditRecipeScreen() {
                   <Text style={styles.stepPhotoText}>{uploadingStep === i ? 'Uploading…' : '📷 Add step photo'}</Text>
                 </TouchableOpacity>
               )}
+              <View style={styles.stepTimerRow}>
+                <Text style={styles.stepTimerLabel}>⏱ Timer (optional):</Text>
+                <TextInput
+                  style={styles.stepTimerInput}
+                  value={recipe.stepTimers[i] ? String(Math.round(recipe.stepTimers[i]! / 60 * 100) / 100) : ''}
+                  onChangeText={(t) => setStepTimerMinutes(i, t)}
+                  placeholder="0"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.stepTimerLabel}>min</Text>
+              </View>
             </View>
           ))}
         </View>
@@ -486,6 +510,9 @@ const styles = StyleSheet.create({
   stepRow: { flexDirection: 'row', alignItems: 'flex-start' },
   stepPhotoBtn: { alignSelf: 'flex-start', marginLeft: 38, marginTop: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#FFD3C2', backgroundColor: '#FFF3EC' },
   stepPhotoText: { fontSize: 12.5, fontWeight: '600', color: '#F57C00' },
+  stepTimerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 38, marginTop: 8 },
+  stepTimerLabel: { fontSize: 12.5, color: '#888' },
+  stepTimerInput: { width: 54, backgroundColor: '#FFF9F2', borderRadius: 8, borderWidth: 1, borderColor: '#EEE', paddingVertical: 5, paddingHorizontal: 10, fontSize: 13, textAlign: 'center' },
   stepImageWrap: { marginLeft: 38, marginTop: 8, width: 120, height: 90, borderRadius: 10, overflow: 'hidden' },
   stepImageThumb: { width: '100%', height: '100%' },
   stepImageRemove: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(13,43,99,0.8)', justifyContent: 'center', alignItems: 'center' },

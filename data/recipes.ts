@@ -47,6 +47,8 @@ export type Recipe = {
   steps: string[];
   // Optional per-step photo (index-aligned with `steps`). Undefined/null = none.
   stepImages?: (string | null)[];
+  // Optional per-step timer in seconds (index-aligned). Undefined/null = none.
+  stepTimers?: (number | null)[];
   // Paywall: true = premium-only (creator-gated content). Optional so the local
   // seed catalogue (all free) doesn't need the field.
   isPaid?: boolean;

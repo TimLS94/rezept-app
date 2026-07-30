@@ -37,6 +37,9 @@ export function mapDbRecipe(row: any): Recipe {
     stepImages: (Array.isArray(row.instructions) ? row.instructions : []).map((s: any) =>
       typeof s === 'string' ? null : (s?.image ?? null)
     ),
+    stepTimers: (Array.isArray(row.instructions) ? row.instructions : []).map((s: any) =>
+      typeof s === 'string' ? null : (s?.timer ?? null)
+    ),
     isPaid: row.is_paid ?? false,
   };
 }
@@ -119,6 +122,7 @@ export type NewRecipeInput = {
   ingredients: Ingredient[];
   steps: string[];
   stepImages?: (string | null)[]; // index-aligned with steps
+  stepTimers?: (number | null)[]; // seconds, index-aligned
   isPaid?: boolean;
 };
 
@@ -153,11 +157,13 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
       kid_approved: false,
       tags: input.dietary,
       ingredients: input.ingredients,
-      // Store steps as { text, image } when a step has a photo, else a plain
-      // string (keeps legacy recipes and the seed catalogue compatible).
-      instructions: input.steps.map((text, i) =>
-        input.stepImages?.[i] ? { text, image: input.stepImages[i] } : text
-      ),
+      // Store steps as { text, image?, timer? } when a step has media/timer,
+      // else a plain string (keeps legacy recipes + seed catalogue compatible).
+      instructions: input.steps.map((text, i) => {
+        const image = input.stepImages?.[i] ?? null;
+        const timer = input.stepTimers?.[i] ?? null;
+        return image || timer ? { text, ...(image ? { image } : {}), ...(timer ? { timer } : {}) } : text;
+      }),
       is_paid: input.isPaid ?? false,
       influencer_id: user.id,
       influencer_name: profile?.full_name || 'Creator',

@@ -49,6 +49,7 @@ export default function UploadRecipeScreen() {
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([emptyIngredient()]);
   const [steps, setSteps] = useState<string[]>(['']);
   const [stepImages, setStepImages] = useState<(string | null)[]>([null]);
+  const [stepTimers, setStepTimers] = useState<(number | null)[]>([null]); // seconds
   const [uploadingStep, setUploadingStep] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -73,10 +74,21 @@ export default function UploadRecipeScreen() {
 
   const updateStep = (i: number, value: string) =>
     setSteps(prev => prev.map((s, idx) => (idx === i ? value : s)));
-  const addStep = () => { setSteps(prev => [...prev, '']); setStepImages(prev => [...prev, null]); };
+  const addStep = () => {
+    setSteps(prev => [...prev, '']);
+    setStepImages(prev => [...prev, null]);
+    setStepTimers(prev => [...prev, null]);
+  };
   const removeStep = (i: number) => {
     setSteps(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
     setStepImages(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
+    setStepTimers(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
+  };
+  // Timer entered in minutes; stored as seconds (empty/0 → no timer).
+  const setStepTimerMinutes = (i: number, mins: string) => {
+    const m = parseFloat(mins.replace(',', '.'));
+    const secs = isNaN(m) || m <= 0 ? null : Math.round(m * 60);
+    setStepTimers(prev => prev.map((t, idx) => (idx === i ? secs : t)));
   };
   const chooseStepImage = async (i: number) => {
     setUploadingStep(i);
@@ -101,10 +113,11 @@ export default function UploadRecipeScreen() {
       }));
     // Keep each step's photo aligned after dropping empty steps.
     const stepPairs = steps
-      .map((s, i) => ({ text: s.trim(), image: stepImages[i] ?? null }))
+      .map((s, i) => ({ text: s.trim(), image: stepImages[i] ?? null, timer: stepTimers[i] ?? null }))
       .filter(p => p.text);
     const cleanedSteps = stepPairs.map(p => p.text);
     const cleanedStepImages = stepPairs.map(p => p.image);
+    const cleanedStepTimers = stepPairs.map(p => p.timer);
 
     if (cleanedIngredients.length === 0)
       return Alert.alert('Missing ingredients', 'Add at least one ingredient.');
@@ -126,6 +139,7 @@ export default function UploadRecipeScreen() {
       ingredients: cleanedIngredients,
       steps: cleanedSteps,
       stepImages: cleanedStepImages,
+      stepTimers: cleanedStepTimers,
     });
     setSaving(false);
 
@@ -396,6 +410,19 @@ export default function UploadRecipeScreen() {
                   <Text style={styles.stepPhotoText}>{uploadingStep === i ? 'Uploading…' : 'Add step photo'}</Text>
                 </TouchableOpacity>
               )}
+              <View style={styles.stepTimerRow}>
+                <Ionicons name="timer-outline" size={16} color="#888" />
+                <Text style={styles.stepTimerLabel}>Timer (optional):</Text>
+                <TextInput
+                  style={styles.stepTimerInput}
+                  value={stepTimers[i] ? String(Math.round(stepTimers[i]! / 60 * 100) / 100) : ''}
+                  onChangeText={t => setStepTimerMinutes(i, t)}
+                  placeholder="0"
+                  placeholderTextColor="#BBB"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.stepTimerLabel}>min</Text>
+              </View>
             </View>
           ))}
           <TouchableOpacity style={styles.addRow} onPress={addStep}>
@@ -465,6 +492,9 @@ const styles = StyleSheet.create({
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   stepPhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginLeft: 40, marginTop: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#FFD3C2', backgroundColor: '#FFF3EC' },
   stepPhotoText: { fontFamily: 'Poppins_600SemiBold', fontSize: 12.5, color: '#F57C00' },
+  stepTimerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 40, marginTop: 8 },
+  stepTimerLabel: { fontSize: 12.5, color: '#888' },
+  stepTimerInput: { width: 54, backgroundColor: '#FFF9F2', borderRadius: 8, borderWidth: 1, borderColor: '#EEE', paddingVertical: 5, paddingHorizontal: 10, fontSize: 13, textAlign: 'center', color: '#1A1A1A' },
   stepImageWrap: { marginLeft: 40, marginTop: 8, width: 120, height: 90, borderRadius: 10, overflow: 'hidden' },
   stepImage: { width: '100%', height: '100%' },
   stepImageRemove: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(13,43,99,0.8)', justifyContent: 'center', alignItems: 'center' },
