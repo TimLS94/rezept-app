@@ -77,7 +77,14 @@ export async function fetchDbRecipes(force = false): Promise<Recipe[]> {
 export async function fetchRecipeOfTheWeek(): Promise<Recipe | null> {
   const { data, error } = await supabase.rpc('recipe_of_the_week');
   if (error || !data) return null;
-  return data as Recipe;
+  const stored = data as Recipe;
+  // The favorite blob is a snapshot from whenever it was saved, so its image can
+  // be stale/mismatched. Re-fetch the live recipe by id so title + image match.
+  if (stored?.id) {
+    const fresh = await fetchDbRecipeById(stored.id).catch(() => undefined);
+    if (fresh) return fresh;
+  }
+  return stored;
 }
 
 // Uploaded recipes first (newest, so they can trend), then the local seed set.

@@ -17,14 +17,17 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe } from '../../data/recipes';
 import { fetchDbRecipeById } from '../../lib/recipes';
 import { incrementCooked, awardFor, nextAward, logCook, saveCookRating } from '../../lib/cookStats';
+import { scaleAmount, setServings as persistServings } from '../../lib/servings';
 import { COLORS, FONTS } from '../../lib/theme';
 import ImageViewer from '../../components/ImageViewer';
 
 type Phase = 'intro' | 'cooking';
 
 export default function CookModeScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, servings } = useLocalSearchParams<{ id: string; servings?: string }>();
   const [recipe, setRecipe] = useState<Recipe | undefined>(getRecipeById(id || ''));
+  // Chosen serving count (from the favorite / passed in), scales the ingredients.
+  const [servingsSel, setServingsSel] = useState<number | null>(servings ? Number(servings) : null);
   const [loading, setLoading] = useState(!recipe);
   const [phase, setPhase] = useState<Phase>('intro');
   const [done, setDone] = useState<Set<number>>(new Set());
@@ -118,6 +121,13 @@ export default function CookModeScreen() {
   }, [finished, cookedCount]);
 
   const total = recipe?.steps.length ?? 0;
+  const baseServings = recipe?.servings ?? 1;
+  const chosenServings = servingsSel ?? baseServings;
+  const changeServings = (delta: number) => {
+    const next = Math.max(1, chosenServings + delta);
+    setServingsSel(next);
+    if (id) persistServings(id, next); // remember for the favorite too
+  };
 
   const startCooking = () => setPhase('cooking');
 
@@ -225,8 +235,22 @@ export default function CookModeScreen() {
           <View style={styles.introMeta}>
             <View style={styles.introMetaItem}><Ionicons name="time-outline" size={16} color="#FFF" /><Text style={styles.introMetaText}>{recipe.prepTime + recipe.cookTime} min</Text></View>
             <View style={styles.introMetaItem}><Ionicons name="list-outline" size={16} color="#FFF" /><Text style={styles.introMetaText}>{recipe.steps.length} steps</Text></View>
-            <View style={styles.introMetaItem}><Ionicons name="people-outline" size={16} color="#FFF" /><Text style={styles.introMetaText}>{recipe.servings}</Text></View>
           </View>
+
+          {/* Serving selector — scales the ingredient amounts while cooking. */}
+          <View style={styles.servingsRow}>
+            <Text style={styles.servingsLabel}>SERVINGS</Text>
+            <View style={styles.servingsStepper}>
+              <TouchableOpacity style={styles.servingsBtn} onPress={() => changeServings(-1)} disabled={chosenServings <= 1}>
+                <Ionicons name="remove" size={20} color={chosenServings <= 1 ? 'rgba(255,255,255,0.4)' : '#FFF'} />
+              </TouchableOpacity>
+              <Text style={styles.servingsValue}>{chosenServings}</Text>
+              <TouchableOpacity style={styles.servingsBtn} onPress={() => changeServings(1)}>
+                <Ionicons name="add" size={20} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <TouchableOpacity style={styles.startBtn} onPress={startCooking} activeOpacity={0.9}>
             <Ionicons name="flame" size={20} color="#FFF" />
             <Text style={styles.startBtnText}>START COOKING</Text>
@@ -255,9 +279,14 @@ export default function CookModeScreen() {
 
         {recipe.ingredients.length > 0 && (
           <View style={styles.ingredientsCard}>
-            <Text style={styles.cardHeader}>INGREDIENTS</Text>
+            <View style={styles.ingredientsHead}>
+              <Text style={styles.cardHeader}>INGREDIENTS</Text>
+              <Text style={styles.ingredientsServings}>for {chosenServings} {chosenServings === 1 ? 'serving' : 'servings'}</Text>
+            </View>
             {recipe.ingredients.map((ing, i) => (
-              <Text key={i} style={styles.ingredientLine}>• {ing.amount ? `${ing.amount} ${ing.unit} ` : ''}{ing.name}</Text>
+              <Text key={i} style={styles.ingredientLine}>
+                • {ing.amount ? `${scaleAmount(ing.amount, baseServings, chosenServings)} ${ing.unit} ` : ''}{ing.name}
+              </Text>
             ))}
           </View>
         )}
@@ -361,6 +390,13 @@ const styles = StyleSheet.create({
   introMeta: { flexDirection: 'row', gap: 18, marginTop: 18 },
   introMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   introMetaText: { fontFamily: FONTS.medium, color: 'rgba(255,255,255,0.92)', fontSize: 13 },
+  servingsRow: { alignItems: 'center', marginTop: 24 },
+  servingsLabel: { fontFamily: FONTS.semibold, color: 'rgba(255,255,255,0.75)', fontSize: 12, letterSpacing: 2, marginBottom: 10 },
+  servingsStepper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 30, padding: 5, gap: 4 },
+  servingsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.16)', justifyContent: 'center', alignItems: 'center' },
+  servingsValue: { fontFamily: FONTS.display, color: '#FFF', fontSize: 24, minWidth: 44, textAlign: 'center' },
+  ingredientsHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 },
+  ingredientsServings: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.warmGray },
   startBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.orange, paddingHorizontal: 30, paddingVertical: 16, borderRadius: 30, marginTop: 34 },
   startBtnText: { fontFamily: FONTS.bold, color: '#FFF', fontSize: 15, letterSpacing: 0.5 },
 
