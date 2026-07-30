@@ -253,6 +253,25 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
+-- ── cook_log: finished cook sessions (drives cooked-count + recipe ratings) ─
+create table if not exists public.cook_log (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid references public.profiles(id) on delete cascade not null,
+  recipe_id    text not null,
+  recipe_title text,
+  rating       integer check (rating between 1 and 5),
+  created_at   timestamptz default timezone('utc'::text, now()) not null
+);
+create index if not exists cook_log_user_idx on public.cook_log(user_id);
+create index if not exists cook_log_recipe_idx on public.cook_log(recipe_id);
+alter table public.cook_log enable row level security;
+drop policy if exists "Users view own cook log" on public.cook_log;
+create policy "Users view own cook log" on public.cook_log for select using (auth.uid() = user_id);
+drop policy if exists "Users add own cook log" on public.cook_log;
+create policy "Users add own cook log" on public.cook_log for insert with check (auth.uid() = user_id);
+drop policy if exists "Users update own cook log" on public.cook_log;
+create policy "Users update own cook log" on public.cook_log for update using (auth.uid() = user_id);
+
 -- ── recipe of the week: most-favorited recipe across all users (last 7 days) ─
 create or replace function public.recipe_of_the_week()
 returns jsonb

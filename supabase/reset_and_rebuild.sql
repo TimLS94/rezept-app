@@ -15,6 +15,7 @@ begin;
 create extension if not exists "uuid-ossp";
 
 -- ── 1. Drop app tables (CASCADE clears FKs, policies, indexes) ──────────────
+drop table if exists public.cook_log            cascade;
 drop table if exists public.creator_subscribers cascade;
 drop table if exists public.meal_plan_items   cascade;
 drop table if exists public.favorite_recipes  cascade;
@@ -248,6 +249,22 @@ on conflict (id) do nothing;
 
 update public.profiles set role = 'creator'
 where email = 'schaefer.l.tim+creator@gmail.com';
+
+-- Cook log: finished cook sessions (cooked-count + recipe ratings).
+create table public.cook_log (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid references public.profiles(id) on delete cascade not null,
+  recipe_id    text not null,
+  recipe_title text,
+  rating       integer check (rating between 1 and 5),
+  created_at   timestamptz default timezone('utc'::text, now()) not null
+);
+create index cook_log_user_idx on public.cook_log(user_id);
+create index cook_log_recipe_idx on public.cook_log(recipe_id);
+alter table public.cook_log enable row level security;
+create policy "Users view own cook log" on public.cook_log for select using (auth.uid() = user_id);
+create policy "Users add own cook log" on public.cook_log for insert with check (auth.uid() = user_id);
+create policy "Users update own cook log" on public.cook_log for update using (auth.uid() = user_id);
 
 -- Recipe of the week: most-favorited recipe across all users (last 7 days).
 create or replace function public.recipe_of_the_week()

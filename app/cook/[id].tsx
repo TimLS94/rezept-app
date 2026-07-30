@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe } from '../../data/recipes';
 import { fetchDbRecipeById } from '../../lib/recipes';
-import { incrementCooked, awardFor, nextAward } from '../../lib/cookStats';
+import { incrementCooked, awardFor, nextAward, logCook, saveCookRating } from '../../lib/cookStats';
 import { COLORS, FONTS } from '../../lib/theme';
 
 type Phase = 'intro' | 'cooking';
@@ -28,6 +28,7 @@ export default function CookModeScreen() {
   const [finished, setFinished] = useState(false);
   const [cookedCount, setCookedCount] = useState(0);
   const [rating, setRating] = useState(0);
+  const [logId, setLogId] = useState<string | null>(null);
   const counted = useRef(false);
 
   // Animations
@@ -87,6 +88,7 @@ export default function CookModeScreen() {
     if (counted.current) return;
     counted.current = true;
     incrementCooked().then(setCookedCount);
+    if (recipe) logCook(recipe).then(setLogId); // persist to DB (aggregatable)
     setFinished(true);
   };
 
@@ -137,7 +139,7 @@ export default function CookModeScreen() {
           <Text style={styles.feedbackLabel}>How was it?</Text>
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map(n => (
-              <TouchableOpacity key={n} onPress={() => setRating(n)}>
+              <TouchableOpacity key={n} onPress={() => { setRating(n); if (logId) saveCookRating(logId, n); }}>
                 <Ionicons name={n <= rating ? 'star' : 'star-outline'} size={32} color={COLORS.orange} />
               </TouchableOpacity>
             ))}

@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './supabase';
+import type { Recipe } from '../data/recipes';
 
 // How many recipes the user has cooked (finished all steps in Cook Mode).
 // Stored locally on the device — drives the awards/milestones.
@@ -45,4 +47,23 @@ export function awardFor(count: number): Award | null {
 // The next milestone to aim for (null once all are earned).
 export function nextAward(count: number): Award | null {
   return AWARDS.find(a => count < a.threshold) ?? null;
+}
+
+// ── DB persistence (aggregatable in Supabase) ───────────────────────────────
+// Log a finished cook session. Returns the new row id so a rating can be
+// attached later, or null for guests / on error.
+export async function logCook(recipe: Recipe): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from('cook_log')
+    .insert({ user_id: user.id, recipe_id: recipe.id, recipe_title: recipe.title })
+    .select('id')
+    .single();
+  return data?.id ?? null;
+}
+
+// Attach the star feedback to a logged cook session.
+export async function saveCookRating(id: string, rating: number): Promise<void> {
+  await supabase.from('cook_log').update({ rating }).eq('id', id);
 }
