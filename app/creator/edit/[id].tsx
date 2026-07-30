@@ -34,6 +34,7 @@ type RecipeData = {
   tags: string[];
   ingredients: Ingredient[];
   instructions: string[];
+  stepImages: (string | null)[];
 };
 
 export default function EditRecipeScreen() {
@@ -42,6 +43,7 @@ export default function EditRecipeScreen() {
   const [saving, setSaving] = useState(false);
   const [recipe, setRecipe] = useState<RecipeData | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingStep, setUploadingStep] = useState<number | null>(null);
 
   useEffect(() => {
     loadRecipe();
@@ -62,6 +64,8 @@ export default function EditRecipeScreen() {
       return;
     }
 
+    // Instructions may be plain strings (legacy) or { text, image } objects.
+    const instr: any[] = Array.isArray(data.instructions) ? data.instructions : [];
     setRecipe({
       id: data.id,
       title: data.title || '',
@@ -74,7 +78,8 @@ export default function EditRecipeScreen() {
       is_paid: data.is_paid || false,
       tags: data.tags || [],
       ingredients: data.ingredients || [],
-      instructions: data.instructions || [],
+      instructions: instr.map(s => (typeof s === 'string' ? s : (s?.text ?? ''))),
+      stepImages: instr.map(s => (typeof s === 'string' ? null : (s?.image ?? null))),
     });
     setLoading(false);
   };
@@ -102,7 +107,9 @@ export default function EditRecipeScreen() {
         is_paid: recipe.is_paid,
         tags: recipe.tags,
         ingredients: recipe.ingredients,
-        instructions: recipe.instructions,
+        instructions: recipe.instructions.map((text, i) =>
+          recipe.stepImages[i] ? { text, image: recipe.stepImages[i] } : text
+        ),
       })
       .eq('id', recipe.id);
 
@@ -161,7 +168,8 @@ export default function EditRecipeScreen() {
     if (!recipe) return;
     setRecipe({
       ...recipe,
-      instructions: [...recipe.instructions, '']
+      instructions: [...recipe.instructions, ''],
+      stepImages: [...recipe.stepImages, null],
     });
   };
 
@@ -169,8 +177,23 @@ export default function EditRecipeScreen() {
     if (!recipe) return;
     setRecipe({
       ...recipe,
-      instructions: recipe.instructions.filter((_, i) => i !== index)
+      instructions: recipe.instructions.filter((_, i) => i !== index),
+      stepImages: recipe.stepImages.filter((_, i) => i !== index),
     });
+  };
+
+  const chooseStepImage = async (index: number) => {
+    setUploadingStep(index);
+    const url = await pickAndUploadImage('recipes');
+    setUploadingStep(null);
+    if (url && recipe) {
+      setRecipe(r => (r ? { ...r, stepImages: r.stepImages.map((img, i) => (i === index ? url : img)) } : r));
+    }
+  };
+
+  const removeStepImage = (index: number) => {
+    if (!recipe) return;
+    setRecipe({ ...recipe, stepImages: recipe.stepImages.map((img, i) => (i === index ? null : img)) });
   };
 
   const deleteRecipe = () => {
@@ -365,20 +388,38 @@ export default function EditRecipeScreen() {
             </TouchableOpacity>
           </View>
           {recipe.instructions.map((step, i) => (
-            <View key={i} style={styles.stepRow}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>{i + 1}</Text>
+            <View key={i} style={styles.stepItem}>
+              <View style={styles.stepRow}>
+                <View style={styles.stepNumber}>
+                  <Text style={styles.stepNumberText}>{i + 1}</Text>
+                </View>
+                <TextInput
+                  style={styles.stepInput}
+                  value={step}
+                  onChangeText={(t) => updateStep(i, t)}
+                  placeholder={`Step ${i + 1}`}
+                  multiline
+                />
+                <TouchableOpacity onPress={() => removeStep(i)}>
+                  <Text style={styles.removeButton}>×</Text>
+                </TouchableOpacity>
               </View>
-              <TextInput
-                style={styles.stepInput}
-                value={step}
-                onChangeText={(t) => updateStep(i, t)}
-                placeholder={`Step ${i + 1}`}
-                multiline
-              />
-              <TouchableOpacity onPress={() => removeStep(i)}>
-                <Text style={styles.removeButton}>×</Text>
-              </TouchableOpacity>
+              {recipe.stepImages[i] ? (
+                <View style={styles.stepImageWrap}>
+                  <Image source={{ uri: recipe.stepImages[i]! }} style={styles.stepImageThumb} />
+                  <TouchableOpacity style={styles.stepImageRemove} onPress={() => removeStepImage(i)}>
+                    <Text style={styles.stepImageRemoveText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.stepPhotoBtn}
+                  onPress={() => chooseStepImage(i)}
+                  disabled={uploadingStep === i}
+                >
+                  <Text style={styles.stepPhotoText}>{uploadingStep === i ? 'Uploading…' : '📷 Add step photo'}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
         </View>
@@ -441,7 +482,14 @@ const styles = StyleSheet.create({
   ingredientUnit: { width: 60, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14 },
   ingredientName: { flex: 1, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14 },
   removeButton: { fontSize: 24, color: '#E53935', fontWeight: '600', paddingHorizontal: 8 },
-  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
+  stepItem: { marginBottom: 12 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  stepPhotoBtn: { alignSelf: 'flex-start', marginLeft: 38, marginTop: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#FFD3C2', backgroundColor: '#FFF3EC' },
+  stepPhotoText: { fontSize: 12.5, fontWeight: '600', color: '#F57C00' },
+  stepImageWrap: { marginLeft: 38, marginTop: 8, width: 120, height: 90, borderRadius: 10, overflow: 'hidden' },
+  stepImageThumb: { width: '100%', height: '100%' },
+  stepImageRemove: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(13,43,99,0.8)', justifyContent: 'center', alignItems: 'center' },
+  stepImageRemoveText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
   stepNumber: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   stepNumberText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   stepInput: { flex: 1, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14, minHeight: 40 },
