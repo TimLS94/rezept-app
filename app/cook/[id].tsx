@@ -66,6 +66,7 @@ export default function CookModeScreen() {
   const introLift = useRef(new Animated.Value(30)).current;
   const pulse = useRef(new Animated.Value(1)).current;
   const awardPop = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current; // reward-bar fill (0..1)
 
   useEffect(() => {
     if (recipe) return;
@@ -97,6 +98,24 @@ export default function CookModeScreen() {
       Animated.spring(awardPop, { toValue: 1, friction: 4, tension: 80, useNativeDriver: true }).start();
     }
   }, [finished]);
+
+  // Grow the reward bar from where you WERE (before this cook) to where you are
+  // now, so the progress toward the next rank is visible instead of pre-filled.
+  useEffect(() => {
+    if (!finished || cookedCount <= 0) return;
+    const nxt = nextAward(cookedCount);
+    if (!nxt) return;
+    const newFrac = Math.min(cookedCount / nxt.threshold, 1);
+    const prevFrac = Math.min(Math.max(cookedCount - 1, 0) / nxt.threshold, 1);
+    progressAnim.setValue(prevFrac);
+    Animated.timing(progressAnim, {
+      toValue: newFrac,
+      duration: 900,
+      delay: 400,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [finished, cookedCount]);
 
   const total = recipe?.steps.length ?? 0;
 
@@ -158,7 +177,12 @@ export default function CookModeScreen() {
               {next && (
                 <View style={styles.awardProgressWrap}>
                   <View style={styles.awardTrack}>
-                    <View style={[styles.awardFill, { width: `${Math.min((cookedCount / next.threshold) * 100, 100)}%` }]} />
+                    <Animated.View
+                      style={[
+                        styles.awardFill,
+                        { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+                      ]}
+                    />
                   </View>
                   <Text style={styles.awardNext}>{next.threshold - cookedCount} more → {next.icon} {next.title}</Text>
                 </View>
