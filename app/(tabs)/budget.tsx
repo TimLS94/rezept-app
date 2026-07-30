@@ -412,9 +412,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   headerTitle: {
+    fontFamily: 'Anton_400Regular',
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#0D2B63',
+    letterSpacing: 0.3,
   },
   budgetCard: {
     backgroundColor: '#F57C00',
