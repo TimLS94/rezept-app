@@ -12,6 +12,7 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe } from '../../data/recipes';
 import { fetchDbRecipeById } from '../../lib/recipes';
@@ -34,6 +35,12 @@ export default function CookModeScreen() {
   const [timer, setTimer] = useState<{ step: number; left: number } | null>(null);
   const [viewerUri, setViewerUri] = useState<string | null>(null);
   const counted = useRef(false);
+  const beep = useAudioPlayer(require('../../assets/sounds/timer-done.wav'));
+
+  // Let the timer beep sound even when the phone is on silent.
+  useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+  }, []);
 
   // Per-step countdown. Buzzes (haptic) when it reaches zero.
   useEffect(() => {
@@ -43,6 +50,7 @@ export default function CookModeScreen() {
         if (!t) return t;
         if (t.left <= 1) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          try { beep.seekTo(0); beep.play(); } catch {}
           return { ...t, left: 0 };
         }
         return { ...t, left: t.left - 1 };

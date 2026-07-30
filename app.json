@@ -77,7 +77,8 @@
         }
       ],
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "expo-audio"
     ],
     "scheme": "feedfamily",
     "newArchEnabled": true
