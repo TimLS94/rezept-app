@@ -131,8 +131,8 @@ export default function CreatorStudioScreen() {
           <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/creator/import')}>
             <Text style={styles.actionIcon}>📥</Text>
             <View style={styles.actionBody}>
-              <Text style={styles.actionTitle}>Import from Instagram</Text>
-              <Text style={styles.actionSub}>Paste a link or upload screenshots</Text>
+              <Text style={styles.actionTitle}>Import a recipe</Text>
+              <Text style={styles.actionSub}>Instagram link, screenshots or text</Text>
             </View>
             <Text style={styles.actionArrow}>→</Text>
           </TouchableOpacity>

@@ -182,12 +182,12 @@ export default function UploadRecipeScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Import from Instagram */}
+        {/* Import instead of typing */}
         <TouchableOpacity style={styles.importBanner} onPress={() => router.push('/creator/import')}>
-          <Text style={styles.importIcon}>📱</Text>
+          <Text style={styles.importIcon}>✨</Text>
           <View style={styles.importText}>
-            <Text style={styles.importTitle}>Import from Instagram</Text>
-            <Text style={styles.importSubtitle}>Paste a link and let AI extract the recipe</Text>
+            <Text style={styles.importTitle}>Import a recipe</Text>
+            <Text style={styles.importSubtitle}>From an Instagram link, screenshots or text — AI does the rest</Text>
           </View>
           <Text style={styles.importArrow}>→</Text>
         </TouchableOpacity>

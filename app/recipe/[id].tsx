@@ -18,6 +18,7 @@ import { fetchDbRecipeById, setRecipePaid } from '../../lib/recipes';
 import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { useFavorites } from '../../lib/favorites';
+import ImageViewer from '../../components/ImageViewer';
 
 type FamilyMember = {
   id: string;
@@ -53,6 +54,7 @@ export default function RecipeDetailScreen() {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showPortionModal, setShowPortionModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'steps'>('ingredients');
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
   const [togglingPaid, setTogglingPaid] = useState(false);
   
   // Check if current user is the recipe owner (can edit)
@@ -208,8 +210,10 @@ export default function RecipeDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero Image */}
         <View style={styles.heroContainer}>
-          <Image source={{ uri: recipe.image }} style={styles.heroImage} />
-          <View style={styles.heroOverlay} />
+          <TouchableOpacity activeOpacity={0.95} onPress={() => setViewerUri(recipe.image)}>
+            <Image source={{ uri: recipe.image }} style={styles.heroImage} />
+          </TouchableOpacity>
+          <View style={styles.heroOverlay} pointerEvents="none" />
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
@@ -389,7 +393,9 @@ export default function RecipeDetailScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.stepText}>{step}</Text>
                   {recipe.stepImages?.[index] ? (
-                    <Image source={{ uri: recipe.stepImages[index]! }} style={styles.stepImage} contentFit="cover" />
+                    <TouchableOpacity activeOpacity={0.9} onPress={() => setViewerUri(recipe.stepImages![index]!)}>
+                      <Image source={{ uri: recipe.stepImages[index]! }} style={styles.stepImage} contentFit="cover" />
+                    </TouchableOpacity>
                   ) : null}
                 </View>
               </View>
@@ -492,6 +498,8 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      <ImageViewer uri={viewerUri} onClose={() => setViewerUri(null)} />
     </View>
   );
 }
