@@ -17,6 +17,7 @@ import { getRecipeById, Recipe } from '../../data/recipes';
 import { fetchDbRecipeById } from '../../lib/recipes';
 import { incrementCooked, awardFor, nextAward, logCook, saveCookRating } from '../../lib/cookStats';
 import { COLORS, FONTS } from '../../lib/theme';
+import ImageViewer from '../../components/ImageViewer';
 
 type Phase = 'intro' | 'cooking';
 
@@ -31,6 +32,7 @@ export default function CookModeScreen() {
   const [rating, setRating] = useState(0);
   const [logId, setLogId] = useState<string | null>(null);
   const [timer, setTimer] = useState<{ step: number; left: number } | null>(null);
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
   const counted = useRef(false);
 
   // Per-step countdown. Buzzes (haptic) when it reaches zero.
@@ -249,7 +251,9 @@ export default function CookModeScreen() {
                 {isDone && <Ionicons name="chevron-down" size={16} color={COLORS.warmGray} style={{ marginLeft: 8 }} />}
               </View>
               {!isDone && recipe.stepImages?.[i] ? (
-                <Image source={{ uri: recipe.stepImages[i]! }} style={styles.stepImg} contentFit="cover" />
+                <TouchableOpacity activeOpacity={0.9} onPress={() => setViewerUri(recipe.stepImages![i]!)}>
+                  <Image source={{ uri: recipe.stepImages[i]! }} style={styles.stepImg} contentFit="cover" />
+                </TouchableOpacity>
               ) : null}
               {!isDone && recipe.stepTimers?.[i] ? (
                 timer?.step === i ? (
@@ -285,6 +289,8 @@ export default function CookModeScreen() {
 
         <View style={{ height: 60 }} />
       </ScrollView>
+
+      <ImageViewer uri={viewerUri} onClose={() => setViewerUri(null)} />
     </View>
   );
 }
