@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 12 },
   backButton: { width: 70 },
   backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   likedBadge: { backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, minWidth: 56, alignItems: 'center' },
   likedBadgeText: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
   filterRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },

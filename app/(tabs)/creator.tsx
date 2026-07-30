@@ -185,7 +185,7 @@ export default function CreatorStudioScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF9F2' },
   header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 12, alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
 
   blocked: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   blockedIcon: { fontSize: 64, marginBottom: 16 },

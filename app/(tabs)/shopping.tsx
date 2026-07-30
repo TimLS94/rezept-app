@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
   exportButton: { width: 70 },
   exportText: { fontSize: 14, color: '#F57C00', fontWeight: '600' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   clearText: { fontSize: 14, color: '#888' },
   progressCard: { backgroundColor: '#FFF', marginHorizontal: 20, borderRadius: 16, padding: 16, marginBottom: 12 },
   progressInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },

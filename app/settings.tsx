@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   avatarWrap: { alignItems: 'center', marginTop: 8, marginBottom: 8 },
   avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: '#F57C00', backgroundColor: '#EEE' },
   avatarButton: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#F57C00', backgroundColor: '#FFF5F0' },

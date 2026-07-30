@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
   headerBtn: { minWidth: 56 },
   headerBtnText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
 
   progressWrap: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
   progressText: { fontSize: 13, color: '#888', marginBottom: 8, fontWeight: '600' },

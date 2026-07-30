@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   headerBtn: { minWidth: 60 },
   headerBtnText: { fontSize: 16, color: '#888' },
   saveText: { color: '#F57C00', fontWeight: '700', textAlign: 'right' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
   content: { flex: 1, padding: 20 },
 
   avatarSection: { alignItems: 'center', marginBottom: 20 },

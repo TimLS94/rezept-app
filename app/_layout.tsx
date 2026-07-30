@@ -11,6 +11,10 @@ import { AuthProvider } from '../lib/auth';
 import { MealPlanProvider } from '../lib/mealPlan';
 import { FavoritesProvider } from '../lib/favorites';
 import { COLORS } from '../lib/theme';
+import { applyGlobalFont } from '../lib/applyGlobalFont';
+
+// Poppins as the default font across every screen (headlines override it).
+applyGlobalFont();
 
 // Incoming shared/deep links are handled in `app/+native-intent.ts`
 // (redirectSystemPath), which runs before route matching. Doing it here too

@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
   },
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   content: { flex: 1 },
   blockedState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   blockedIcon: { fontSize: 64, marginBottom: 16 },

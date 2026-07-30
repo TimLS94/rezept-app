@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIcon: { fontSize: 64, marginBottom: 16 },
   emptyText: { fontSize: 18, fontWeight: '600', color: '#888' },

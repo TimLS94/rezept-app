@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
   content: { flex: 1, padding: 20 },
   lastUpdated: { fontSize: 13, color: '#888', marginBottom: 24 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A', marginTop: 24, marginBottom: 12 },
