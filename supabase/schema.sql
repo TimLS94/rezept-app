@@ -180,6 +180,7 @@ create table if not exists public.favorite_recipes (
   user_id    uuid references public.profiles(id) on delete cascade not null,
   recipe_id  text not null,
   recipe     jsonb not null,
+  collection text,
   created_at timestamptz default timezone('utc'::text, now()) not null,
   primary key (user_id, recipe_id)
 );

@@ -12,6 +12,9 @@ type FavoritesContextValue = {
   addFavorite: (recipe: Recipe) => boolean;
   removeFavorite: (id: string) => void;
   toggleFavorite: (recipe: Recipe) => void;
+  // Named collection/section a favorite belongs to (null = uncategorised).
+  collections: Record<string, string | null>;
+  setCollection: (id: string, collection: string | null) => void;
 };
 
 const FavoritesContext = createContext<FavoritesContextValue | null>(null);
@@ -19,6 +22,7 @@ const FavoritesContext = createContext<FavoritesContextValue | null>(null);
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState<Recipe[]>([]);
+  const [collections, setCollections] = useState<Record<string, string | null>>({});
   const [loaded, setLoaded] = useState(false);
 
   // Load the signed-in user's favorites; clear them on sign-out (guests are
@@ -28,16 +32,20 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     (async () => {
       if (!user) {
         setFavorites([]);
+        setCollections({});
         setLoaded(true);
         return;
       }
       const { data } = await supabase
         .from('favorite_recipes')
-        .select('recipe')
+        .select('recipe, recipe_id, collection')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       if (!active) return;
-      if (data) setFavorites(data.map(r => r.recipe as Recipe));
+      if (data) {
+        setFavorites(data.map(r => r.recipe as Recipe));
+        setCollections(Object.fromEntries(data.map(r => [r.recipe_id as string, (r.collection as string | null) ?? null])));
+      }
       setLoaded(true);
     })();
     return () => {
@@ -91,9 +99,24 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     [favorites, addFavorite, removeFavorite]
   );
 
+  const setCollection = useCallback(
+    (id: string, collection: string | null) => {
+      setCollections(prev => ({ ...prev, [id]: collection }));
+      if (user) {
+        supabase
+          .from('favorite_recipes')
+          .update({ collection })
+          .eq('user_id', user.id)
+          .eq('recipe_id', id)
+          .then(() => {});
+      }
+    },
+    [user]
+  );
+
   return (
     <FavoritesContext.Provider
-      value={{ favorites, loaded, isFavorite, addFavorite, removeFavorite, toggleFavorite }}
+      value={{ favorites, loaded, isFavorite, addFavorite, removeFavorite, toggleFavorite, collections, setCollection }}
     >
       {children}
     </FavoritesContext.Provider>
