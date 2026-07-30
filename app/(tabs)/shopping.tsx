@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { getRecipeById } from '../../data/recipes';
+import { getRecipeById, Recipe } from '../../data/recipes';
+import { fetchDbRecipeById } from '../../lib/recipes';
 
 type ShoppingItem = {
   id: string;
@@ -46,6 +47,27 @@ export default function ShoppingScreen() {
   const [viewMode, setViewMode] = useState<'category' | 'recipe'>('category');
   // Recipe view: collapsed by default; tapping a card expands only that one.
   const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
+  // Creator recipes live in the DB (uuid ids), not the local seed catalogue —
+  // resolve them so their meal card shows the image/title.
+  const [dbRecipes, setDbRecipes] = useState<Record<string, Recipe>>({});
+
+  useEffect(() => {
+    const ids = [...new Set(items.map(i => i.recipe_id).filter((x): x is string => !!x))];
+    const missing = ids.filter(id => !getRecipeById(id) && !dbRecipes[id]);
+    if (missing.length === 0) return;
+    (async () => {
+      const entries = await Promise.all(
+        missing.map(async id => [id, await fetchDbRecipeById(id).catch(() => undefined)] as const)
+      );
+      setDbRecipes(prev => {
+        const next = { ...prev };
+        for (const [id, r] of entries) if (r) next[id] = r;
+        return next;
+      });
+    })();
+  }, [items]);
+
+  const resolveRecipe = (id?: string) => (id ? getRecipeById(id) || dbRecipes[id] : undefined);
 
   const toggleRecipe = (key: string) => {
     setExpandedRecipes(prev => {
@@ -389,7 +411,7 @@ export default function ShoppingScreen() {
         ) : (
           // Recipe View
           groupedByRecipe.map((group, index) => {
-            const recipe = group.recipe_id ? getRecipeById(group.recipe_id) : undefined;
+            const recipe = resolveRecipe(group.recipe_id);
             const doneCount = group.items.filter(i => i.checked).length;
             const key = group.name;
             const isExpanded = expandedRecipes.has(key);
