@@ -183,7 +183,7 @@ export default function CreatorStudioScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 12, alignItems: 'center' },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
 
@@ -193,17 +193,17 @@ const styles = StyleSheet.create({
   blockedText: { fontSize: 15, color: '#888', textAlign: 'center', marginTop: 10, lineHeight: 22 },
 
   profileCard: { backgroundColor: '#FFF', borderRadius: 20, marginHorizontal: 20, padding: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
-  avatar: { width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: '#FF6B35' },
+  avatar: { width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: '#F57C00' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   name: { fontSize: 20, fontWeight: '800', color: '#1A1A1A' },
   badge: { backgroundColor: '#FFF0EA', borderColor: '#FFC7B0', borderWidth: 1, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeText: { fontSize: 11, fontWeight: '800', color: '#FF6B35', letterSpacing: 0.5 },
+  badgeText: { fontSize: 11, fontWeight: '800', color: '#F57C00', letterSpacing: 0.5 },
   handle: { fontSize: 14, color: '#888', marginTop: 4 },
   bio: { fontSize: 14, color: '#444', textAlign: 'center', marginTop: 10, lineHeight: 20 },
   socialRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 14 },
   socialChip: { backgroundColor: '#F5F5F5', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
   socialText: { fontSize: 13, color: '#333', fontWeight: '600' },
-  editButton: { marginTop: 16, backgroundColor: '#FF6B35', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, alignSelf: 'stretch', alignItems: 'center' },
+  editButton: { marginTop: 16, backgroundColor: '#F57C00', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, alignSelf: 'stretch', alignItems: 'center' },
   editButtonText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
 
   actions: { marginTop: 16, marginHorizontal: 20, gap: 12 },
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   actionBody: { flex: 1 },
   actionTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
   actionSub: { fontSize: 13, color: '#888', marginTop: 2 },
-  actionArrow: { fontSize: 20, color: '#FF6B35' },
+  actionArrow: { fontSize: 20, color: '#F57C00' },
 
   section: { marginTop: 24, marginHorizontal: 20 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
@@ -225,10 +225,10 @@ const styles = StyleSheet.create({
   payToggle: { paddingHorizontal: 10, paddingVertical: 7, marginRight: 10, borderRadius: 10, borderWidth: 1, borderColor: '#C8E6C9', backgroundColor: '#E8F5E9' },
   payToggleOn: { borderColor: '#FFD3C2', backgroundColor: '#FFF0EA' },
   payToggleText: { fontSize: 12, fontWeight: '700', color: '#2E7D32' },
-  payToggleTextOn: { color: '#FF6B35' },
+  payToggleTextOn: { color: '#F57C00' },
   recipeTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   recipeMeta: { fontSize: 12, color: '#888', marginTop: 4 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   tag: { backgroundColor: '#FFF5F0', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  tagText: { fontSize: 11, color: '#FF6B35', fontWeight: '600' },
+  tagText: { fontSize: 11, color: '#F57C00', fontWeight: '600' },
 });

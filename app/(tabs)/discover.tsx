@@ -237,7 +237,7 @@ export default function DiscoverScreen() {
       <View style={styles.cardArea}>
         {!excluded ? (
           <View style={styles.emptyState}>
-            <ActivityIndicator size="large" color="#FF6B35" />
+            <ActivityIndicator size="large" color="#F57C00" />
           </View>
         ) : deck.length === 0 ? (
           <View style={styles.emptyState}>
@@ -382,16 +382,16 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 12 },
   backButton: { width: 70 },
-  backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   likedBadge: { backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, minWidth: 56, alignItems: 'center' },
   likedBadgeText: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
   filterRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFF', marginRight: 8, borderWidth: 1, borderColor: '#EEE' },
-  filterChipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
+  filterChipActive: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
   filterChipText: { fontSize: 13, color: '#666', fontWeight: '500' },
   filterChipTextActive: { color: '#FFF', fontWeight: '600' },
   cardArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   influencerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   influencerAvatar: { width: 28, height: 28, borderRadius: 14, marginRight: 8 },
   influencerName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
-  influencerHandle: { fontSize: 12, color: '#FF6B35', fontWeight: '500' },
+  influencerHandle: { fontSize: 12, color: '#F57C00', fontWeight: '500' },
   viewProfileArrow: { fontSize: 24, color: '#CCC', marginLeft: 'auto', paddingLeft: 12 },
   cardTitle: { fontSize: 24, fontWeight: '800', color: '#1A1A1A', marginBottom: 10 },
   cardMeta: { flexDirection: 'row', marginBottom: 12 },
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   tagBadge: { backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, marginRight: 8, marginBottom: 8 },
   tagBadgeText: { fontSize: 12, color: '#2E7D32', fontWeight: '600' },
   viewRecipeLink: { paddingVertical: 8 },
-  viewRecipeLinkText: { fontSize: 14, color: '#FF6B35', fontWeight: '600' },
+  viewRecipeLinkText: { fontSize: 14, color: '#F57C00', fontWeight: '600' },
   stampBase: { position: 'absolute', top: 40, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 4, borderRadius: 12, zIndex: 10 },
   likeStamp: { left: 24, borderColor: '#4CAF50', transform: [{ rotate: '-18deg' }] },
   likeStampText: { color: '#4CAF50', fontSize: 32, fontWeight: '800' },
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 64, marginBottom: 16 },
   emptyText: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   emptySubtext: { fontSize: 14, color: '#888', marginTop: 6, marginBottom: 20 },
-  primaryButton: { backgroundColor: '#FF6B35', paddingHorizontal: 24, paddingVertical: 16, borderRadius: 14, marginTop: 8 },
+  primaryButton: { backgroundColor: '#F57C00', paddingHorizontal: 24, paddingVertical: 16, borderRadius: 14, marginTop: 8 },
   primaryButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   secondaryButton: { paddingHorizontal: 24, paddingVertical: 14, marginTop: 4 },
   secondaryButtonText: { color: '#888', fontSize: 15, fontWeight: '600' },

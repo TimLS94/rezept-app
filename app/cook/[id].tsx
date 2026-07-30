@@ -50,7 +50,7 @@ export default function CookModeScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#F57C00" />
       </View>
     );
   }
@@ -170,7 +170,7 @@ function Header({ title }: { title: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { fontSize: 16, color: '#888' },
   header: {
@@ -179,13 +179,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
   },
   headerBtn: { minWidth: 56 },
-  headerBtnText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  headerBtnText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
 
   progressWrap: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
   progressText: { fontSize: 13, color: '#888', marginBottom: 8, fontWeight: '600' },
   progressTrack: { height: 8, borderRadius: 4, backgroundColor: '#EEE', overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#FF6B35', borderRadius: 4 },
+  progressFill: { height: '100%', backgroundColor: '#F57C00', borderRadius: 4 },
 
   stepsWrap: { padding: 20 },
   recipeTitle: { fontSize: 22, fontWeight: '800', color: '#1A1A1A', marginBottom: 16 },
@@ -194,11 +194,11 @@ const styles = StyleSheet.create({
   ingredientLine: { fontSize: 14, color: '#555', lineHeight: 22 },
   stepsHeader: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
   stepCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#F0F0F0' },
-  stepCardCurrent: { borderColor: '#FF6B35', borderWidth: 2 },
+  stepCardCurrent: { borderColor: '#F57C00', borderWidth: 2 },
   stepNumber: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#FFF0EA', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  stepNumberText: { fontSize: 14, fontWeight: '700', color: '#FF6B35' },
+  stepNumberText: { fontSize: 14, fontWeight: '700', color: '#F57C00' },
   stepText: { flex: 1, fontSize: 15, color: '#333', lineHeight: 22 },
-  stepCheck: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
+  stepCheck: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
   stepCheckText: { color: '#FFF', fontSize: 18, fontWeight: '800' },
 
   doneWrap: { alignItems: 'center', padding: 30, paddingTop: 40 },
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   awardNext: { fontSize: 13, color: '#888', marginTop: 8, textAlign: 'center' },
   feedbackLabel: { fontSize: 15, fontWeight: '600', color: '#333', marginTop: 28 },
   starsRow: { flexDirection: 'row', gap: 6, marginTop: 10 },
-  star: { fontSize: 34, color: '#FF6B35' },
-  doneButton: { backgroundColor: '#FF6B35', borderRadius: 14, paddingVertical: 16, paddingHorizontal: 48, marginTop: 32 },
+  star: { fontSize: 34, color: '#F57C00' },
+  doneButton: { backgroundColor: '#F57C00', borderRadius: 14, paddingVertical: 16, paddingHorizontal: 48, marginTop: 32 },
   doneButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

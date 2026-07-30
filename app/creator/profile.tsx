@@ -62,7 +62,7 @@ export default function EditCreatorProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#F57C00" />
       </View>
     );
   }
@@ -191,7 +191,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   center: { justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
@@ -206,13 +206,13 @@ const styles = StyleSheet.create({
   },
   headerBtn: { minWidth: 60 },
   headerBtnText: { fontSize: 16, color: '#888' },
-  saveText: { color: '#FF6B35', fontWeight: '700', textAlign: 'right' },
+  saveText: { color: '#F57C00', fontWeight: '700', textAlign: 'right' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
   content: { flex: 1, padding: 20 },
 
   avatarSection: { alignItems: 'center', marginBottom: 20 },
-  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: '#FF6B35' },
-  avatarEdit: { position: 'absolute', bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
+  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: '#F57C00' },
+  avatarEdit: { position: 'absolute', bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
   avatarEditText: { fontSize: 13 },
   avatarHint: { fontSize: 13, color: '#888', marginTop: 8 },
 
@@ -226,6 +226,6 @@ const styles = StyleSheet.create({
   handleInput: { flex: 1, padding: 14, fontSize: 15 },
   groupLabel: { fontSize: 13, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12, marginTop: 4 },
 
-  saveButton: { backgroundColor: '#FF6B35', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
+  saveButton: { backgroundColor: '#F57C00', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
   saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

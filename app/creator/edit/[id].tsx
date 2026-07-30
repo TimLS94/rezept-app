@@ -198,7 +198,7 @@ export default function EditRecipeScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#F57C00" />
       </View>
     );
   }
@@ -220,7 +220,7 @@ export default function EditRecipeScreen() {
         <Text style={styles.headerTitle}>Edit Recipe</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving}>
           {saving ? (
-            <ActivityIndicator size="small" color="#FF6B35" />
+            <ActivityIndicator size="small" color="#F57C00" />
           ) : (
             <Text style={styles.saveText}>Save</Text>
           )}
@@ -395,7 +395,7 @@ export default function EditRecipeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   center: { justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
@@ -409,9 +409,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 80 },
-  backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
-  saveText: { fontSize: 16, color: '#FF6B35', fontWeight: '700' },
+  saveText: { fontSize: 16, color: '#F57C00', fontWeight: '700' },
   content: { flex: 1 },
   imageContainer: { height: 200, backgroundColor: '#F0F0F0', position: 'relative' },
   recipeImage: { width: '100%', height: '100%' },
@@ -430,19 +430,19 @@ const styles = StyleSheet.create({
   toggleLabel: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
   toggleHint: { fontSize: 13, color: '#888', marginTop: 2 },
   toggle: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: '#F0F0F0' },
-  toggleActive: { backgroundColor: '#FF6B35' },
+  toggleActive: { backgroundColor: '#F57C00' },
   toggleText: { fontSize: 14, fontWeight: '600', color: '#888' },
   toggleTextActive: { color: '#FFF' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
-  addLink: { fontSize: 14, color: '#FF6B35', fontWeight: '600' },
+  addLink: { fontSize: 14, color: '#F57C00', fontWeight: '600' },
   ingredientRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
   ingredientAmount: { width: 50, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14, textAlign: 'center' },
   ingredientUnit: { width: 60, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14 },
   ingredientName: { flex: 1, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14 },
   removeButton: { fontSize: 24, color: '#E53935', fontWeight: '600', paddingHorizontal: 8 },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  stepNumber: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  stepNumber: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   stepNumberText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   stepInput: { flex: 1, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14, minHeight: 40 },
   deleteButton: { margin: 16, padding: 16, borderRadius: 12, backgroundColor: '#FFEBEE', alignItems: 'center' },

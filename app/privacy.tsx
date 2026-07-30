@@ -111,7 +111,7 @@ export default function PrivacyPolicyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
   content: { flex: 1, padding: 20 },
   lastUpdated: { fontSize: 13, color: '#888', marginBottom: 24 },

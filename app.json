@@ -11,9 +11,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.feedfamily.app",
       "buildNumber": "1",
-      "associatedDomains": ["applinks:feedfamily.app"],
+      "associatedDomains": [
+        "applinks:feedfamily.app"
+      ],
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["instagram", "instagram-stories", "instacart", "walmart"]
+        "LSApplicationQueriesSchemes": [
+          "instagram",
+          "instagram-stories",
+          "instacart",
+          "walmart"
+        ]
       }
     },
     "android": {
@@ -40,13 +47,20 @@
               "pathPrefix": "/p"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         },
         {
           "action": "SEND",
-          "category": ["DEFAULT"],
+          "category": [
+            "DEFAULT"
+          ],
           "data": [
-            { "mimeType": "text/plain" }
+            {
+              "mimeType": "text/plain"
+            }
           ]
         }
       ]
@@ -62,7 +76,8 @@
           "photosPermission": "Allow FeedFamily to access your photos to upload recipe and profile images."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ],
     "scheme": "feedfamily",
     "newArchEnabled": true

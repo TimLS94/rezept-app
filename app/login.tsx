@@ -392,11 +392,11 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: '#FF6B35',
+    color: '#F57C00',
     fontWeight: '600',
   },
   primaryButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F57C00',
     borderRadius: 14,
     padding: 18,
     alignItems: 'center',
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   switchAuthLink: {
-    color: '#FF6B35',
+    color: '#F57C00',
     fontWeight: '600',
   },
   guestLink: {

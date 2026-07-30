@@ -103,7 +103,7 @@ export default function CookbookRecipeScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#F57C00" />
       </View>
     );
   }
@@ -276,7 +276,7 @@ function Meta({ value, label }: { value: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   header: {
     flexDirection: 'row',
@@ -290,12 +290,12 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   headerRight: { width: 60, alignItems: 'flex-end' },
-  editLink: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  editLink: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
   saveHeaderBtn: { width: 60, alignItems: 'flex-end' },
-  saveHeaderTxt: { fontSize: 16, color: '#FF6B35', fontWeight: '700' },
+  saveHeaderTxt: { fontSize: 16, color: '#F57C00', fontWeight: '700' },
   editBody: { padding: 20 },
 
   hero: { width: '100%', height: 240 },
@@ -315,11 +315,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   metaItem: { alignItems: 'center' },
-  metaValue: { fontSize: 18, fontWeight: '700', color: '#FF6B35' },
+  metaValue: { fontSize: 18, fontWeight: '700', color: '#F57C00' },
   metaLabel: { fontSize: 12, color: '#888', marginTop: 2 },
 
   sourceLink: { marginBottom: 16 },
-  sourceLinkText: { fontSize: 14, color: '#FF6B35', fontWeight: '600' },
+  sourceLinkText: { fontSize: 14, color: '#F57C00', fontWeight: '600' },
 
   emptyCard: {
     backgroundColor: '#FFF5F0',
@@ -343,14 +343,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
-  ingredientAmount: { width: 80, fontSize: 14, color: '#FF6B35', fontWeight: '600' },
+  ingredientAmount: { width: 80, fontSize: 14, color: '#F57C00', fontWeight: '600' },
   ingredientName: { flex: 1, fontSize: 14, color: '#333' },
   stepRow: { flexDirection: 'row', marginBottom: 12 },
   stepNumber: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F57C00',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   stepText: { flex: 1, fontSize: 14, color: '#333', lineHeight: 20 },
 
   cartButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F57C00',
     borderRadius: 14,
     padding: 18,
     alignItems: 'center',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   emptyText: { fontSize: 14, color: '#888', marginTop: 6, textAlign: 'center' },
   primaryButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F57C00',
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 14,

@@ -198,7 +198,7 @@ export default function RecipeDetailScreen() {
   if (!recipe) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color="#FF6B35" />
+        <ActivityIndicator color="#F57C00" />
       </View>
     );
   }
@@ -270,7 +270,7 @@ export default function RecipeDetailScreen() {
               disabled={togglingPaid}
             >
               {togglingPaid ? (
-                <ActivityIndicator size="small" color={recipe.isPaid ? '#FFF' : '#FF6B35'} />
+                <ActivityIndicator size="small" color={recipe.isPaid ? '#FFF' : '#F57C00'} />
               ) : (
                 <Text style={[styles.paidToggleText, recipe.isPaid && styles.paidToggleTextActive]}>
                   {recipe.isPaid ? '💎 Premium' : '🆓 Free'}
@@ -492,7 +492,7 @@ export default function RecipeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   heroContainer: { height: 300, position: 'relative' },
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' },
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
   backButtonText: { fontSize: 20, color: '#1A1A1A' },
   heroContent: { position: 'absolute', bottom: 20, left: 20, right: 20 },
   badges: { flexDirection: 'row', marginBottom: 10 },
-  badge: { backgroundColor: '#FF6B35', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginRight: 8 },
+  badge: { backgroundColor: '#F57C00', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginRight: 8 },
   badgeText: { color: '#FFF', fontSize: 12, fontWeight: '600' },
   heroTitle: { fontSize: 24, fontWeight: '700', color: '#FFF', marginBottom: 10 },
   heroMeta: { flexDirection: 'row' },
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   influencerHandle: { fontSize: 12, color: '#888' },
   favoriteButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF5F0' },
   favoriteIcon: { fontSize: 24, color: '#FFB39C' },
-  favoriteIconActive: { color: '#FF6B35' },
+  favoriteIconActive: { color: '#F57C00' },
   servingsCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF', margin: 16, padding: 16, borderRadius: 16 },
   servingsLeft: {},
   servingsLabel: { fontSize: 12, color: '#888', marginBottom: 8 },
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   servingsButtonText: { fontSize: 20, color: '#1A1A1A' },
   servingsNumber: { fontSize: 24, fontWeight: '700', color: '#1A1A1A', marginHorizontal: 20 },
   familyButton: { backgroundColor: '#FFE0B2', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 },
-  familyButtonText: { fontSize: 13, fontWeight: '600', color: '#FF6B35' },
+  familyButtonText: { fontSize: 13, fontWeight: '600', color: '#F57C00' },
   tabs: { flexDirection: 'row', marginHorizontal: 16, backgroundColor: '#F5F5F5', borderRadius: 12, padding: 4 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10 },
   tabActive: { backgroundColor: '#FFF' },
@@ -529,16 +529,16 @@ const styles = StyleSheet.create({
   ingredientsList: { padding: 16 },
   ingredientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   ingredientAmount: { width: 80, backgroundColor: '#F5F5F5', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginRight: 12 },
-  ingredientAmountText: { fontSize: 13, fontWeight: '600', color: '#FF6B35', textAlign: 'center' },
+  ingredientAmountText: { fontSize: 13, fontWeight: '600', color: '#F57C00', textAlign: 'center' },
   ingredientName: { fontSize: 16, color: '#1A1A1A', flex: 1 },
   stepsList: { padding: 16 },
   stepRow: { flexDirection: 'row', marginBottom: 20 },
-  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
   stepNumberText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
   stepText: { flex: 1, fontSize: 15, color: '#1A1A1A', lineHeight: 22 },
   bottomSpacer: { height: 100 },
   bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 32, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-  addToCartButton: { backgroundColor: '#FF6B35', padding: 18, borderRadius: 14, alignItems: 'center' },
+  addToCartButton: { backgroundColor: '#F57C00', padding: 18, borderRadius: 14, alignItems: 'center' },
   addToCartText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   modalSubtitle: { fontSize: 14, color: '#888', marginBottom: 20 },
   emptyFamily: { alignItems: 'center', padding: 24 },
   emptyFamilyText: { fontSize: 16, color: '#888', marginBottom: 16 },
-  addFamilyButton: { backgroundColor: '#FF6B35', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
+  addFamilyButton: { backgroundColor: '#F57C00', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
   addFamilyButtonText: { color: '#FFF', fontWeight: '600' },
   memberOption: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#F5F5F5', borderRadius: 12, marginBottom: 10 },
   memberOptionSelected: { backgroundColor: '#FFE0B2' },
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   memberOptionName: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
   memberOptionDetails: { fontSize: 13, color: '#888' },
   memberCheckbox: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#DDD', justifyContent: 'center', alignItems: 'center' },
-  memberCheckboxChecked: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
+  memberCheckboxChecked: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
   memberCheckmark: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   portionResult: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 16, borderRadius: 12, marginTop: 10 },
   portionResultLabel: { fontSize: 14, color: '#2E7D32' },
@@ -563,21 +563,21 @@ const styles = StyleSheet.create({
   modalButtons: { flexDirection: 'row', marginTop: 20 },
   modalCancelButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#F5F5F5', alignItems: 'center', marginRight: 8 },
   modalCancelText: { fontSize: 16, fontWeight: '600', color: '#666' },
-  modalApplyButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#FF6B35', alignItems: 'center' },
+  modalApplyButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#F57C00', alignItems: 'center' },
   modalApplyText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
   lockedCard: { backgroundColor: '#FFF', margin: 16, padding: 24, borderRadius: 16, alignItems: 'center' },
   lockedIcon: { fontSize: 48, marginBottom: 12 },
   lockedTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
   lockedText: { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
-  lockedButton: { backgroundColor: '#FF6B35', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12 },
+  lockedButton: { backgroundColor: '#F57C00', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12 },
   lockedButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   guestContinueLink: { marginTop: 16, paddingVertical: 8 },
   guestContinueLinkText: { fontSize: 14, color: '#888', fontWeight: '500' },
   creatorControls: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 10, backgroundColor: '#FFF5F0', borderBottomWidth: 1, borderBottomColor: '#FFE0B2' },
-  editRecipeButton: { flex: 1, backgroundColor: '#FFF', paddingVertical: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#FF6B35' },
-  editRecipeButtonText: { fontSize: 14, fontWeight: '600', color: '#FF6B35' },
-  paidToggle: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#FF6B35' },
-  paidToggleActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
-  paidToggleText: { fontSize: 14, fontWeight: '600', color: '#FF6B35' },
+  editRecipeButton: { flex: 1, backgroundColor: '#FFF', paddingVertical: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#F57C00' },
+  editRecipeButtonText: { fontSize: 14, fontWeight: '600', color: '#F57C00' },
+  paidToggle: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#F57C00' },
+  paidToggleActive: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
+  paidToggleText: { fontSize: 14, fontWeight: '600', color: '#F57C00' },
   paidToggleTextActive: { color: '#FFF' },
 });

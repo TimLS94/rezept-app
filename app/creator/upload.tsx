@@ -182,7 +182,7 @@ export default function UploadRecipeScreen() {
         <View style={styles.field}>
           <TouchableOpacity style={styles.photoButton} onPress={chooseImage} disabled={uploadingImage}>
             {uploadingImage ? (
-              <ActivityIndicator color="#FF6B35" />
+              <ActivityIndicator color="#F57C00" />
             ) : (
               <Text style={styles.photoButtonText}>📷 Upload photo</Text>
             )}
@@ -382,10 +382,10 @@ export default function UploadRecipeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   blockedState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   blockedIcon: { fontSize: 64, marginBottom: 16 },
@@ -396,8 +396,8 @@ const styles = StyleSheet.create({
   previewEmptyText: { fontSize: 16, color: '#AAA' },
   field: { paddingHorizontal: 20, marginTop: 16 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
-  photoButton: { padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#FF6B35', backgroundColor: '#FFF5F0' },
-  photoButtonText: { color: '#FF6B35', fontSize: 15, fontWeight: '700' },
+  photoButton: { padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#F57C00', backgroundColor: '#FFF5F0' },
+  photoButtonText: { color: '#F57C00', fontSize: 15, fontWeight: '700' },
   orLabel: { fontSize: 12, color: '#999', textAlign: 'center', marginVertical: 8 },
   input: { backgroundColor: '#FFF', borderRadius: 10, padding: 14, fontSize: 15, borderWidth: 1, borderColor: '#EEE' },
   multiline: { minHeight: 70, textAlignVertical: 'top' },
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   segmentTextActive: { color: '#1A1A1A', fontWeight: '700' },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEE' },
-  chipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
+  chipActive: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
   chipText: { fontSize: 13, color: '#666', fontWeight: '500' },
   chipTextActive: { color: '#FFF', fontWeight: '600' },
   ingredientCard: { backgroundColor: '#F7F7F7', borderRadius: 12, padding: 10, marginBottom: 10 },
@@ -423,15 +423,15 @@ const styles = StyleSheet.create({
   catChipActive: { backgroundColor: '#FFE0B2', borderColor: '#FFB74D' },
   catChipText: { fontSize: 12, color: '#666' },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10, gap: 8 },
-  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', marginTop: 8 },
+  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', marginTop: 8 },
   stepNumberText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
   stepInput: { flex: 1, minHeight: 48, textAlignVertical: 'top' },
   removeCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFE0E0', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   removeCircleText: { fontSize: 18, color: '#E53935', fontWeight: '700' },
   addRow: { paddingVertical: 12, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: '#EEE', borderStyle: 'dashed' },
-  addRowText: { fontSize: 14, color: '#FF6B35', fontWeight: '600' },
+  addRowText: { fontSize: 14, color: '#F57C00', fontWeight: '600' },
   bottomAction: { padding: 16, paddingBottom: 32, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-  publishButton: { backgroundColor: '#FF6B35', padding: 18, borderRadius: 14, alignItems: 'center' },
+  publishButton: { backgroundColor: '#F57C00', padding: 18, borderRadius: 14, alignItems: 'center' },
   publishButtonText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
   importBanner: {
     flexDirection: 'row',
@@ -449,5 +449,5 @@ const styles = StyleSheet.create({
   importText: { flex: 1 },
   importTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
   importSubtitle: { fontSize: 13, color: '#888', marginTop: 2 },
-  importArrow: { fontSize: 20, color: '#FF6B35', fontWeight: '600' },
+  importArrow: { fontSize: 20, color: '#F57C00', fontWeight: '600' },
 });

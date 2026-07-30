@@ -393,7 +393,7 @@ export default function BudgetScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#FFF9F2',
   },
   header: {
     flexDirection: 'row',
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    color: '#FF6B35',
+    color: '#F57C00',
     fontWeight: '600',
   },
   headerTitle: {
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   budgetCard: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F57C00',
     marginHorizontal: 20,
     borderRadius: 20,
     padding: 24,
@@ -480,8 +480,8 @@ const styles = StyleSheet.create({
     borderColor: '#EEE',
   },
   filterChipActive: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: '#F57C00',
+    borderColor: '#F57C00',
   },
   filterChipText: {
     fontSize: 13,
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   },
   weekArrowText: {
     fontSize: 24,
-    color: '#FF6B35',
+    color: '#F57C00',
     fontWeight: '700',
     lineHeight: 26,
   },
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   },
   weekSub: {
     fontSize: 12,
-    color: '#FF6B35',
+    color: '#F57C00',
     marginTop: 2,
     fontWeight: '600',
   },
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
   mealDay: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FF6B35',
+    color: '#F57C00',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -693,28 +693,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFD3C2',
   },
-  addFavButtonText: { fontSize: 14, fontWeight: '700', color: '#FF6B35' },
+  addFavButtonText: { fontSize: 14, fontWeight: '700', color: '#F57C00' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: { backgroundColor: '#FFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
-  modalClose: { fontSize: 16, fontWeight: '700', color: '#FF6B35' },
+  modalClose: { fontSize: 16, fontWeight: '700', color: '#F57C00' },
   modalEmpty: { fontSize: 14, color: '#888', textAlign: 'center', paddingVertical: 30, lineHeight: 20 },
   favRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
   favImage: { width: 56, height: 56, borderRadius: 10 },
   favTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   favMeta: { fontSize: 12, color: '#888', marginTop: 2 },
-  favAdd: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: '#FF6B35' },
+  favAdd: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: '#F57C00' },
   favAddDone: { backgroundColor: '#E8F5E9' },
   favAddText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
   favAddDoneText: { color: '#2E7D32' },
   addMealButtonText: {
     fontSize: 14,
-    color: '#FF6B35',
+    color: '#F57C00',
     fontWeight: '600',
   },
   addWeekButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F57C00',
     marginHorizontal: 20,
     marginBottom: 12,
     padding: 16,

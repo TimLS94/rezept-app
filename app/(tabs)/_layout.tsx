@@ -1,12 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
+import { COLORS, FONTS } from '../../lib/theme';
 
-// Emoji tab icons match the app's emoji-led visual style. Emoji ignore tint
-// color, so the active state is conveyed with opacity instead.
+// Emoji tab icons. Emoji ignore tint color, so the active state is conveyed
+// with opacity instead.
 const tabIcon = (emoji: string) =>
   function TabIcon({ focused }: { focused: boolean }) {
-    return <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.45 }}>{emoji}</Text>;
+    return <Text style={{ fontSize: 21, opacity: focused ? 1 : 0.4 }}>{emoji}</Text>;
   };
 
 export default function TabsLayout() {
@@ -17,9 +18,10 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#FF6B35',
-        tabBarInactiveTintColor: '#999',
-        tabBarStyle: { paddingTop: 4 },
+        tabBarActiveTintColor: COLORS.orange,
+        tabBarInactiveTintColor: COLORS.warmGray,
+        tabBarStyle: { backgroundColor: COLORS.card, borderTopColor: COLORS.border, paddingTop: 6 },
+        tabBarLabelStyle: { fontFamily: FONTS.semibold, fontSize: 11 },
       }}
     >
       {/* Consumer tabs — hidden for creators, who only create & market.

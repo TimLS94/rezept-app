@@ -419,7 +419,7 @@ export default function ImportRecipeScreen() {
         {/* Extracting Step */}
         {step === 'extracting' && (
           <View style={styles.loadingSection}>
-            <ActivityIndicator size="large" color="#FF6B35" />
+            <ActivityIndicator size="large" color="#F57C00" />
             <Text style={styles.loadingTitle}>Extracting Recipe...</Text>
             <Text style={styles.loadingText}>
               Analyzing the post content with AI. This may take a few seconds.
@@ -611,7 +611,7 @@ export default function ImportRecipeScreen() {
         {/* Saving Step */}
         {step === 'saving' && (
           <View style={styles.loadingSection}>
-            <ActivityIndicator size="large" color="#FF6B35" />
+            <ActivityIndicator size="large" color="#F57C00" />
             <Text style={styles.loadingTitle}>Saving Recipe...</Text>
           </View>
         )}
@@ -621,7 +621,7 @@ export default function ImportRecipeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   content: { flex: 1 },
   blockedState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   },
   errorText: { color: '#C62828', fontSize: 14 },
   primaryButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F57C00',
     borderRadius: 14,
     padding: 18,
     alignItems: 'center',
@@ -699,8 +699,8 @@ const styles = StyleSheet.create({
   screenshotImage: { width: 100, height: 150, borderRadius: 10 },
   removeScreenshot: { position: 'absolute', top: -8, right: -8, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FF5252', justifyContent: 'center', alignItems: 'center' },
   removeScreenshotText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-  uploadButton: { backgroundColor: '#FFF', borderWidth: 2, borderColor: '#FF6B35', borderStyle: 'dashed', borderRadius: 12, padding: 20, alignItems: 'center', marginBottom: 12 },
-  uploadButtonText: { color: '#FF6B35', fontSize: 16, fontWeight: '600' },
+  uploadButton: { backgroundColor: '#FFF', borderWidth: 2, borderColor: '#F57C00', borderStyle: 'dashed', borderRadius: 12, padding: 20, alignItems: 'center', marginBottom: 12 },
+  uploadButtonText: { color: '#F57C00', fontSize: 16, fontWeight: '600' },
   screenshotHint: { fontSize: 13, color: '#888', lineHeight: 20, textAlign: 'center' },
 
   // Loading section
@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
   reviewDescription: { fontSize: 15, color: '#666', lineHeight: 22, marginBottom: 16 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-around' },
   metaItem: { alignItems: 'center' },
-  metaValue: { fontSize: 18, fontWeight: '700', color: '#FF6B35' },
+  metaValue: { fontSize: 18, fontWeight: '700', color: '#F57C00' },
   metaLabel: { fontSize: 12, color: '#888', marginTop: 2 },
 
   section: {
@@ -761,14 +761,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
-  ingredientAmount: { width: 80, fontSize: 14, color: '#FF6B35', fontWeight: '600' },
+  ingredientAmount: { width: 80, fontSize: 14, color: '#F57C00', fontWeight: '600' },
   ingredientName: { flex: 1, fontSize: 14, color: '#333' },
   stepRow: { flexDirection: 'row', marginBottom: 12 },
   stepNumber: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F57C00',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
   },
-  tagText: { fontSize: 13, color: '#FF6B35', fontWeight: '500' },
+  tagText: { fontSize: 13, color: '#F57C00', fontWeight: '500' },
 
   actionRow: {
     flexDirection: 'row',
@@ -820,7 +820,7 @@ const styles = StyleSheet.create({
   metaEditItem: { flex: 1 },
   editInputSmall: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 12, fontSize: 15, textAlign: 'center', color: '#1A1A1A' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  addLink: { fontSize: 14, color: '#FF6B35', fontWeight: '600' },
+  addLink: { fontSize: 14, color: '#F57C00', fontWeight: '600' },
   ingredientEditRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
   ingredientAmountInput: { width: 50, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14, textAlign: 'center' },
   ingredientUnitInput: { width: 60, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14 },

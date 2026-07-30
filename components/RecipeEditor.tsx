@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   mt: { marginTop: 14 },
   hint: { fontSize: 12, color: '#999', marginTop: 6 },
   input: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#FFF9F2',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F57C00',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
@@ -229,12 +229,12 @@ const styles = StyleSheet.create({
   removeTxt: { color: '#FF5252', fontSize: 14, fontWeight: '700' },
   addBtn: {
     borderWidth: 1,
-    borderColor: '#FF6B35',
+    borderColor: '#F57C00',
     borderStyle: 'dashed',
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 4,
   },
-  addTxt: { color: '#FF6B35', fontSize: 14, fontWeight: '600' },
+  addTxt: { color: '#F57C00', fontSize: 14, fontWeight: '600' },
 });

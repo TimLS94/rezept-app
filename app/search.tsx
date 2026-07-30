@@ -229,10 +229,10 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#FFF9F2' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 12 },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', marginHorizontal: 20, borderRadius: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: '#EEE' },
   searchIcon: { fontSize: 16, marginRight: 8 },
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   clearIcon: { fontSize: 14, color: '#999', padding: 4 },
   filterRow: { paddingHorizontal: 20, paddingVertical: 12, gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFF', marginRight: 8, borderWidth: 1, borderColor: '#EEE' },
-  filterChipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
+  filterChipActive: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
   filterChipText: { fontSize: 13, color: '#666', fontWeight: '500' },
   filterChipTextActive: { color: '#FFF', fontWeight: '600' },
   resultCount: { fontSize: 13, color: '#888', marginHorizontal: 20, marginBottom: 10 },
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   cardContent: { flex: 1, padding: 12, justifyContent: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
   cardMeta: { fontSize: 13, color: '#888', marginTop: 4 },
-  cardHandle: { fontSize: 12, color: '#FF6B35', fontWeight: '500', marginTop: 6 },
+  cardHandle: { fontSize: 12, color: '#F57C00', fontWeight: '500', marginTop: 6 },
   emptyState: { alignItems: 'center', padding: 60 },
   emptyIcon: { fontSize: 56, marginBottom: 12 },
   emptyText: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   creatorAvatar: { width: 56, height: 56, borderRadius: 28, marginRight: 14 },
   creatorInfo: { flex: 1 },
   creatorName: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
-  creatorHandle: { fontSize: 13, color: '#FF6B35', fontWeight: '500', marginTop: 2 },
+  creatorHandle: { fontSize: 13, color: '#F57C00', fontWeight: '500', marginTop: 2 },
   creatorBio: { fontSize: 13, color: '#888', marginTop: 4 },
   creatorArrow: { fontSize: 24, color: '#CCC' },
 });
