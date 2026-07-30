@@ -86,17 +86,23 @@ export default function CookModeScreen() {
     tick();
   };
 
-  const checkStep = (index: number) => {
+  // Toggle a step done/undone — checking collapses it, tapping again re-opens it.
+  const toggleStep = (index: number) => {
     setDone(prev => {
       const next = new Set(prev);
-      next.add(index);
-      if (next.size === total && total > 0 && !counted.current) {
-        counted.current = true;
-        incrementCooked().then(setCookedCount);
-        setFinished(true);
-      }
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
       return next;
     });
+  };
+
+  // Explicit finish (shown once all steps are checked) so nothing auto-jumps
+  // and you can still go back and re-open steps.
+  const finishCooking = () => {
+    if (counted.current) return;
+    counted.current = true;
+    incrementCooked().then(setCookedCount);
+    setFinished(true);
   };
 
   if (loading) {
@@ -201,7 +207,8 @@ export default function CookModeScreen() {
   }
 
   // ── Cooking ───────────────────────────────────────────────────────────────
-  const remaining = recipe.steps.map((text, i) => ({ text, i })).filter(s => !done.has(s.i));
+  const currentIndex = recipe.steps.findIndex((_, i) => !done.has(i));
+  const allDone = total > 0 && done.size === total;
 
   return (
     <View style={styles.container}>
@@ -226,15 +233,33 @@ export default function CookModeScreen() {
         )}
 
         <Text style={styles.cardHeader}>STEPS</Text>
-        {remaining.map((s, idx) => (
-          <View key={s.i} style={[styles.stepCard, idx === 0 && styles.stepCardCurrent]}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>{s.i + 1}</Text></View>
-            <Text style={styles.stepText}>{s.text}</Text>
-            <TouchableOpacity style={styles.stepCheck} onPress={() => checkStep(s.i)}>
-              <Ionicons name="checkmark" size={20} color="#FFF" />
+        {recipe.steps.map((text, i) => {
+          const isDone = done.has(i);
+          const isCurrent = !isDone && i === currentIndex;
+          return (
+            <TouchableOpacity
+              key={i}
+              activeOpacity={0.85}
+              onPress={() => toggleStep(i)}
+              style={[styles.stepCard, isCurrent && styles.stepCardCurrent, isDone && styles.stepCardDone]}
+            >
+              <View style={[styles.checkCircle, isDone && styles.checkCircleDone]}>
+                {isDone ? <Ionicons name="checkmark" size={16} color="#FFF" /> : <Text style={styles.checkNum}>{i + 1}</Text>}
+              </View>
+              <Text style={[styles.stepText, isDone && styles.stepTextDone]} numberOfLines={isDone ? 1 : undefined}>
+                {text}
+              </Text>
+              {isDone && <Ionicons name="chevron-down" size={16} color={COLORS.warmGray} style={{ marginLeft: 8 }} />}
             </TouchableOpacity>
-          </View>
-        ))}
+          );
+        })}
+
+        {allDone && (
+          <TouchableOpacity style={styles.finishBtn} onPress={finishCooking}>
+            <Ionicons name="trophy" size={18} color="#FFF" />
+            <Text style={styles.finishBtnText}>FINISH & GET REWARD</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={{ height: 60 }} />
       </ScrollView>
@@ -294,10 +319,14 @@ const styles = StyleSheet.create({
   ingredientLine: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.charcoal, lineHeight: 23 },
   stepCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border },
   stepCardCurrent: { borderColor: COLORS.orange, borderWidth: 2 },
-  stepNumber: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.navy, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  stepNumberText: { fontFamily: FONTS.bold, fontSize: 14, color: '#FFF' },
+  stepCardDone: { backgroundColor: '#F6F1EA', borderColor: COLORS.border },
+  checkCircle: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: COLORS.navy, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  checkCircleDone: { backgroundColor: COLORS.orange, borderColor: COLORS.orange },
+  checkNum: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.navy },
   stepText: { flex: 1, fontFamily: FONTS.body, fontSize: 15, color: COLORS.charcoal, lineHeight: 22 },
-  stepCheck: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.orange, justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
+  stepTextDone: { color: COLORS.warmGray, textDecorationLine: 'line-through' },
+  finishBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.orange, borderRadius: 16, paddingVertical: 16, marginTop: 8 },
+  finishBtnText: { fontFamily: FONTS.bold, color: '#FFF', fontSize: 15, letterSpacing: 0.5 },
 
   // Completion
   doneEmoji: { fontSize: 72 },
