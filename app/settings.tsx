@@ -9,19 +9,46 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { pickAndUploadImage } from '../lib/storage';
 import { VERSION_STRING } from '../lib/version';
+import { useAuth } from '../lib/auth';
+import { restorePurchases } from '../lib/purchases';
+import Paywall from '../components/Paywall';
 
 const DEFAULT_AVATAR =
   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
 
 export default function SettingsScreen() {
+  const { isPremium, refresh } = useAuth();
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // IAP subscriptions can only be cancelled in the store, so we deep-link there.
+  const manageSubscription = () => {
+    const url = Platform.OS === 'ios'
+      ? 'https://apps.apple.com/account/subscriptions'
+      : 'https://play.google.com/store/account/subscriptions';
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const handleRestore = async () => {
+    const r = await restorePurchases();
+    if (r === 'success') {
+      await refresh();
+      Alert.alert('Wiederhergestellt', 'Dein Abo ist wieder aktiv.');
+    } else if (r === 'unavailable') {
+      Alert.alert('Nicht verfügbar', 'Käufe wiederherstellen funktioniert im Store-/Dev-Build.');
+    } else {
+      Alert.alert('Keine Käufe gefunden', 'Wir konnten kein aktives Abo wiederherstellen.');
+    }
+  };
 
   // Profile
   const [fullName, setFullName] = useState('');
@@ -278,6 +305,30 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Subscription */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Subscription</Text>
+          {isPremium ? (
+            <>
+              <Text style={styles.subActive}>✓ Premium aktiv</Text>
+              <Text style={styles.subHint}>Du hast Zugriff auf alle Premium-Rezepte.</Text>
+              <TouchableOpacity style={styles.secondaryButton} onPress={manageSubscription}>
+                <Text style={styles.secondaryButtonText}>Abo verwalten / kündigen</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.subHint}>Schalte alle Premium-Rezepte frei und unterstütze die Creator.</Text>
+              <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPaywall(true)}>
+                <Text style={styles.primaryButtonText}>Premium freischalten</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          <TouchableOpacity style={styles.restoreLink} onPress={handleRestore}>
+            <Text style={styles.restoreLinkText}>Käufe wiederherstellen</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Legal */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Legal</Text>
@@ -309,6 +360,8 @@ export default function SettingsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <Paywall visible={showPaywall} onClose={() => setShowPaywall(false)} onSubscribed={refresh} />
     </View>
   );
 }
@@ -344,6 +397,10 @@ const styles = StyleSheet.create({
   legalLink: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   legalLinkText: { fontSize: 15, color: '#1A1A1A' },
   legalArrow: { fontSize: 20, color: '#CCC' },
+  subActive: { fontSize: 16, fontWeight: '700', color: '#3C8D40', marginBottom: 6 },
+  subHint: { fontSize: 13, color: '#888', marginBottom: 12, lineHeight: 19 },
+  restoreLink: { alignItems: 'center', paddingVertical: 12, marginTop: 6 },
+  restoreLinkText: { fontSize: 14, color: '#0D2B63', fontWeight: '600' },
   versionContainer: { alignItems: 'center', marginTop: 24 },
   versionText: { fontSize: 13, color: '#AAA' },
 });

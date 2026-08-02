@@ -361,18 +361,42 @@ export default function RecipeDetailScreen() {
             </TouchableOpacity>
           </View>
         ) : locked ? (
-          <View style={styles.lockedCard}>
-            <Text style={styles.lockedIcon}>🔒</Text>
-            <Text style={styles.lockedTitle}>Premium recipe</Text>
-            <Text style={styles.lockedText}>
-              This recipe is available to subscribers. Unlock the full ingredients and step-by-step instructions with a subscription.
-            </Text>
-            <TouchableOpacity
-              style={styles.lockedButton}
-              onPress={() => setShowPaywall(true)}
-            >
-              <Text style={styles.lockedButtonText}>Subscribe to unlock</Text>
-            </TouchableOpacity>
+          <View style={styles.teaserWrap}>
+            {recipe.description ? (
+              <Text style={styles.teaserDesc}>{recipe.description}</Text>
+            ) : null}
+            <View style={styles.teaserCounts}>
+              <Text style={styles.teaserCount}>🥘 {recipe.ingredients.length} Zutaten</Text>
+              <Text style={styles.teaserCount}>👨‍🍳 {recipe.steps.length} Schritte</Text>
+            </View>
+
+            {recipe.ingredients.length > 0 && (
+              <View style={styles.teaserPreview}>
+                <Text style={styles.teaserPreviewLabel}>ZUTATEN · VORSCHAU</Text>
+                {recipe.ingredients.slice(0, 3).map((ing, i) => (
+                  <Text key={i} style={styles.teaserIngredient}>
+                    • {ing.amount ? `${ing.amount} ${ing.unit} ` : ''}{ing.name}
+                  </Text>
+                ))}
+                {recipe.ingredients.length > 3 && (
+                  <Text style={styles.teaserMore}>🔒 + {recipe.ingredients.length - 3} weitere Zutaten & alle Schritte</Text>
+                )}
+              </View>
+            )}
+
+            <View style={styles.lockedCard}>
+              <Text style={styles.lockedIcon}>🔒</Text>
+              <Text style={styles.lockedTitle}>Premium-Rezept</Text>
+              <Text style={styles.lockedText}>
+                Schalte die komplette Zutatenliste und alle Schritt-für-Schritt-Anleitungen frei.
+              </Text>
+              <TouchableOpacity
+                style={styles.lockedButton}
+                onPress={() => setShowPaywall(true)}
+              >
+                <Text style={styles.lockedButtonText}>Premium freischalten</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
         <>
@@ -614,6 +638,14 @@ const styles = StyleSheet.create({
   modalCancelText: { fontSize: 16, fontWeight: '600', color: '#666' },
   modalApplyButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#F57C00', alignItems: 'center' },
   modalApplyText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
+  teaserWrap: { paddingBottom: 8 },
+  teaserDesc: { fontSize: 15, color: '#444', lineHeight: 22, marginHorizontal: 20, marginTop: 16 },
+  teaserCounts: { flexDirection: 'row', gap: 18, marginHorizontal: 20, marginTop: 14 },
+  teaserCount: { fontSize: 14, color: '#666', fontWeight: '600' },
+  teaserPreview: { backgroundColor: '#FFF', marginHorizontal: 16, marginTop: 16, padding: 18, borderRadius: 16 },
+  teaserPreviewLabel: { fontSize: 11, fontWeight: '700', color: '#F57C00', letterSpacing: 1, marginBottom: 10 },
+  teaserIngredient: { fontSize: 15, color: '#333', lineHeight: 26 },
+  teaserMore: { fontSize: 14, color: '#999', fontStyle: 'italic', marginTop: 8 },
   lockedCard: { backgroundColor: '#FFF', margin: 16, padding: 24, borderRadius: 16, alignItems: 'center' },
   lockedIcon: { fontSize: 48, marginBottom: 12 },
   lockedTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
