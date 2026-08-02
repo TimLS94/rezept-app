@@ -210,7 +210,83 @@ Edge Function `supabase/functions/revenuecat-webhook`:
    `stripe_transfer_id` + `status='paid'` zurückschreiben.
 
 > Hinweis Marge: Store-Fee (15–30 %) + Plattform-Fee kommen **beide** vor dem Creator-Anteil.
-> Realistisch: von 4,99 € bleiben nach Apple (15 %) ~4,24 €; davon Plattform 20 % ⇒ Creator ~3,39 €.
+> Details siehe Abschnitt 6b.
+
+---
+
+## 6b. Creator-Vergütung, Tracking & Transparenz
+
+### Grundprinzip: teile den NETTO-Erlös, nicht den Schaufensterpreis
+
+IAP-Preise sind **inkl. USt**, und Apple/Google behalten Provision **plus** USt ein. Wenn du Creators
+einen Anteil vom Sticker-Preis (9,99 €) versprichst, machst du Verlust. Deshalb: Creator bekommen
+einen festen Prozentsatz vom **Netto-Erlös** (= was der Store dir tatsächlich auszahlt).
+
+**Empfehlung: Creator 80 % / Plattform 20 % vom Netto-Erlös.** (Vergleich: YouTube 55 %, Twitch 50 %,
+OnlyFans 80 %, Substack ~90 % — 80 % ist creator-freundlich und trotzdem tragfähig.)
+
+### Was am Ende beim Creator ankommt (Annahmen: DE 19 % USt, Small-Business 15 % Store-Fee)
+
+| Abo-Preis | − USt | − Store 15 % = Netto | Creator (80 %) | Plattform (20 %) |
+|---|---|---|---|---|
+| **9,99 €** (Phase 1, app-weit) | 8,39 € | **7,13 €** | **5,70 €** | 1,43 € |
+| **4,99 €** (Phase 2, pro Creator) | 4,19 € | **3,56 €** | **2,85 €** | 0,71 € |
+
+Bei 30 % Store-Fee (über 1 Mio $/Jahr oder ohne Small-Business-Programm) sinkt das Netto z.B. bei
+9,99 € auf ~5,88 € → Creator ~4,70 €. **Die Store-Fee ist der größte Abzug — nicht deine Plattform.**
+Das solltest du Creators offen so kommunizieren.
+
+### Attribution: Wer bekommt welchen Anteil? (zwei Methoden)
+
+Da Phase 1 **ein** app-weites Abo ist, muss der Erlös auf Creator verteilt werden. Zwei Wege:
+
+| | **Pooled (einfach)** | **User-centric (fair & transparent) ⭐** |
+|---|---|---|
+| Idee | Gesamter Premium-Pool wird nach **globalem** Engagement verteilt | **Jedes** Abo einzeln auf die Creator verteilt, die *dieser* Abonnent genutzt hat |
+| Beispiel | „Du hattest 2,8 % aller Premium-Cooks → 2,8 % vom Pool" | „Anna hat diesen Monat 3 deiner Rezepte gekocht → ein Anteil von Annas 9,99 € geht an dich" |
+| Nachvollziehbar | mittel (hängt von allen ab) | hoch (direkt an konkrete Abonnenten geknüpft) |
+| Aufwand | gering | etwas höher |
+
+**Empfehlung: user-centric.** Es ist fairer (kleine Creator mit treuen Fans verhungern nicht im Pool)
+und für das Dashboard viel glaubwürdiger belegbar. Beide nutzen dieselben Rohdaten (`cook_log`).
+
+### Tracking-Daten (Quelle der Wahrheit)
+
+- **`cook_log`** (existiert bereits) — jedes „Rezept gekocht"-Event mit `user_id`, `recipe_id`, Zeitstempel.
+  Das ist die Engagement-Primitive und **pro Nutzer & Rezept einzeln belegbar**.
+- Optional Phase 1.1: `recipe_views` (Öffnungen) für eine reichere Metrik — v1 reicht Cooks (+ evtl. Favoriten).
+- **`purchase_events`** — Erlös rein, pro Periode (aus dem Webhook, Abschnitt 5). Nie verändert.
+- **`creator_payouts`** — pro Creator & Monat, **inkl. eingebettetem Snapshot** (`breakdown jsonb`):
+  Pool-Größe, Formel-Version, dein Engagement, Gesamt-Engagement, dein %, Store-Fee, Plattform-Fee, Netto.
+  Dieser Snapshot ist **unveränderlich** und macht jede Auszahlung reproduzierbar/auditierbar.
+
+### Monatliche Abrechnung (Edge Function / Cron)
+
+1. Periode abgrenzen (Kalendermonat).
+2. Aus `purchase_events` den Netto-Pool bzw. je Abo die Netto-Beträge holen.
+3. Aus `cook_log` das Engagement je Creator (user-centric: je Abonnent × Creator) berechnen.
+4. Anteile ausrechnen, **Snapshot** je Creator in `creator_payouts` schreiben (`status='pending'`).
+5. Stripe-Transfer auslösen → `stripe_transfer_id`, `status='paid'`.
+
+### In-App-Dashboard für Creator — `app/creator/earnings.tsx`
+
+Damit es **transparent, nachvollziehbar und in der App sichtbar** ist:
+
+- **Diesen Monat (Live-Schätzung):** großes € geschätzt, „läuft noch"-Badge, dein Engagement (Cooks),
+  aktuelle Pool-/Netto-Basis, dein Anteil in %. Kommt aus RPC `creator_earnings_estimate()`
+  (rechnet live aus laufendem `cook_log` + `purchase_events`).
+- **Aufschlüsselung pro Rezept:** welche deiner Rezepte wie oft gekocht wurden → zeigt, *woher* die Zahl kommt.
+- **Auszahlungs-Historie:** je Monat Netto-€ + Status (ausstehend/ausgezahlt/fehlgeschlagen), Stripe-Referenz,
+  und **„Details"** → voller Snapshot: Pool, deine Cooks / Gesamt-Cooks, %, Store-Fee, Plattform-Fee, Netto.
+- **„So wird berechnet":** aufklappbarer Erklärtext mit der genauen Formel und den Eingangswerten.
+- **Auszahlungskonto:** Stripe-Connect-Status + „Auszahlung einrichten".
+
+Transparenz-Grundsätze: (a) Events sind **unveränderlich**, (b) jede Auszahlung speichert ihren
+**Snapshot** samt Formel-Version, (c) das Dashboard zeigt **Formel + konkrete Eingangswerte**, nie nur ein Ergebnis.
+
+RPCs dafür (SECURITY DEFINER, nur eigene Daten):
+`creator_earnings_estimate()` (laufender Monat), `creator_payout_history()` (abgeschlossene Monate mit Snapshot),
+`creator_engagement_breakdown(period)` (pro-Rezept-Zahlen).
 
 ---
 
@@ -235,7 +311,8 @@ Edge Function `supabase/functions/revenuecat-webhook`:
 3. `components/Paywall.tsx` + Gate in `app/recipe/[id].tsx`; `lib/auth.isPremium` aus Entitlements.
 4. Edge Function `revenuecat-webhook` → `entitlements`/`purchase_events`.
 5. `fetchDbRecipeById` → `get_recipe_full` (serverseitiger Schutz).
-6. Stripe-Connect-Onboarding (Creator-Studio) + Auszahlungs-Job (Pool-Rev-Share).
+6. Stripe-Connect-Onboarding (Creator-Studio) + monatliche Abrechnung (Abschnitt 6b).
+7. **Creator-Dashboard `app/creator/earnings.tsx`** + RPCs (`creator_earnings_estimate`, `creator_payout_history`, `creator_engagement_breakdown`).
 
 **Phase 2 — Abo pro Creator** (später, ohne Umbau)
 7. `profiles.subscription_price_cents` + Preis-UI im Creator-Studio.
@@ -248,7 +325,8 @@ Edge Function `supabase/functions/revenuecat-webhook`:
 ## 9. Offene Entscheidungen
 
 - **Preis Phase 1**: Höhe des app-weiten Premium-Abos? (z.B. 4,99 € oder 9,99 €/Monat)
-- **Plattform-Fee**: 20 % Vorschlag ok?
+- **Plattform-Fee**: 20 % vom Netto (Creator 80 %) ok? Siehe Abschnitt 6b.
+- **Attribution**: user-centric (empfohlen) oder pooled? Siehe Abschnitt 6b.
 - **Rev-Share-Metrik Phase 1**: Cooks (`cook_log`) als Basis — oder auch Views/Favoriten gewichten?
 - **Kostenlose-Rezepte-Regel**: „mind. N kostenlose je Creator" erzwingen (z.B. 10) oder Creator frei entscheiden lassen?
 - **Free-Trial / Intro-Preis** anbieten? (RevenueCat/Store unterstützen das.)
