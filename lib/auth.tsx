@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, ReactNode 
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { FEATURES } from './features';
+import { initPurchases, logOutPurchases } from './purchases';
 
 export type Role = 'user' | 'creator' | 'admin';
 
@@ -34,8 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!u) {
       setRole(null);
       setIsPremium(false);
+      logOutPurchases();
       return null;
     }
+    initPurchases(u.id); // inert until real RevenueCat keys + dev build
     const { data } = await supabase
       .from('profiles')
       .select('role, is_premium')
@@ -43,7 +46,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
     const resolved = (data?.role as Role) ?? 'user';
     setRole(resolved);
-    setIsPremium(!!data?.is_premium);
+
+    // App-wide premium = legacy is_premium flag OR an active platform entitlement
+    // (written by the RevenueCat webhook). Failure is non-fatal (stays false).
+    let premium = !!data?.is_premium;
+    if (!premium) {
+      const { data: ent } = await supabase
+        .from('entitlements')
+        .select('id')
+        .eq('user_id', u.id)
+        .eq('scope', 'platform')
+        .eq('status', 'active')
+        .limit(1);
+      premium = !!ent && ent.length > 0;
+    }
+    setIsPremium(premium);
     return resolved;
   }, []);
 

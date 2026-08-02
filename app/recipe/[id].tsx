@@ -20,6 +20,7 @@ import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { useFavorites } from '../../lib/favorites';
 import ImageViewer from '../../components/ImageViewer';
+import Paywall from '../../components/Paywall';
 
 type FamilyMember = {
   id: string;
@@ -48,7 +49,8 @@ export default function RecipeDetailScreen() {
   const localRecipe = getRecipeById(id || '');
 
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { isPremium, role, isGuest, user } = useAuth();
+  const { isPremium, role, isGuest, user, refresh } = useAuth();
+  const [showPaywall, setShowPaywall] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | undefined>(localRecipe);
   const [servings, setServings] = useState(localRecipe?.servings || 4);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
@@ -367,7 +369,7 @@ export default function RecipeDetailScreen() {
             </Text>
             <TouchableOpacity
               style={styles.lockedButton}
-              onPress={() => Alert.alert('Coming soon', 'Subscriptions are not available yet — this recipe will be unlockable once billing goes live.')}
+              onPress={() => setShowPaywall(true)}
             >
               <Text style={styles.lockedButtonText}>Subscribe to unlock</Text>
             </TouchableOpacity>
@@ -525,6 +527,12 @@ export default function RecipeDetailScreen() {
       </Modal>
 
       <ImageViewer uri={viewerUri} onClose={() => setViewerUri(null)} />
+      <Paywall
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        onSubscribed={refresh}
+        creatorName={recipe?.influencer.name}
+      />
     </View>
   );
 }
