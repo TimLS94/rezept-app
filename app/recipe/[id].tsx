@@ -63,10 +63,10 @@ export default function RecipeDetailScreen() {
   // Check if current user is the recipe owner (can edit)
   const [isOwner, setIsOwner] = useState(false);
 
-  // Paywall: premium-only recipes are locked for non-subscribers. Creators/admins
-  // always see full content (so they can preview). Billing isn't live yet
-  // (FEATURES.payments === false) — the unlock CTA is a placeholder for now.
-  const locked = !!recipe?.isPaid && !isPremium && !canUploadRecipes(role);
+  // Paywall: premium-only recipes are locked for non-subscribers. Trust the
+  // server's lock flag (get_recipe_full already stripped the content); fall back
+  // to the client check for local/seed recipes that don't carry the flag.
+  const locked = recipe?.locked ?? (!!recipe?.isPaid && !isPremium && !canUploadRecipes(role));
   
   // Guest mode: can see preview but not full recipe details
   const guestLocked = isGuest;
@@ -366,8 +366,8 @@ export default function RecipeDetailScreen() {
               <Text style={styles.teaserDesc}>{recipe.description}</Text>
             ) : null}
             <View style={styles.teaserCounts}>
-              <Text style={styles.teaserCount}>🥘 {recipe.ingredients.length} Zutaten</Text>
-              <Text style={styles.teaserCount}>👨‍🍳 {recipe.steps.length} Schritte</Text>
+              <Text style={styles.teaserCount}>🥘 {recipe.ingredientsCount ?? recipe.ingredients.length} Zutaten</Text>
+              <Text style={styles.teaserCount}>👨‍🍳 {recipe.stepsCount ?? recipe.steps.length} Schritte</Text>
             </View>
 
             {recipe.ingredients.length > 0 && (
@@ -378,8 +378,8 @@ export default function RecipeDetailScreen() {
                     • {ing.amount ? `${ing.amount} ${ing.unit} ` : ''}{ing.name}
                   </Text>
                 ))}
-                {recipe.ingredients.length > 3 && (
-                  <Text style={styles.teaserMore}>🔒 + {recipe.ingredients.length - 3} weitere Zutaten & alle Schritte</Text>
+                {(recipe.ingredientsCount ?? recipe.ingredients.length) > 3 && (
+                  <Text style={styles.teaserMore}>🔒 + {(recipe.ingredientsCount ?? recipe.ingredients.length) - 3} weitere Zutaten & alle Schritte</Text>
                 )}
               </View>
             )}

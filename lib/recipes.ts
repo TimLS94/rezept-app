@@ -41,6 +41,10 @@ export function mapDbRecipe(row: any): Recipe {
       typeof s === 'string' ? null : (s?.timer ?? null)
     ),
     isPaid: row.is_paid ?? false,
+    // Real counts (survive premium stripping) + server lock flag for the teaser.
+    ingredientsCount: row.ingredients_count ?? (Array.isArray(row.ingredients) ? row.ingredients.length : 0),
+    stepsCount: row.steps_count ?? (Array.isArray(row.instructions) ? row.instructions.length : 0),
+    locked: row.locked ?? false,
   };
 }
 
@@ -96,13 +100,18 @@ export async function fetchAllRecipes(): Promise<Recipe[]> {
 // Look up a single uploaded recipe by its uuid (used when it's not in the
 // local catalogue).
 export async function fetchDbRecipeById(id: string): Promise<Recipe | undefined> {
-  const { data, error } = await supabase
+  // Server-side gate: premium ingredients/steps are stripped for unentitled
+  // users (returns a teaser instead). Falls back to a plain select on error
+  // (e.g. before payments.sql is applied).
+  const { data, error } = await supabase.rpc('get_recipe_full', { p_recipe_id: id });
+  if (!error && data) return mapDbRecipe(data);
+
+  const { data: row } = await supabase
     .from('recipes')
     .select('*, profiles:influencer_id(id, full_name, username, avatar_url)')
     .eq('id', id)
     .single();
-  if (error || !data) return undefined;
-  return mapDbRecipe(data);
+  return row ? mapDbRecipe(row) : undefined;
 }
 
 export async function fetchRecipesByCreator(creatorId: string): Promise<Recipe[]> {

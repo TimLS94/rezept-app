@@ -52,6 +52,11 @@ export type Recipe = {
   // Paywall: true = premium-only (creator-gated content). Optional so the local
   // seed catalogue (all free) doesn't need the field.
   isPaid?: boolean;
+  // Real counts from the server (survive premium stripping) for the paywall teaser.
+  ingredientsCount?: number;
+  stepsCount?: number;
+  // Server says this recipe is locked for the current user (premium, no access).
+  locked?: boolean;
 };
 
 export const RECIPES: Recipe[] = [
