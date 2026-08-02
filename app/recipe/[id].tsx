@@ -7,7 +7,8 @@ import {
   ScrollView,
   Alert,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
+  Share,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -114,6 +115,25 @@ export default function RecipeDetailScreen() {
     setTogglingPaid(false);
   };
 
+  // Share a recipe with friends — free recipes only. Premium content stays
+  // behind the paywall and cannot be shared out.
+  const shareRecipe = async () => {
+    if (!recipe) return;
+    if (recipe.isPaid) {
+      Alert.alert('Premium recipe', 'Premium recipes are subscriber-only and cannot be shared.');
+      return;
+    }
+    const link = `https://feedfamily.app/recipe/${recipe.id}`;
+    const time = recipe.prepTime + recipe.cookTime;
+    try {
+      await Share.share({
+        message: `Check out "${recipe.title}" by ${recipe.influencer.handle} on FeedFamily 🍳\n⏱ ${time} min • 🔥 ${recipe.calories} cal\n\n${link}`,
+      });
+    } catch {
+      // user dismissed the share sheet — nothing to do
+    }
+  };
+
   const loadFamilyMembers = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -217,6 +237,11 @@ export default function RecipeDetailScreen() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
+          {!recipe.isPaid && (
+            <TouchableOpacity style={styles.shareButton} onPress={shareRecipe}>
+              <Text style={styles.shareButtonText}>📤</Text>
+            </TouchableOpacity>
+          )}
           <View style={styles.heroContent}>
             <View style={styles.badges}>
               {recipe.kidApproved && (
@@ -509,6 +534,8 @@ const styles = StyleSheet.create({
   heroContainer: { height: 300, position: 'relative' },
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' },
+  shareButton: { position: 'absolute', top: 50, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
+  shareButtonText: { fontSize: 18 },
   backButton: { position: 'absolute', top: 50, left: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
   backButtonText: { fontSize: 20, color: '#1A1A1A' },
   heroContent: { position: 'absolute', bottom: 20, left: 20, right: 20 },
