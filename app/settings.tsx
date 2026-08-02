@@ -16,7 +16,7 @@ import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { pickAndUploadImage } from '../lib/storage';
 import { VERSION_STRING } from '../lib/version';
-import { useAuth } from '../lib/auth';
+import { useAuth, canUploadRecipes } from '../lib/auth';
 import { restorePurchases } from '../lib/purchases';
 import Paywall from '../components/Paywall';
 
@@ -24,7 +24,8 @@ const DEFAULT_AVATAR =
   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
 
 export default function SettingsScreen() {
-  const { isPremium, refresh } = useAuth();
+  const { isPremium, role, refresh } = useAuth();
+  const isCreator = canUploadRecipes(role);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -42,11 +43,11 @@ export default function SettingsScreen() {
     const r = await restorePurchases();
     if (r === 'success') {
       await refresh();
-      Alert.alert('Wiederhergestellt', 'Dein Abo ist wieder aktiv.');
+      Alert.alert('Restored', 'Your subscription is active again.');
     } else if (r === 'unavailable') {
-      Alert.alert('Nicht verfügbar', 'Käufe wiederherstellen funktioniert im Store-/Dev-Build.');
+      Alert.alert('Not available', 'Restoring purchases works in a store/dev build.');
     } else {
-      Alert.alert('Keine Käufe gefunden', 'Wir konnten kein aktives Abo wiederherstellen.');
+      Alert.alert('No purchases found', "We couldn't restore an active subscription.");
     }
   };
 
@@ -196,6 +197,8 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {/* Public profile (avatar, name, @handle) is only relevant for creators. */}
+        {isCreator && (<>
         {/* Profile picture */}
         <View style={styles.avatarWrap}>
           <Image
@@ -254,6 +257,7 @@ export default function SettingsScreen() {
             )}
           </TouchableOpacity>
         </View>
+        </>)}
 
         {/* Email */}
         <View style={styles.card}>
@@ -310,22 +314,22 @@ export default function SettingsScreen() {
           <Text style={styles.cardTitle}>Subscription</Text>
           {isPremium ? (
             <>
-              <Text style={styles.subActive}>✓ Premium aktiv</Text>
-              <Text style={styles.subHint}>Du hast Zugriff auf alle Premium-Rezepte.</Text>
+              <Text style={styles.subActive}>✓ Premium active</Text>
+              <Text style={styles.subHint}>You have access to all premium recipes.</Text>
               <TouchableOpacity style={styles.secondaryButton} onPress={manageSubscription}>
-                <Text style={styles.secondaryButtonText}>Abo verwalten / kündigen</Text>
+                <Text style={styles.secondaryButtonText}>Manage / cancel subscription</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
-              <Text style={styles.subHint}>Schalte alle Premium-Rezepte frei und unterstütze die Creator.</Text>
+              <Text style={styles.subHint}>Unlock all premium recipes and support the creators.</Text>
               <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPaywall(true)}>
-                <Text style={styles.primaryButtonText}>Premium freischalten</Text>
+                <Text style={styles.primaryButtonText}>Unlock Premium</Text>
               </TouchableOpacity>
             </>
           )}
           <TouchableOpacity style={styles.restoreLink} onPress={handleRestore}>
-            <Text style={styles.restoreLinkText}>Käufe wiederherstellen</Text>
+            <Text style={styles.restoreLinkText}>Restore purchases</Text>
           </TouchableOpacity>
         </View>
 

@@ -366,35 +366,35 @@ export default function RecipeDetailScreen() {
               <Text style={styles.teaserDesc}>{recipe.description}</Text>
             ) : null}
             <View style={styles.teaserCounts}>
-              <Text style={styles.teaserCount}>🥘 {recipe.ingredientsCount ?? recipe.ingredients.length} Zutaten</Text>
-              <Text style={styles.teaserCount}>👨‍🍳 {recipe.stepsCount ?? recipe.steps.length} Schritte</Text>
+              <Text style={styles.teaserCount}>🥘 {recipe.ingredientsCount ?? recipe.ingredients.length} ingredients</Text>
+              <Text style={styles.teaserCount}>👨‍🍳 {recipe.stepsCount ?? recipe.steps.length} steps</Text>
             </View>
 
             {recipe.ingredients.length > 0 && (
               <View style={styles.teaserPreview}>
-                <Text style={styles.teaserPreviewLabel}>ZUTATEN · VORSCHAU</Text>
+                <Text style={styles.teaserPreviewLabel}>INGREDIENTS · PREVIEW</Text>
                 {recipe.ingredients.slice(0, 3).map((ing, i) => (
                   <Text key={i} style={styles.teaserIngredient}>
                     • {ing.amount ? `${ing.amount} ${ing.unit} ` : ''}{ing.name}
                   </Text>
                 ))}
                 {(recipe.ingredientsCount ?? recipe.ingredients.length) > 3 && (
-                  <Text style={styles.teaserMore}>🔒 + {(recipe.ingredientsCount ?? recipe.ingredients.length) - 3} weitere Zutaten & alle Schritte</Text>
+                  <Text style={styles.teaserMore}>🔒 + {(recipe.ingredientsCount ?? recipe.ingredients.length) - 3} more ingredients & all steps</Text>
                 )}
               </View>
             )}
 
             <View style={styles.lockedCard}>
               <Text style={styles.lockedIcon}>🔒</Text>
-              <Text style={styles.lockedTitle}>Premium-Rezept</Text>
+              <Text style={styles.lockedTitle}>Premium recipe</Text>
               <Text style={styles.lockedText}>
-                Schalte die komplette Zutatenliste und alle Schritt-für-Schritt-Anleitungen frei.
+                Unlock the full ingredient list and all step-by-step instructions.
               </Text>
               <TouchableOpacity
                 style={styles.lockedButton}
                 onPress={() => setShowPaywall(true)}
               >
-                <Text style={styles.lockedButtonText}>Premium freischalten</Text>
+                <Text style={styles.lockedButtonText}>Unlock Premium</Text>
               </TouchableOpacity>
             </View>
           </View>

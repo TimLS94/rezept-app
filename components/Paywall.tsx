@@ -12,9 +12,9 @@ type Props = {
 };
 
 const BENEFITS = [
-  'Zugriff auf alle Premium-Rezepte',
-  'Unterstützt die Creator direkt',
-  'Jederzeit kündbar',
+  'Access all premium recipes',
+  'Support creators directly',
+  'Cancel anytime',
 ];
 
 // Shown until the store returns the real localized price.
@@ -33,11 +33,11 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
     if (result === 'success') {
       onSubscribed?.();
       onClose();
-      Alert.alert('Freigeschaltet 🎉', successMsg);
+      Alert.alert('Unlocked 🎉', successMsg);
     } else if (result === 'unavailable') {
-      Alert.alert('Bald verfügbar', 'In-App-Käufe sind in dieser Version noch nicht aktiv. Sie funktionieren im Store-/Dev-Build, sobald RevenueCat eingerichtet ist.');
+      Alert.alert('Coming soon', "In-app purchases aren't active in this version yet. They work in a store/dev build once RevenueCat is set up.");
     } else if (result === 'error') {
-      Alert.alert('Fehler', 'Der Kauf konnte nicht abgeschlossen werden. Bitte später erneut versuchen.');
+      Alert.alert('Error', 'The purchase could not be completed. Please try again later.');
     }
     // 'cancelled' → silent
   };
@@ -46,15 +46,15 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
     setBusy(true);
     const r = await purchasePremium();
     setBusy(false);
-    handleResult(r, 'Du hast jetzt Zugriff auf alle Premium-Rezepte.');
+    handleResult(r, 'You now have access to all premium recipes.');
   };
 
   const restore = async () => {
     setBusy(true);
     const r = await restorePurchases();
     setBusy(false);
-    if (r === 'error') { Alert.alert('Keine Käufe gefunden', 'Wir konnten kein aktives Abo wiederherstellen.'); return; }
-    handleResult(r, 'Dein Abo wurde wiederhergestellt.');
+    if (r === 'error') { Alert.alert('No purchases found', "We couldn't restore an active subscription."); return; }
+    handleResult(r, 'Your subscription has been restored.');
   };
 
   return (
@@ -66,9 +66,9 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
           </TouchableOpacity>
 
           <View style={styles.badge}><Ionicons name="lock-open" size={26} color="#FFF" /></View>
-          <Text style={styles.title}>Premium freischalten</Text>
+          <Text style={styles.title}>Unlock Premium</Text>
           <Text style={styles.subtitle}>
-            {creatorName ? `Schalte die Premium-Rezepte von ${creatorName} und allen Creators frei.` : 'Schalte alle Premium-Rezepte frei.'}
+            {creatorName ? `Unlock premium recipes from ${creatorName} and all creators.` : 'Unlock all premium recipes.'}
           </Text>
 
           <View style={styles.benefits}>
@@ -80,18 +80,18 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
             ))}
           </View>
 
-          <Text style={styles.price}>{price}<Text style={styles.priceUnit}> / Monat</Text></Text>
+          <Text style={styles.price}>{price}<Text style={styles.priceUnit}> / month</Text></Text>
 
           <TouchableOpacity style={styles.cta} onPress={subscribe} disabled={busy} activeOpacity={0.9}>
-            {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.ctaText}>Jetzt abonnieren</Text>}
+            {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.ctaText}>Subscribe now</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={restore} disabled={busy} style={styles.restore}>
-            <Text style={styles.restoreText}>Käufe wiederherstellen</Text>
+            <Text style={styles.restoreText}>Restore purchases</Text>
           </TouchableOpacity>
 
           <Text style={styles.legal}>
-            Das Abo verlängert sich automatisch, bis du kündigst. Verwaltung & Kündigung in den Store-Einstellungen.
+            The subscription renews automatically until you cancel. Manage & cancel in your store settings.
           </Text>
         </View>
       </View>

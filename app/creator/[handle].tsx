@@ -104,11 +104,12 @@ export default function CreatorProfileScreen() {
 
   const loadCreatorData = async (creatorId: string) => {
     // Load recipes
+    // Show all recipes (free + premium). Premium ones appear as locked teasers
+    // so users can preview them and subscribe.
     const { data: recipeData } = await supabase
       .from('recipes')
       .select('*')
       .eq('influencer_id', creatorId)
-      .eq('is_paid', false) // Only free recipes on public profile
       .order('created_at', { ascending: false });
 
     if (recipeData) {
@@ -314,7 +315,14 @@ export default function CreatorProfileScreen() {
                   style={styles.recipeCard}
                   onPress={() => router.push(`/recipe/${recipe.id}`)}
                 >
-                  <Image source={{ uri: recipe.image }} style={styles.recipeImage} />
+                  <View>
+                    <Image source={{ uri: recipe.image }} style={styles.recipeImage} />
+                    {recipe.isPaid && (
+                      <View style={styles.premiumBadge}>
+                        <Text style={styles.premiumBadgeText}>🔒 Premium</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.recipeTitle} numberOfLines={2}>{recipe.title}</Text>
                   <Text style={styles.recipeMeta}>
                     {recipe.prepTime + recipe.cookTime} min • {recipe.calories} cal
@@ -384,6 +392,8 @@ const styles = StyleSheet.create({
   recipesGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 },
   recipeCard: { width: '47%', backgroundColor: '#FFF', borderRadius: 12, marginHorizontal: '1.5%', marginBottom: 12, overflow: 'hidden' },
   recipeImage: { width: '100%', height: 120 },
+  premiumBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(13,43,99,0.85)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  premiumBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
   recipeTitle: { fontSize: 14, fontWeight: '600', color: '#1A1A1A', padding: 10, paddingBottom: 4 },
   recipeMeta: { fontSize: 12, color: '#888', paddingHorizontal: 10, paddingBottom: 10 },
 });
