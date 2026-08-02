@@ -12,7 +12,8 @@ import { Platform } from 'react-native';
 // apps are configured in RevenueCat.
 const RC_IOS_KEY = 'test_jEJSpmuLjQmQaisPFkcFZsROsrK';
 const RC_ANDROID_KEY = 'test_jEJSpmuLjQmQaisPFkcFZsROsrK';
-export const ENTITLEMENT_ID = 'premium';
+// Must match the RevenueCat entitlement identifier exactly (incl. spaces/case).
+export const ENTITLEMENT_ID = 'Cook_App Pro';
 
 let Purchases: any = null;
 let configured = false;
