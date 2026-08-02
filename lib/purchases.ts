@@ -7,8 +7,11 @@ import { Platform } from 'react-native';
 //
 //   RC_IOS_KEY / RC_ANDROID_KEY : Project → API keys (public app-specific keys)
 //   ENTITLEMENT_ID              : the entitlement you map the sub to (e.g. "premium")
-const RC_IOS_KEY = 'appl_PLACEHOLDER';
-const RC_ANDROID_KEY = 'goog_PLACEHOLDER';
+// Test-Store key for early testing (works on both platforms, needs a dev build).
+// Replace with the real appl_… / goog_… keys once the App Store / Play Store
+// apps are configured in RevenueCat.
+const RC_IOS_KEY = 'test_jEJSpmuLjQmQaisPFkcFZsROsrK';
+const RC_ANDROID_KEY = 'test_jEJSpmuLjQmQaisPFkcFZsROsrK';
 export const ENTITLEMENT_ID = 'premium';
 
 let Purchases: any = null;
