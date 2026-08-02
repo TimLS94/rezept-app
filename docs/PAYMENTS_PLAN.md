@@ -202,9 +202,9 @@ Edge Function `supabase/functions/revenuecat-webhook`:
 1. **Onboarding**: Edge Function erstellt einen Stripe **Express**-Account, App öffnet den Onboarding-Link.
    `profiles.stripe_connect_id` + `payouts_enabled` speichern. UI: „Auszahlung einrichten" im Creator-Studio.
 2. **Rev-Share-Berechnung** (monatlicher Job / Edge Function):
-   - **Phase 1 (Pool)**: Premium-Netto-Einnahmen des Monats werden nach **Engagement** verteilt —
-     Anteil eines Creators = seine Premium-`cook_log`-Events / alle Premium-Cook-Events. Plattform behält z.B. **20 %**.
-   - **Phase 2 (direkt)**: pro Creator aus dessen eigenen Abos, Plattform-Fee z.B. 20 %.
+   - **Phase 1 (Pool)**: Premium-Netto-Einnahmen des Monats werden nach **gekochten Rezepten** verteilt —
+     Anteil eines Creators = seine `cook_log`-Events / alle Cook-Events. Plattform behält **25 %**.
+   - **Phase 2 (direkt)**: pro Creator aus dessen eigenen Abos, Plattform-Fee **25 %**.
    - Ergebnis je Creator in `creator_payouts` schreiben.
 3. **Auszahlen**: Stripe **Transfer** auf den Connect-Account; Stripe zahlt gemäß Payout-Schedule an die Bank aus.
    `stripe_transfer_id` + `status='paid'` zurückschreiben.
@@ -222,18 +222,18 @@ IAP-Preise sind **inkl. USt**, und Apple/Google behalten Provision **plus** USt 
 einen Anteil vom Sticker-Preis (9,99 €) versprichst, machst du Verlust. Deshalb: Creator bekommen
 einen festen Prozentsatz vom **Netto-Erlös** (= was der Store dir tatsächlich auszahlt).
 
-**Empfehlung: Creator 80 % / Plattform 20 % vom Netto-Erlös.** (Vergleich: YouTube 55 %, Twitch 50 %,
-OnlyFans 80 %, Substack ~90 % — 80 % ist creator-freundlich und trotzdem tragfähig.)
+**Festgelegt: Creator 75 % / Plattform 25 % vom Netto-Erlös.** (Vergleich: YouTube 55 %, Twitch 50 %,
+OnlyFans 80 %, Substack ~90 % — 75 % ist creator-freundlich und trotzdem tragfähig.)
 
 ### Was am Ende beim Creator ankommt (Annahmen: DE 19 % USt, Small-Business 15 % Store-Fee)
 
-| Abo-Preis | − USt | − Store 15 % = Netto | Creator (80 %) | Plattform (20 %) |
+| Abo-Preis | − USt | − Store 15 % = Netto | Creator (75 %) | Plattform (25 %) |
 |---|---|---|---|---|
-| **9,99 €** (Phase 1, app-weit) | 8,39 € | **7,13 €** | **5,70 €** | 1,43 € |
-| **4,99 €** (Phase 2, pro Creator) | 4,19 € | **3,56 €** | **2,85 €** | 0,71 € |
+| **9,99 €** (Phase 1, app-weit) | 8,39 € | **7,13 €** | **5,35 €** | 1,78 € |
+| **4,99 €** (Phase 2, pro Creator) | 4,19 € | **3,56 €** | **2,67 €** | 0,89 € |
 
 Bei 30 % Store-Fee (über 1 Mio $/Jahr oder ohne Small-Business-Programm) sinkt das Netto z.B. bei
-9,99 € auf ~5,88 € → Creator ~4,70 €. **Die Store-Fee ist der größte Abzug — nicht deine Plattform.**
+9,99 € auf ~5,88 € → Creator ~4,41 €. **Die Store-Fee ist der größte Abzug — nicht deine Plattform.**
 Das solltest du Creators offen so kommunizieren.
 
 ### Attribution: Wer bekommt welchen Anteil? (zwei Methoden)
@@ -325,9 +325,9 @@ RPCs dafür (SECURITY DEFINER, nur eigene Daten):
 ## 9. Offene Entscheidungen
 
 - **Preis Phase 1**: Höhe des app-weiten Premium-Abos? (z.B. 4,99 € oder 9,99 €/Monat)
-- **Plattform-Fee**: 20 % vom Netto (Creator 80 %) ok? Siehe Abschnitt 6b.
-- **Attribution**: user-centric (empfohlen) oder pooled? Siehe Abschnitt 6b.
-- **Rev-Share-Metrik Phase 1**: Cooks (`cook_log`) als Basis — oder auch Views/Favoriten gewichten?
+- **Plattform-Fee**: ✅ 25 % vom Netto (Creator 75 %) — festgelegt.
+- **Attribution**: ✅ nach gekochten Rezepten (`cook_log`) — festgelegt. (user-centric als spätere Verfeinerung möglich)
+- **Rev-Share-Metrik Phase 1**: aktuell Cooks (`cook_log`); optional später Views/Favoriten gewichten.
 - **Kostenlose-Rezepte-Regel**: „mind. N kostenlose je Creator" erzwingen (z.B. 10) oder Creator frei entscheiden lassen?
 - **Free-Trial / Intro-Preis** anbieten? (RevenueCat/Store unterstützen das.)
 ```

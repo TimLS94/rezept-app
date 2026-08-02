@@ -136,6 +136,15 @@ export default function CreatorStudioScreen() {
             </View>
             <Text style={styles.actionArrow}>→</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/creator/earnings')}>
+            <Text style={styles.actionIcon}>💶</Text>
+            <View style={styles.actionBody}>
+              <Text style={styles.actionTitle}>Earnings</Text>
+              <Text style={styles.actionSub}>See what you earn & how it's calculated</Text>
+            </View>
+            <Text style={styles.actionArrow}>→</Text>
+          </TouchableOpacity>
         </View>
 
         {/* My recipes */}
