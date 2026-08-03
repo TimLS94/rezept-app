@@ -17,7 +17,7 @@ import { supabase } from '../lib/supabase';
 import { pickAndUploadImage } from '../lib/storage';
 import { VERSION_STRING } from '../lib/version';
 import { useAuth, canUploadRecipes } from '../lib/auth';
-import { restorePurchases } from '../lib/purchases';
+import { restorePurchases, syncEntitlements } from '../lib/purchases';
 import Paywall from '../components/Paywall';
 
 const DEFAULT_AVATAR =
@@ -37,6 +37,20 @@ export default function SettingsScreen() {
       ? 'https://apps.apple.com/account/subscriptions'
       : 'https://play.google.com/store/account/subscriptions';
     Linking.openURL(url).catch(() => {});
+  };
+
+  // Debug: run the RevenueCat → Supabase sync directly and show the raw result.
+  const debugSync = async () => {
+    const s = await syncEntitlements();
+    await refresh();
+    Alert.alert(
+      s.active ? 'Synced ✓ (active)' : 'Not active',
+      `active: ${s.active}\n` +
+      `error: ${s.error ?? '—'}\n` +
+      `app_user_id: ${s.details?.app_user_id ?? '—'}\n` +
+      `RevenueCat sees: [${(s.details?.entitlements_seen ?? []).join(', ') || 'none'}]\n` +
+      `looking for: ${s.details?.looking_for ?? '—'}`
+    );
   };
 
   const handleRestore = async () => {
@@ -330,6 +344,9 @@ export default function SettingsScreen() {
           )}
           <TouchableOpacity style={styles.restoreLink} onPress={handleRestore}>
             <Text style={styles.restoreLinkText}>Restore purchases</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.restoreLink} onPress={debugSync}>
+            <Text style={[styles.restoreLinkText, { color: '#888' }]}>Debug: check subscription status</Text>
           </TouchableOpacity>
         </View>
 
