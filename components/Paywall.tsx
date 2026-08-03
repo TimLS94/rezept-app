@@ -42,10 +42,28 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
     // 'cancelled' → silent
   };
 
+  // After a successful RevenueCat purchase we must sync to Supabase (server gate).
+  // If that sync doesn't confirm access, surface exactly why (for debugging).
+  const afterPurchase = async (successMsg: string) => {
+    const s = await syncEntitlements();
+    setBusy(false);
+    if (s.active) {
+      onSubscribed?.();
+      onClose();
+      Alert.alert('Unlocked 🎉', successMsg);
+    } else {
+      const seen = s.details?.entitlements_seen ? `\nRevenueCat sees: [${s.details.entitlements_seen.join(', ') || 'none'}]\nLooking for: ${s.details.looking_for ?? 'Cook_App Pro'}` : '';
+      Alert.alert(
+        'Purchased, but backend not synced',
+        `The purchase went through, but the server did not confirm access.\nReason: ${s.error ?? 'unknown'}${seen}`
+      );
+    }
+  };
+
   const subscribe = async () => {
     setBusy(true);
     const r = await purchasePremium();
-    if (r === 'success') await syncEntitlements(); // push access to the server before we re-check
+    if (r === 'success') { await afterPurchase('You now have access to all premium recipes.'); return; }
     setBusy(false);
     handleResult(r, 'You now have access to all premium recipes.');
   };
@@ -53,7 +71,7 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
   const restore = async () => {
     setBusy(true);
     const r = await restorePurchases();
-    if (r === 'success') await syncEntitlements();
+    if (r === 'success') { await afterPurchase('Your subscription has been restored.'); return; }
     setBusy(false);
     if (r === 'error') { Alert.alert('No purchases found', "We couldn't restore an active subscription."); return; }
     handleResult(r, 'Your subscription has been restored.');

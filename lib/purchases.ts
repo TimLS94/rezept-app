@@ -101,14 +101,18 @@ export async function purchasePremium(): Promise<PurchaseResult> {
   }
 }
 
+export type SyncResult = { active: boolean; error?: string; details?: any };
+
 // Reconcile RevenueCat → Supabase so the server-side content gate unlocks.
-// Safe to call even if the edge function isn't deployed (returns false).
-export async function syncEntitlements(): Promise<boolean> {
+// Safe to call even if the edge function isn't deployed. Returns diagnostics.
+export async function syncEntitlements(): Promise<SyncResult> {
   try {
-    const { data } = await supabase.functions.invoke('sync-entitlements');
-    return !!(data as any)?.active;
-  } catch {
-    return false;
+    const { data, error } = await supabase.functions.invoke('sync-entitlements');
+    if (error) return { active: false, error: error.message || 'invoke_failed' };
+    const d = data as any;
+    return { active: !!d?.active, error: d?.error, details: d };
+  } catch (e: any) {
+    return { active: false, error: e?.message || 'exception' };
   }
 }
 

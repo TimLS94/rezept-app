@@ -26,8 +26,10 @@ Deno.serve(async (req) => {
   const rc = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(user.id)}`, {
     headers: { Authorization: `Bearer ${rcSecret}` },
   });
+  if (!rc.ok) return json({ active: false, error: `revenuecat_http_${rc.status}` });
   const body = await rc.json().catch(() => null);
-  const ent = body?.subscriber?.entitlements?.[ENTITLEMENT];
+  const allEnts = body?.subscriber?.entitlements ?? {};
+  const ent = allEnts[ENTITLEMENT];
   const active = !!ent && (!ent.expires_date || new Date(ent.expires_date).getTime() > Date.now());
 
   // Upsert the platform entitlement (service role bypasses RLS).
@@ -45,10 +47,24 @@ Deno.serve(async (req) => {
     current_period_end: ent?.expires_date ?? null,
     updated_at: new Date().toISOString(),
   };
-  if (existing) await admin.from('entitlements').update(row).eq('id', existing.id);
-  else if (active) await admin.from('entitlements').insert(row);
+  let writeError: string | undefined;
+  if (existing) {
+    const { error } = await admin.from('entitlements').update(row).eq('id', existing.id);
+    writeError = error?.message;
+  } else if (active) {
+    const { error } = await admin.from('entitlements').insert(row);
+    writeError = error?.message;
+  }
 
-  return json({ active });
+  // Diagnostics: what the sync saw (app_user_id, which entitlements RevenueCat
+  // returned) so mismatches are easy to spot during setup.
+  return json({
+    active,
+    error: writeError ?? (active ? undefined : (ent ? 'expired' : 'no_entitlement')),
+    app_user_id: user.id,
+    entitlements_seen: Object.keys(allEnts),
+    looking_for: ENTITLEMENT,
+  });
 });
 
 function json(obj: unknown, status = 200) {
