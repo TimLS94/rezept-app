@@ -104,8 +104,20 @@ export async function purchasePremium(): Promise<PurchaseResult> {
 // Write the platform entitlement via the SQL RPC (works with only payments.sql
 // applied — no edge function needed). Call after RevenueCat confirms a purchase.
 export async function grantPlatformEntitlement(product?: string): Promise<{ ok: boolean; error?: string }> {
+  // Pass the subscription price so the revenue pool reflects the purchase.
+  let priceCents: number | null = null;
   try {
-    const { data, error } = await supabase.rpc('grant_platform_entitlement', { p_product: product ?? null });
+    const pkg = await getPremiumPackage();
+    const p = pkg?.product?.price;
+    if (typeof p === 'number' && p > 0) priceCents = Math.round(p * 100);
+  } catch {}
+  if (priceCents == null) priceCents = 999; // fallback €9.99 (e.g. debug/no offering)
+
+  try {
+    const { data, error } = await supabase.rpc('grant_platform_entitlement', {
+      p_product: product ?? null,
+      p_price_cents: priceCents,
+    });
     if (error) return { ok: false, error: error.message };
     const d = data as any;
     return { ok: !!d?.ok, error: d?.error };

@@ -3,29 +3,205 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FeedFamily — Legal</title>
+  <title>Dad's Food Today — Cook together, eat better</title>
+  <meta name="description" content="Family recipes, a built-in cook mode with timers, smart shopping lists and meal planning. Cook together, eat better.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --navy:#0D2B63; --orange:#F57C00; --cream:#FFF9F2; --ink:#232323; --gray:#6F6F6F; --border:#EFE7DC; }
-    * { box-sizing: border-box; }
-    body { margin:0; background:var(--cream); color:var(--ink); font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; }
-    .card { max-width:520px; margin:24px; padding:44px 36px; text-align:center; }
-    h1 { font-size:34px; color:var(--navy); margin:0 0 8px; letter-spacing:.3px; }
-    p { color:var(--gray); margin:0 0 32px; }
-    .links { display:flex; flex-direction:column; gap:12px; }
-    a.btn { display:block; padding:16px; border-radius:14px; background:#fff; border:1px solid var(--border); color:var(--navy); text-decoration:none; font-weight:600; transition:.15s; }
-    a.btn:hover { border-color:var(--orange); color:var(--orange); }
-    footer { margin-top:32px; color:var(--gray); font-size:13px; }
+    :root{
+      --navy:#0D2B63; --orange:#F57C00; --cream:#FFF9F2; --ink:#232323;
+      --gray:#6F6F6F; --border:#EFE7DC; --green:#3C8D40; --card:#FFFFFF;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:var(--cream);color:var(--ink);font-family:'Poppins',system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+    .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+    h1,h2,h3,.display{font-family:'Anton',system-ui,sans-serif;font-weight:400;letter-spacing:.5px;line-height:1.05;text-transform:uppercase}
+    a{color:inherit;text-decoration:none}
+    .accent{color:var(--orange)}
+
+    /* Header */
+    header{position:sticky;top:0;z-index:20;background:rgba(255,249,242,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+    .nav{display:flex;align-items:center;justify-content:space-between;height:68px}
+    .brand{display:flex;align-items:center;gap:10px;font-family:'Anton';font-size:20px;color:var(--navy);letter-spacing:.5px}
+    .brand .logo{width:34px;height:34px;border-radius:9px;background:var(--navy);display:grid;place-items:center;font-size:18px}
+    .nav-links{display:flex;gap:28px;align-items:center;font-weight:500;font-size:15px}
+    .nav-links a{color:var(--gray)}
+    .nav-links a:hover{color:var(--navy)}
+    .btn{display:inline-flex;align-items:center;gap:8px;background:var(--orange);color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;font-size:15px;transition:transform .12s,box-shadow .12s;box-shadow:0 6px 18px rgba(245,124,0,.28)}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(245,124,0,.36)}
+    .nav .btn{padding:10px 18px}
+
+    /* Hero */
+    .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding:80px 0 64px}
+    .kicker{display:inline-block;font-weight:700;letter-spacing:2px;font-size:12px;color:var(--orange);text-transform:uppercase;margin-bottom:18px}
+    .hero h1{font-size:clamp(44px,6vw,76px);color:var(--navy)}
+    .hero p.lead{font-size:19px;color:var(--gray);margin:22px 0 32px;max-width:520px}
+    .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+    .store{display:inline-flex;align-items:center;gap:11px;background:var(--navy);color:#fff;padding:12px 20px;border-radius:14px;transition:transform .12s}
+    .store:hover{transform:translateY(-2px)}
+    .store .g{font-size:26px;line-height:1}
+    .store small{display:block;font-size:10px;opacity:.8;letter-spacing:.5px}
+    .store b{font-size:16px;font-weight:600;font-family:'Poppins'}
+    .soon{margin-left:4px;font-size:12px;color:var(--gray);font-weight:600}
+
+    /* Phone mock */
+    .phone-wrap{display:flex;justify-content:center;position:relative}
+    .blob{position:absolute;inset:auto;width:340px;height:340px;background:radial-gradient(circle,rgba(245,124,0,.22),transparent 65%);filter:blur(10px);z-index:0}
+    .phone{position:relative;z-index:1;width:290px;height:590px;background:#0b1220;border-radius:44px;padding:12px;box-shadow:0 30px 70px rgba(13,43,99,.32);border:1px solid #1c2740}
+    .screen{width:100%;height:100%;border-radius:34px;overflow:hidden;background:var(--cream);display:flex;flex-direction:column}
+    .p-hero{height:60%;background:linear-gradient(180deg,rgba(13,43,99,.15),rgba(13,43,99,.72)),url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="%23e8a05a"/></svg>');background-size:cover;position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;color:#fff}
+    .p-badge{position:absolute;top:16px;left:16px;background:var(--navy);font-size:10px;font-weight:600;padding:6px 11px;border-radius:20px;display:flex;gap:5px;align-items:center}
+    .p-hero h4{font-family:'Anton';font-size:26px;letter-spacing:.4px;line-height:1.05;text-transform:none}
+    .p-meta{display:flex;gap:12px;font-size:11px;opacity:.92;margin-top:8px}
+    .p-cook{margin-top:14px;background:var(--orange);color:#fff;text-align:center;font-weight:700;font-size:13px;padding:11px;border-radius:12px}
+    .p-body{padding:16px;flex:1}
+    .p-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink)}
+    .p-check{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:12px;flex:none}
+    .p-circle{width:22px;height:22px;border-radius:50%;border:2px solid var(--navy);color:var(--navy);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+
+    /* Sections */
+    section{padding:72px 0}
+    .sec-head{text-align:center;max-width:640px;margin:0 auto 48px}
+    .sec-head h2{font-size:clamp(30px,4vw,46px);color:var(--navy)}
+    .sec-head p{color:var(--gray);font-size:17px;margin-top:14px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+    .feature{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;transition:transform .15s,box-shadow .15s}
+    .feature:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(13,43,99,.08)}
+    .feature .ic{width:52px;height:52px;border-radius:14px;background:var(--cream);display:grid;place-items:center;font-size:26px;margin-bottom:16px}
+    .feature h3{font-size:19px;color:var(--navy);text-transform:none;letter-spacing:0;font-family:'Poppins';font-weight:700;margin-bottom:8px}
+    .feature p{color:var(--gray);font-size:15px}
+
+    /* Creator band */
+    .band{background:var(--navy);color:#fff;border-radius:28px;padding:56px;display:grid;grid-template-columns:1.2fr .8fr;gap:32px;align-items:center}
+    .band h2{color:#fff;font-size:clamp(28px,3.5vw,40px)}
+    .band p{color:rgba(255,255,255,.82);font-size:17px;margin-top:14px}
+    .band .stat{background:rgba(255,255,255,.08);border-radius:18px;padding:26px;text-align:center}
+    .band .stat .big{font-family:'Anton';font-size:60px;color:var(--orange);line-height:1}
+    .band .stat p{color:rgba(255,255,255,.85);margin-top:6px;font-size:15px}
+
+    /* Download CTA */
+    .download{text-align:center}
+    .download h2{font-size:clamp(30px,4vw,48px);color:var(--navy)}
+    .download p{color:var(--gray);font-size:18px;margin:14px 0 30px}
+    .download .cta-row{justify-content:center}
+
+    /* Footer */
+    footer{border-top:1px solid var(--border);padding:40px 0;color:var(--gray);font-size:14px}
+    .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+    .foot a{color:var(--gray)}
+    .foot a:hover{color:var(--navy)}
+    .foot-links{display:flex;gap:22px}
+
+    @media(max-width:860px){
+      .hero{grid-template-columns:1fr;text-align:center;padding:56px 0 40px}
+      .hero p.lead{margin-left:auto;margin-right:auto}
+      .cta-row{justify-content:center}
+      .band{grid-template-columns:1fr;text-align:center;padding:40px 26px}
+      .grid{grid-template-columns:1fr}
+      .nav-links{display:none}
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>FeedFamily</h1>
-    <p>Legal &amp; policies</p>
-    <div class="links">
-      <a class="btn" href="./privacy.html">Privacy Policy</a>
-      <a class="btn" href="./terms.html">Terms of Service</a>
+  <header>
+    <div class="wrap nav">
+      <div class="brand"><span class="logo">🍳</span> Dad's Food Today</div>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#creators">For creators</a>
+        <a href="#download">Download</a>
+      </nav>
+      <a href="#download" class="btn">Get the app</a>
     </div>
-    <footer>© 2026 FeedFamily</footer>
-  </div>
+  </header>
+
+  <main class="wrap">
+    <!-- HERO -->
+    <section class="hero">
+      <div>
+        <span class="kicker">Cook together · eat better</span>
+        <h1>Dinner, <span class="accent">sorted.</span></h1>
+        <p class="lead">Real family recipes with a guided cook mode, step timers, smart shopping lists and weekly meal planning — all in one friendly app.</p>
+        <div class="cta-row">
+          <a href="#download" class="store"><span class="g"></span><span><small>Download on the</small><b>App Store</b></span></a>
+          <a href="#download" class="store"><span class="g">▶</span><span><small>Get it on</small><b>Google Play</b></span></a>
+          <span class="soon">Coming soon</span>
+        </div>
+      </div>
+      <div class="phone-wrap">
+        <div class="blob"></div>
+        <div class="phone"><div class="screen">
+          <div class="p-hero">
+            <div class="p-badge">🔥 Most loved this week</div>
+            <h4>15-Minute Garlic Butter Pasta</h4>
+            <div class="p-meta"><span>⏱ 15 min</span><span>🍽 4 servings</span><span>🔥 520 cal</span></div>
+            <div class="p-cook">▶ Start cooking</div>
+          </div>
+          <div class="p-body">
+            <div class="p-row"><span class="p-check">✓</span> Boil the pasta until al dente</div>
+            <div class="p-row"><span class="p-circle">2</span> Melt butter, add garlic</div>
+            <div class="p-row"><span class="p-circle">3</span> Toss, season &amp; serve</div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+      <div class="sec-head">
+        <h2>Everything for the family table</h2>
+        <p>From “what's for dinner?” to a full plate — without the stress.</p>
+      </div>
+      <div class="grid">
+        <div class="feature"><div class="ic">👨‍🍳</div><h3>Guided Cook Mode</h3><p>Step-by-step cooking with built-in timers, photos and a little reward when you finish.</p></div>
+        <div class="feature"><div class="ic">🛒</div><h3>Smart Shopping List</h3><p>Add a recipe and the ingredients land in your list — grouped by aisle or by meal.</p></div>
+        <div class="feature"><div class="ic">📅</div><h3>Weekly Meal Planner</h3><p>Plan the week from your favorites and know exactly what to cook each day.</p></div>
+        <div class="feature"><div class="ic">👨‍👩‍👧</div><h3>Family Portions</h3><p>One tap scales any recipe to your household — ingredients adjust automatically.</p></div>
+        <div class="feature"><div class="ic">❤️</div><h3>Favorites &amp; Collections</h3><p>Save the winners and sort them into your own sections like “Quick” or “Dinner”.</p></div>
+        <div class="feature"><div class="ic">⭐</div><h3>Creator Recipes</h3><p>Cook along with your favorite food creators — free recipes and premium collections.</p></div>
+      </div>
+    </section>
+
+    <!-- CREATORS -->
+    <section id="creators">
+      <div class="band">
+        <div>
+          <span class="kicker">For creators</span>
+          <h2>Share recipes. Get paid.</h2>
+          <p>Publish free and premium recipes, build a following, and earn a share of subscription revenue based on how often your recipes get cooked. Transparent earnings, right in the app.</p>
+        </div>
+        <div class="stat">
+          <div class="big">75%</div>
+          <p>of net subscription revenue goes to creators — split by cooked recipes.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD -->
+    <section id="download" class="download">
+      <h2>Get Dad's Food Today</h2>
+      <p>Free to download. Cook something great tonight.</p>
+      <div class="cta-row">
+        <a href="#" class="store"><span class="g"></span><span><small>Download on the</small><b>App Store</b></span></a>
+        <a href="#" class="store"><span class="g">▶</span><span><small>Get it on</small><b>Google Play</b></span></a>
+      </div>
+      <p style="margin-top:20px;font-size:14px">Launching soon on iOS &amp; Android.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <div class="brand" style="font-size:16px"><span class="logo" style="width:28px;height:28px;font-size:15px">🍳</span> Dad's Food Today</div>
+      <div class="foot-links">
+        <a href="./privacy.html">Privacy</a>
+        <a href="./terms.html">Terms</a>
+        <a href="mailto:hello@feedfamily.app">Contact</a>
+      </div>
+      <div>© 2026 Dad's Food Today</div>
+    </div>
+  </footer>
 </body>
 </html>
