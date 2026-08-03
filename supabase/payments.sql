@@ -131,9 +131,24 @@ begin
 end; $$;
 grant execute on function public.get_recipe_full(uuid) to anon, authenticated;
 
+-- Was the user an active subscriber at a given time? (Model B: only subscriber
+-- cooks earn money — Sybil-resistant, since fake accounts would have to pay.)
+create or replace function public.was_subscriber_at(p_user uuid, p_when timestamptz)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.entitlements e
+    where e.user_id = p_user
+      and e.scope = 'platform'
+      and e.created_at <= p_when
+      and coalesce(e.current_period_end, now()) >= p_when
+  );
+$$;
+grant execute on function public.was_subscriber_at(uuid, timestamptz) to authenticated;
+
 -- ── Live earnings estimate for the signed-in creator (current month). ───────
--- Split rule: creators share 75 % of the month's NET proceeds, weighted by the
--- number of times their recipes were cooked (cook_log). 25 % stays with platform.
+-- Split rule: creators share 75 % of the month's NET proceeds, split by cooks
+-- from active SUBSCRIBERS (Model B). 25 % stays with platform. All cooks still
+-- show as reach; only subscriber cooks move money.
 create or replace function public.creator_earnings_estimate()
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
@@ -142,8 +157,9 @@ declare
   p_end         date := (date_trunc('month', now()) + interval '1 month - 1 day')::date;
   platform_bps  int  := 2500;                              -- 25 %
   pool_net      int;
-  my_cooks      int;
-  total_cooks   int;
+  my_total      int;  -- reach: all deduped cooks of my recipes
+  my_paid       int;  -- money: deduped cooks by subscribers, of my recipes
+  total_paid    int;  -- denominator: all deduped subscriber cooks
   creator_pool  int;
   my_share      numeric := 0;
   est_cents     int := 0;
@@ -154,20 +170,29 @@ begin
 
   creator_pool := floor(pool_net * (10000 - platform_bps) / 10000.0);
 
-  -- Deduped anti-abuse: one cook per (user, recipe, day) — repeated taps don't pay.
-  select count(distinct (cl.user_id::text || ':' || cl.recipe_id || ':' || cl.created_at::date::text)) into my_cooks
+  -- Reach (all cooks, deduped one per user/recipe/day).
+  select count(distinct (cl.user_id::text || ':' || cl.recipe_id || ':' || cl.created_at::date::text)) into my_total
   from public.cook_log cl
   join public.recipes r on r.id::text = cl.recipe_id
   where r.influencer_id = me
     and cl.created_at >= p_start and cl.created_at < (p_end + 1);
 
-  select count(distinct (cl.user_id::text || ':' || cl.recipe_id || ':' || cl.created_at::date::text)) into total_cooks
+  -- Money: only cooks by users who were active subscribers when they cooked.
+  select count(distinct (cl.user_id::text || ':' || cl.recipe_id || ':' || cl.created_at::date::text)) into my_paid
   from public.cook_log cl
   join public.recipes r on r.id::text = cl.recipe_id
-  where cl.created_at >= p_start and cl.created_at < (p_end + 1);
+  where r.influencer_id = me
+    and cl.created_at >= p_start and cl.created_at < (p_end + 1)
+    and public.was_subscriber_at(cl.user_id, cl.created_at);
 
-  if total_cooks > 0 then
-    my_share  := my_cooks::numeric / total_cooks;
+  select count(distinct (cl.user_id::text || ':' || cl.recipe_id || ':' || cl.created_at::date::text)) into total_paid
+  from public.cook_log cl
+  join public.recipes r on r.id::text = cl.recipe_id
+  where cl.created_at >= p_start and cl.created_at < (p_end + 1)
+    and public.was_subscriber_at(cl.user_id, cl.created_at);
+
+  if total_paid > 0 then
+    my_share  := my_paid::numeric / total_paid;
     est_cents := floor(creator_pool * my_share);
   end if;
 
@@ -179,8 +204,9 @@ begin
     'pool_net_cents',      pool_net,
     'creator_pool_cents',  creator_pool,
     'platform_fee_pct',    platform_bps / 100.0,
-    'my_cooks',      my_cooks,
-    'total_cooks',   total_cooks,
+    'my_total_cooks', my_total,
+    'my_paid_cooks',  my_paid,
+    'total_paid_cooks', total_paid,
     'my_share_pct',  round(my_share * 100, 2),
     'estimated_cents', est_cents
   );

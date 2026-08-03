@@ -12,8 +12,9 @@ type Estimate = {
   pool_net_cents: number;
   creator_pool_cents: number;
   platform_fee_pct: number;
-  my_cooks: number;
-  total_cooks: number;
+  my_total_cooks: number;  // reach: all cooks of your recipes
+  my_paid_cooks: number;   // subscriber cooks (count toward earnings)
+  total_paid_cooks: number;
   my_share_pct: number;
   estimated_cents: number;
 };
@@ -107,18 +108,18 @@ export default function EarningsScreen() {
 
             <View style={styles.heroStats}>
               <View style={styles.stat}>
-                <Text style={styles.statNum}>{estimate?.my_cooks ?? 0}</Text>
-                <Text style={styles.statLabel}>your cooks</Text>
+                <Text style={styles.statNum}>{estimate?.my_total_cooks ?? 0}</Text>
+                <Text style={styles.statLabel}>total cooks</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.stat}>
+                <Text style={styles.statNum}>{estimate?.my_paid_cooks ?? 0}</Text>
+                <Text style={styles.statLabel}>paid cooks</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.stat}>
                 <Text style={styles.statNum}>{estimate?.my_share_pct ?? 0}%</Text>
                 <Text style={styles.statLabel}>your share</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.stat}>
-                <Text style={styles.statNum}>{estimate?.total_cooks ?? 0}</Text>
-                <Text style={styles.statLabel}>total cooks</Text>
               </View>
             </View>
 
@@ -141,9 +142,9 @@ export default function EarningsScreen() {
                 Creators share <Text style={styles.bold}>75%</Text> of a month's net revenue
                 (the platform keeps 25%). It's split by <Text style={styles.bold}>cooked recipes</Text>.
                 {'\n\n'}
-                <Text style={styles.bold}>Your share</Text> = your cooks ÷ all cooks × the creator pool.
+                <Text style={styles.bold}>Your share</Text> = your paid cooks ÷ all paid cooks × the creator pool.
                 {'\n\n'}
-                Cooks are counted <Text style={styles.bold}>once per person per day</Text>, so repeated cooking of the same recipe can't inflate earnings.
+                Only cooks by <Text style={styles.bold}>active subscribers</Text> earn money — they're the ones paying into the pool. Free cooks still count as your <Text style={styles.bold}>reach</Text> ("total cooks"). Cooks are counted once per person per day.
                 {'\n\n'}
                 "Net" is what Apple/Google pay out after their commission (15–30%) —
                 the store cut is the biggest deduction, not the platform fee.
