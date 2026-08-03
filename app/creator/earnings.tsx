@@ -143,6 +143,8 @@ export default function EarningsScreen() {
                 {'\n\n'}
                 <Text style={styles.bold}>Your share</Text> = your cooks ÷ all cooks × the creator pool.
                 {'\n\n'}
+                Cooks are counted <Text style={styles.bold}>once per person per day</Text>, so repeated cooking of the same recipe can't inflate earnings.
+                {'\n\n'}
                 "Net" is what Apple/Google pay out after their commission (15–30%) —
                 the store cut is the biggest deduction, not the platform fee.
               </Text>

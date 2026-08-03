@@ -154,13 +154,14 @@ begin
 
   creator_pool := floor(pool_net * (10000 - platform_bps) / 10000.0);
 
-  select count(*) into my_cooks
+  -- Deduped anti-abuse: one cook per (user, recipe, day) — repeated taps don't pay.
+  select count(distinct (cl.user_id::text || ':' || cl.recipe_id || ':' || cl.created_at::date::text)) into my_cooks
   from public.cook_log cl
   join public.recipes r on r.id::text = cl.recipe_id
   where r.influencer_id = me
     and cl.created_at >= p_start and cl.created_at < (p_end + 1);
 
-  select count(*) into total_cooks
+  select count(distinct (cl.user_id::text || ':' || cl.recipe_id || ':' || cl.created_at::date::text)) into total_cooks
   from public.cook_log cl
   join public.recipes r on r.id::text = cl.recipe_id
   where cl.created_at >= p_start and cl.created_at < (p_end + 1);
@@ -196,7 +197,8 @@ declare
 begin
   select coalesce(jsonb_agg(row_to_json(t)), '[]'::jsonb) into result
   from (
-    select r.id as recipe_id, r.title, count(*)::int as cooks
+    select r.id as recipe_id, r.title,
+           count(distinct (cl.user_id::text || ':' || cl.created_at::date::text))::int as cooks
     from public.cook_log cl
     join public.recipes r on r.id::text = cl.recipe_id
     where r.influencer_id = me and cl.created_at >= p_start
