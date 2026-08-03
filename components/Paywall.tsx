@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
-import { getPremiumPriceString, purchasePremium, restorePurchases } from '../lib/purchases';
+import { getPremiumPriceString, purchasePremium, restorePurchases, syncEntitlements } from '../lib/purchases';
 
 type Props = {
   visible: boolean;
@@ -45,6 +45,7 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
   const subscribe = async () => {
     setBusy(true);
     const r = await purchasePremium();
+    if (r === 'success') await syncEntitlements(); // push access to the server before we re-check
     setBusy(false);
     handleResult(r, 'You now have access to all premium recipes.');
   };
@@ -52,6 +53,7 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
   const restore = async () => {
     setBusy(true);
     const r = await restorePurchases();
+    if (r === 'success') await syncEntitlements();
     setBusy(false);
     if (r === 'error') { Alert.alert('No purchases found', "We couldn't restore an active subscription."); return; }
     handleResult(r, 'Your subscription has been restored.');

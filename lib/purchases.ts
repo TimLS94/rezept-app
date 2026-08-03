@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { supabase } from './supabase';
 
 // ── RevenueCat integration ──────────────────────────────────────────────────
 // PLACEHOLDERS — fill these from the RevenueCat dashboard, then create an EAS
@@ -97,6 +98,17 @@ export async function purchasePremium(): Promise<PurchaseResult> {
   } catch (e: any) {
     if (e?.userCancelled) return 'cancelled';
     return 'error';
+  }
+}
+
+// Reconcile RevenueCat → Supabase so the server-side content gate unlocks.
+// Safe to call even if the edge function isn't deployed (returns false).
+export async function syncEntitlements(): Promise<boolean> {
+  try {
+    const { data } = await supabase.functions.invoke('sync-entitlements');
+    return !!(data as any)?.active;
+  } catch {
+    return false;
   }
 }
 

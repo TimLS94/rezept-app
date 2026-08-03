@@ -86,6 +86,16 @@ export default function RecipeDetailScreen() {
     });
   }, [id, localRecipe]);
 
+  // After a successful purchase, re-check access and re-fetch the recipe so the
+  // now-unlocked full content (server-gated) replaces the teaser.
+  const reloadAfterPurchase = async () => {
+    await refresh();
+    if (id) {
+      const r = await fetchDbRecipeById(id);
+      if (r) { setRecipe(r); setServings(r.servings); }
+    }
+  };
+
   // Check if user owns this recipe
   useEffect(() => {
     const checkOwnership = async () => {
@@ -554,7 +564,7 @@ export default function RecipeDetailScreen() {
       <Paywall
         visible={showPaywall}
         onClose={() => setShowPaywall(false)}
-        onSubscribed={refresh}
+        onSubscribed={reloadAfterPurchase}
         creatorName={recipe?.influencer.name}
       />
     </View>
