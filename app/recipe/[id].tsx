@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getRecipeById, Recipe } from '../../data/recipes';
+import { getRecipeById, Recipe, totalTime, isQuick, isBudget } from '../../data/recipes';
 import { supabase } from '../../lib/supabase';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { fetchDbRecipeById, setRecipePaid } from '../../lib/recipes';
@@ -256,18 +256,28 @@ export default function RecipeDetailScreen() {
           )}
           <View style={styles.heroContent}>
             <View style={styles.badges}>
+              {isQuick(recipe) && (
+                <View style={[styles.badge, { backgroundColor: '#F57C00' }]}>
+                  <Text style={styles.badgeText}>⚡ Quick</Text>
+                </View>
+              )}
+              {isBudget(recipe) && (
+                <View style={[styles.badge, { backgroundColor: '#3C8D40' }]}>
+                  <Text style={styles.badgeText}>💰 Budget</Text>
+                </View>
+              )}
               {recipe.kidApproved && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>👶 Kid Approved</Text>
                 </View>
               )}
-              <View style={[styles.badge, { backgroundColor: '#3C8D40' }]}>
+              <View style={[styles.badge, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
                 <Text style={styles.badgeText}>{recipe.difficulty}</Text>
               </View>
             </View>
             <Text style={styles.heroTitle}>{recipe.title}</Text>
             <View style={styles.heroMeta}>
-              <Text style={styles.metaItem}>⏱ {recipe.prepTime + recipe.cookTime} min</Text>
+              <Text style={styles.metaItem}>⏱ {totalTime(recipe)} min total</Text>
               <Text style={styles.metaItem}>🔥 {recipe.calories} cal</Text>
               {FEATURES.budget && (
                 <Text style={styles.metaItem}>💰 ${recipe.cost.toFixed(2)}</Text>
@@ -294,6 +304,24 @@ export default function RecipeDetailScreen() {
               {isFavorite(recipe.id) ? '♥' : '♡'}
             </Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Time breakdown */}
+        <View style={styles.timeCard}>
+          <View style={styles.timeItem}>
+            <Text style={styles.timeValue}>{recipe.prepTime}<Text style={styles.timeUnit}> min</Text></Text>
+            <Text style={styles.timeLabel}>Prep</Text>
+          </View>
+          <View style={styles.timeDivider} />
+          <View style={styles.timeItem}>
+            <Text style={styles.timeValue}>{recipe.cookTime}<Text style={styles.timeUnit}> min</Text></Text>
+            <Text style={styles.timeLabel}>Cook</Text>
+          </View>
+          <View style={styles.timeDivider} />
+          <View style={styles.timeItem}>
+            <Text style={[styles.timeValue, { color: '#F57C00' }]}>{totalTime(recipe)}<Text style={styles.timeUnit}> min</Text></Text>
+            <Text style={styles.timeLabel}>Total</Text>
+          </View>
         </View>
 
         {/* Creator Controls - only visible to recipe owner */}
@@ -648,6 +676,12 @@ const styles = StyleSheet.create({
   modalCancelText: { fontSize: 16, fontWeight: '600', color: '#666' },
   modalApplyButton: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#F57C00', alignItems: 'center' },
   modalApplyText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
+  timeCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', marginHorizontal: 16, marginTop: 16, borderRadius: 16, paddingVertical: 16, borderWidth: 1, borderColor: '#F0EAE0' },
+  timeItem: { flex: 1, alignItems: 'center' },
+  timeValue: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  timeUnit: { fontSize: 13, fontWeight: '500', color: '#888' },
+  timeLabel: { fontSize: 12, color: '#888', marginTop: 3, textTransform: 'uppercase', letterSpacing: 0.5 },
+  timeDivider: { width: 1, height: 32, backgroundColor: '#EEE' },
   teaserWrap: { paddingBottom: 8 },
   teaserDesc: { fontSize: 15, color: '#444', lineHeight: 22, marginHorizontal: 20, marginTop: 16 },
   teaserCounts: { flexDirection: 'row', gap: 18, marginHorizontal: 20, marginTop: 14 },

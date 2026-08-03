@@ -10,9 +10,16 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { RECIPES, Recipe, DietaryTag, DIETARY_TAGS } from '../data/recipes';
+import { RECIPES, Recipe, DietaryTag, DIETARY_TAGS, isQuick, isBudget } from '../data/recipes';
 import { fetchDbRecipes } from '../lib/recipes';
 import { supabase } from '../lib/supabase';
+
+// Auto-derived attribute filters (computed from time/cost) + manual dietary tags.
+const ALL_FILTERS: { id: string; label: string; icon: string }[] = [
+  { id: 'quick', label: 'Quick', icon: '⚡' },
+  { id: 'budget', label: 'Budget', icon: '💰' },
+  ...DIETARY_TAGS,
+];
 
 type Creator = {
   id: string;
@@ -24,7 +31,7 @@ type Creator = {
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [uploaded, setUploaded] = useState<Recipe[]>([]);
   const [creators, setCreators] = useState<Creator[]>([]);
   const [searchMode, setSearchMode] = useState<'recipes' | 'creators'>('recipes');
@@ -42,7 +49,7 @@ export default function SearchScreen() {
     if (data) setCreators(data);
   };
 
-  const toggleFilter = (tag: DietaryTag) => {
+  const toggleFilter = (tag: string) => {
     setActiveFilters(prev =>
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
@@ -58,7 +65,9 @@ export default function SearchScreen() {
         r.description.toLowerCase().includes(q) ||
         r.influencer.name.toLowerCase().includes(q) ||
         r.influencer.handle.toLowerCase().includes(q);
-      const matchesFilters = activeFilters.every(tag => r.dietary.includes(tag));
+      const matchesFilters = activeFilters.every(f =>
+        f === 'quick' ? isQuick(r) : f === 'budget' ? isBudget(r) : r.dietary.includes(f as DietaryTag)
+      );
       return matchesQuery && matchesFilters;
     });
   }, [query, activeFilters, uploaded]);
@@ -132,7 +141,7 @@ export default function SearchScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.filterRow}
             >
-              {DIETARY_TAGS.map(tag => {
+              {ALL_FILTERS.map(tag => {
                 const active = activeFilters.includes(tag.id);
                 return (
                   <TouchableOpacity

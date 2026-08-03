@@ -410,6 +410,17 @@ export const RECIPES: Recipe[] = [
   },
 ];
 
+// Total hands-on + cooking time for a recipe.
+export const totalTime = (r: Recipe): number => (r.prepTime || 0) + (r.cookTime || 0);
+
+// Auto-derived attributes (no manual tagging needed). Quick = fast to make,
+// Budget = cheap per serving. Applied to every recipe, including creator uploads.
+export const QUICK_MAX_MIN = 30;
+export const BUDGET_MAX_PER_SERVING = 3; // USD
+export const isQuick = (r: Recipe): boolean => { const t = totalTime(r); return t > 0 && t <= QUICK_MAX_MIN; };
+export const costPerServing = (r: Recipe): number => (r.servings > 0 ? r.cost / r.servings : r.cost);
+export const isBudget = (r: Recipe): boolean => r.cost > 0 && costPerServing(r) <= BUDGET_MAX_PER_SERVING;
+
 export const getRecipesByCategory = (category: 'quick' | 'kids' | 'healthy' | 'budget'): Recipe[] => {
   return RECIPES.filter(r => r.categories.includes(category));
 };
