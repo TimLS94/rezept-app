@@ -1,5 +1,11 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { supabase } from './supabase';
+
+// Expo Go has no native RevenueCat module — the SDK falls back to a "browser
+// mode" whose network calls fail. Skip RevenueCat entirely there; it only runs
+// in a real dev/store build. (Entitlement checks still work via Supabase.)
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 // ── RevenueCat integration ──────────────────────────────────────────────────
 // PLACEHOLDERS — fill these from the RevenueCat dashboard, then create an EAS
@@ -22,6 +28,7 @@ let configured = false;
 // Lazy require: in Expo Go the native module doesn't exist, so importing it
 // statically would crash. We only touch it once a dev build includes it.
 function loadSDK(): any {
+  if (isExpoGo) return null; // never load the SDK in Expo Go
   if (Purchases) return Purchases;
   try {
     Purchases = require('react-native-purchases').default;
@@ -37,6 +44,7 @@ function apiKey(): string {
 
 // True once real keys are set AND the native SDK is available (dev build).
 export function purchasesAvailable(): boolean {
+  if (isExpoGo) return false;
   return !!loadSDK() && !apiKey().includes('PLACEHOLDER');
 }
 
