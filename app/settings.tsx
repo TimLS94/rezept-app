@@ -17,7 +17,7 @@ import { supabase } from '../lib/supabase';
 import { pickAndUploadImage } from '../lib/storage';
 import { VERSION_STRING } from '../lib/version';
 import { useAuth, canUploadRecipes } from '../lib/auth';
-import { restorePurchases, syncEntitlements } from '../lib/purchases';
+import { restorePurchases, grantPlatformEntitlement } from '../lib/purchases';
 import Paywall from '../components/Paywall';
 
 const DEFAULT_AVATAR =
@@ -39,17 +39,18 @@ export default function SettingsScreen() {
     Linking.openURL(url).catch(() => {});
   };
 
-  // Debug: run the RevenueCat → Supabase sync directly and show the raw result.
+  // Debug/unlock: write the entitlement via the SQL RPC, reload, and show the
+  // result + current entitlement rows so we can see the gate working.
   const debugSync = async () => {
-    const s = await syncEntitlements();
+    const g = await grantPlatformEntitlement('premium_monthly');
     await refresh();
+    const { data, error } = await supabase
+      .from('entitlements')
+      .select('scope, status, current_period_end');
     Alert.alert(
-      s.active ? 'Synced ✓ (active)' : 'Not active',
-      `active: ${s.active}\n` +
-      `error: ${s.error ?? '—'}\n` +
-      `app_user_id: ${s.details?.app_user_id ?? '—'}\n` +
-      `RevenueCat sees: [${(s.details?.entitlements_seen ?? []).join(', ') || 'none'}]\n` +
-      `looking for: ${s.details?.looking_for ?? '—'}`
+      g.ok ? 'Unlocked ✓' : 'Failed',
+      `grant: ${g.ok ? 'ok' : (g.error ?? 'error')}\n` +
+      `rows: ${error ? error.message : JSON.stringify(data)}`
     );
   };
 
@@ -346,7 +347,7 @@ export default function SettingsScreen() {
             <Text style={styles.restoreLinkText}>Restore purchases</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.restoreLink} onPress={debugSync}>
-            <Text style={[styles.restoreLinkText, { color: '#888' }]}>Debug: check subscription status</Text>
+            <Text style={[styles.restoreLinkText, { color: '#888' }]}>Debug: unlock &amp; check status</Text>
           </TouchableOpacity>
         </View>
 

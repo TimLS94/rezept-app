@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
-import { getPremiumPriceString, purchasePremium, restorePurchases, syncEntitlements } from '../lib/purchases';
+import { getPremiumPriceString, purchasePremium, restorePurchases, syncEntitlements, grantPlatformEntitlement } from '../lib/purchases';
 
 type Props = {
   visible: boolean;
@@ -45,19 +45,22 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
   // After a successful RevenueCat purchase we must sync to Supabase (server gate).
   // If that sync doesn't confirm access, surface exactly why (for debugging).
   const afterPurchase = async (successMsg: string) => {
-    const s = await syncEntitlements();
+    // RevenueCat already validated the receipt, so write the entitlement via the
+    // SQL RPC (reliable, no edge function). syncEntitlements is a best-effort
+    // extra if the edge function happens to be deployed.
+    const g = await grantPlatformEntitlement('premium_monthly');
+    await syncEntitlements();
     setBusy(false);
-    if (s.active) {
-      onSubscribed?.();
-      onClose();
-      Alert.alert('Unlocked 🎉', successMsg);
-    } else {
-      const seen = s.details?.entitlements_seen ? `\nRevenueCat sees: [${s.details.entitlements_seen.join(', ') || 'none'}]\nLooking for: ${s.details.looking_for ?? 'Cook_App Pro'}` : '';
+    if (!g.ok) {
       Alert.alert(
-        'Purchased, but backend not synced',
-        `The purchase went through, but the server did not confirm access.\nReason: ${s.error ?? 'unknown'}${seen}`
+        'Almost there',
+        `Purchase succeeded, but unlocking failed: ${g.error ?? 'unknown'}.\n\nMake sure payments.sql (incl. grant_platform_entitlement) has been run in Supabase.`
       );
+      return;
     }
+    onSubscribed?.();
+    onClose();
+    Alert.alert('Unlocked 🎉', successMsg);
   };
 
   const subscribe = async () => {

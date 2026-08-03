@@ -101,6 +101,19 @@ export async function purchasePremium(): Promise<PurchaseResult> {
   }
 }
 
+// Write the platform entitlement via the SQL RPC (works with only payments.sql
+// applied — no edge function needed). Call after RevenueCat confirms a purchase.
+export async function grantPlatformEntitlement(product?: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.rpc('grant_platform_entitlement', { p_product: product ?? null });
+    if (error) return { ok: false, error: error.message };
+    const d = data as any;
+    return { ok: !!d?.ok, error: d?.error };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'exception' };
+  }
+}
+
 export type SyncResult = { active: boolean; error?: string; details?: any };
 
 // Reconcile RevenueCat → Supabase so the server-side content gate unlocks.
