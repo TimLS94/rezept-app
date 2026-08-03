@@ -33,7 +33,7 @@ type Payout = {
 
 const euro = (cents: number) => `€ ${((cents || 0) / 100).toFixed(2).replace('.', ',')}`;
 
-const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthLabel = (iso: string) => {
   const d = new Date(iso);
   return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
@@ -69,9 +69,9 @@ export default function EarningsScreen() {
 
   const statusChip = (s: Payout['status']) => {
     const map = {
-      paid: { bg: '#E8F5E9', fg: COLORS.green, label: 'Ausgezahlt' },
-      pending: { bg: '#FFF3EC', fg: COLORS.orange, label: 'Ausstehend' },
-      failed: { bg: '#FFEBEE', fg: '#E53935', label: 'Fehlgeschlagen' },
+      paid: { bg: '#E8F5E9', fg: COLORS.green, label: 'Paid' },
+      pending: { bg: '#FFF3EC', fg: COLORS.orange, label: 'Pending' },
+      failed: { bg: '#FFEBEE', fg: '#E53935', label: 'Failed' },
     }[s];
     return (
       <View style={[styles.chip, { backgroundColor: map.bg }]}>
@@ -97,34 +97,34 @@ export default function EarningsScreen() {
           {/* This month */}
           <View style={styles.heroCard}>
             <View style={styles.heroTop}>
-              <Text style={styles.heroLabel}>DIESEN MONAT{estimate ? ` · ${monthLabel(estimate.period_start)}` : ''}</Text>
+              <Text style={styles.heroLabel}>THIS MONTH{estimate ? ` · ${monthLabel(estimate.period_start)}` : ''}</Text>
               <View style={styles.liveBadge}>
-                <Text style={styles.liveBadgeText}>läuft noch</Text>
+                <Text style={styles.liveBadgeText}>in progress</Text>
               </View>
             </View>
             <Text style={styles.heroAmount}>{euro(estimate?.estimated_cents ?? 0)}</Text>
-            <Text style={styles.heroSub}>Geschätzt · wird am Monatsende final berechnet</Text>
+            <Text style={styles.heroSub}>Estimated · finalized at the end of the month</Text>
 
             <View style={styles.heroStats}>
               <View style={styles.stat}>
                 <Text style={styles.statNum}>{estimate?.my_cooks ?? 0}</Text>
-                <Text style={styles.statLabel}>deine Cooks</Text>
+                <Text style={styles.statLabel}>your cooks</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.stat}>
                 <Text style={styles.statNum}>{estimate?.my_share_pct ?? 0}%</Text>
-                <Text style={styles.statLabel}>dein Anteil</Text>
+                <Text style={styles.statLabel}>your share</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.stat}>
                 <Text style={styles.statNum}>{estimate?.total_cooks ?? 0}</Text>
-                <Text style={styles.statLabel}>Cooks gesamt</Text>
+                <Text style={styles.statLabel}>total cooks</Text>
               </View>
             </View>
 
             {(estimate?.pool_net_cents ?? 0) === 0 && (
               <Text style={styles.poolHint}>
-                Sobald Premium-Abos laufen, erscheint hier dein Anteil am Umsatz. Deine Cooks werden schon gezählt.
+                Your cooks are already counted. Earnings appear here once premium subscriptions bring in revenue — you earn a share of that revenue based on how often your recipes are cooked.
               </Text>
             )}
           </View>
@@ -132,47 +132,47 @@ export default function EarningsScreen() {
           {/* How it's calculated */}
           <TouchableOpacity style={styles.formulaToggle} onPress={() => setShowFormula(v => !v)} activeOpacity={0.8}>
             <Ionicons name="information-circle-outline" size={18} color={COLORS.navy} />
-            <Text style={styles.formulaToggleText}>So wird berechnet</Text>
+            <Text style={styles.formulaToggleText}>How this is calculated</Text>
             <Ionicons name={showFormula ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.warmGray} />
           </TouchableOpacity>
           {showFormula && (
             <View style={styles.formulaCard}>
               <Text style={styles.formulaText}>
-                Creator teilen sich <Text style={styles.bold}>75 %</Text> des Netto-Umsatzes eines Monats
-                (die Plattform behält 25 %). Verteilt wird nach <Text style={styles.bold}>gekochten Rezepten</Text>.
+                Creators share <Text style={styles.bold}>75%</Text> of a month's net revenue
+                (the platform keeps 25%). It's split by <Text style={styles.bold}>cooked recipes</Text>.
                 {'\n\n'}
-                <Text style={styles.bold}>Dein Anteil</Text> = deine Cooks ÷ alle Cooks × Creator-Topf.
+                <Text style={styles.bold}>Your share</Text> = your cooks ÷ all cooks × the creator pool.
                 {'\n\n'}
-                „Netto" ist das, was Apple/Google nach Abzug von Provision (15–30 %) und Umsatzsteuer auszahlen —
-                der Store-Abzug ist der größte Posten, nicht die Plattform-Gebühr.
+                "Net" is what Apple/Google pay out after their commission (15–30%) and VAT —
+                the store cut is the biggest deduction, not the platform fee.
               </Text>
               {estimate && (estimate.creator_pool_cents > 0) && (
                 <Text style={styles.formulaExample}>
-                  Diesen Monat: Creator-Topf {euro(estimate.creator_pool_cents)} × {estimate.my_share_pct}% = {euro(estimate.estimated_cents)}
+                  This month: creator pool {euro(estimate.creator_pool_cents)} × {estimate.my_share_pct}% = {euro(estimate.estimated_cents)}
                 </Text>
               )}
             </View>
           )}
 
           {/* Per-recipe breakdown */}
-          <Text style={styles.sectionTitle}>Deine Rezepte diesen Monat</Text>
+          <Text style={styles.sectionTitle}>Your recipes this month</Text>
           {breakdown.length === 0 ? (
-            <Text style={styles.emptyText}>Noch keine gekochten Rezepte in diesem Monat.</Text>
+            <Text style={styles.emptyText}>No recipes cooked yet this month.</Text>
           ) : (
             <View style={styles.card}>
               {breakdown.map((b, i) => (
                 <View key={b.recipe_id} style={[styles.rowLine, i > 0 && styles.rowBorderTop]}>
                   <Text style={styles.rowTitle} numberOfLines={1}>{b.title}</Text>
-                  <Text style={styles.rowCooks}>{b.cooks}× gekocht</Text>
+                  <Text style={styles.rowCooks}>{b.cooks}× cooked</Text>
                 </View>
               ))}
             </View>
           )}
 
           {/* Payout history */}
-          <Text style={styles.sectionTitle}>Auszahlungen</Text>
+          <Text style={styles.sectionTitle}>Payouts</Text>
           {payouts.length === 0 ? (
-            <Text style={styles.emptyText}>Noch keine abgeschlossenen Auszahlungen.</Text>
+            <Text style={styles.emptyText}>No completed payouts yet.</Text>
           ) : (
             payouts.map(p => {
               const open = openPayout === p.id;
@@ -188,11 +188,11 @@ export default function EarningsScreen() {
                   </TouchableOpacity>
                   {open && (
                     <View style={styles.payoutDetail}>
-                      <DetailRow label="Dein Bruttoanteil" value={euro(p.gross_cents)} />
-                      <DetailRow label="Plattform-Gebühr (25 %)" value={`− ${euro(p.platform_fee_cents)}`} />
-                      <DetailRow label="Netto-Auszahlung" value={euro(p.net_cents)} strong />
+                      <DetailRow label="Your gross share" value={euro(p.gross_cents)} />
+                      <DetailRow label="Platform fee (25%)" value={`− ${euro(p.platform_fee_cents)}`} />
+                      <DetailRow label="Net payout" value={euro(p.net_cents)} strong />
                       {p.breakdown?.my_cooks != null && (
-                        <DetailRow label="Cooks (du / gesamt)" value={`${p.breakdown.my_cooks} / ${p.breakdown.total_cooks}`} />
+                        <DetailRow label="Cooks (you / total)" value={`${p.breakdown.my_cooks} / ${p.breakdown.total_cooks}`} />
                       )}
                     </View>
                   )}
@@ -202,10 +202,10 @@ export default function EarningsScreen() {
           )}
 
           {/* Payout account */}
-          <Text style={styles.sectionTitle}>Auszahlungskonto</Text>
+          <Text style={styles.sectionTitle}>Payout account</Text>
           <TouchableOpacity style={styles.connectBtn} activeOpacity={0.85} disabled>
             <Ionicons name="card-outline" size={18} color={COLORS.warmGray} />
-            <Text style={styles.connectText}>Auszahlung einrichten (bald verfügbar)</Text>
+            <Text style={styles.connectText}>Set up payouts (coming soon)</Text>
           </TouchableOpacity>
 
           <View style={{ height: 40 }} />
