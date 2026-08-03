@@ -18,6 +18,7 @@ import { getRecipeById, Recipe } from '../../data/recipes';
 import { fetchDbRecipeById } from '../../lib/recipes';
 import { incrementCooked, awardFor, nextAward, logCook, saveCookRating } from '../../lib/cookStats';
 import { scaleAmount, setServings as persistServings } from '../../lib/servings';
+import { getFamilyServings } from '../../lib/family';
 import { COLORS, FONTS } from '../../lib/theme';
 import ImageViewer from '../../components/ImageViewer';
 
@@ -28,6 +29,7 @@ export default function CookModeScreen() {
   const [recipe, setRecipe] = useState<Recipe | undefined>(getRecipeById(id || ''));
   // Chosen serving count (from the favorite / passed in), scales the ingredients.
   const [servingsSel, setServingsSel] = useState<number | null>(servings ? Number(servings) : null);
+  const [familyServings, setFamilyServings] = useState<number | null>(null);
   const [loading, setLoading] = useState(!recipe);
   const [phase, setPhase] = useState<Phase>('intro');
   const [done, setDone] = useState<Set<number>>(new Set());
@@ -43,6 +45,10 @@ export default function CookModeScreen() {
   // Let the timer beep sound even when the phone is on silent.
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getFamilyServings().then(setFamilyServings).catch(() => {});
   }, []);
 
   // Per-step countdown. Buzzes (haptic) when it reaches zero.
@@ -123,11 +129,12 @@ export default function CookModeScreen() {
   const total = recipe?.steps.length ?? 0;
   const baseServings = recipe?.servings ?? 1;
   const chosenServings = servingsSel ?? baseServings;
-  const changeServings = (delta: number) => {
-    const next = Math.max(1, chosenServings + delta);
+  const setServings = (val: number) => {
+    const next = Math.max(1, val);
     setServingsSel(next);
     if (id) persistServings(id, next); // remember for the favorite too
   };
+  const changeServings = (delta: number) => setServings(chosenServings + delta);
 
   const startCooking = () => setPhase('cooking');
 
@@ -249,6 +256,15 @@ export default function CookModeScreen() {
                 <Ionicons name="add" size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
+            {familyServings != null && (
+              <TouchableOpacity
+                style={[styles.familyChip, chosenServings === familyServings && styles.familyChipActive]}
+                onPress={() => setServings(familyServings)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.familyChipText}>👨‍👩‍👧 Family ({familyServings})</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <TouchableOpacity style={styles.startBtn} onPress={startCooking} activeOpacity={0.9}>
@@ -395,6 +411,9 @@ const styles = StyleSheet.create({
   servingsStepper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 30, padding: 5, gap: 4 },
   servingsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.16)', justifyContent: 'center', alignItems: 'center' },
   servingsValue: { fontFamily: FONTS.display, color: '#FFF', fontSize: 24, minWidth: 44, textAlign: 'center' },
+  familyChip: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  familyChipActive: { backgroundColor: COLORS.orange, borderColor: COLORS.orange },
+  familyChipText: { fontFamily: FONTS.semibold, color: '#FFF', fontSize: 13 },
   ingredientsHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 },
   ingredientsServings: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.warmGray },
   startBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.orange, paddingHorizontal: 30, paddingVertical: 16, borderRadius: 30, marginTop: 34 },

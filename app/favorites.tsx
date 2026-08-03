@@ -17,6 +17,7 @@ import { useFavorites } from '../lib/favorites';
 import { useMealPlan, thisWeekKey } from '../lib/mealPlan';
 import { addRecipesToShoppingList } from '../lib/shopping';
 import { getAllServings, setServings as setServingsStore } from '../lib/servings';
+import { getFamilyServings } from '../lib/family';
 
 export default function FavoritesScreen() {
   const { favorites, removeFavorite, collections, setCollection } = useFavorites();
@@ -26,17 +27,21 @@ export default function FavoritesScreen() {
   const [assignFor, setAssignFor] = useState<string | null>(null); // recipe id being filed
   const [newColl, setNewColl] = useState('');
   const [servingsMap, setServingsMap] = useState<Record<string, number>>({}); // per-recipe overrides
+  const [familyServings, setFamilyServings] = useState<number | null>(null);
 
   useEffect(() => {
     getAllServings().then(setServingsMap).catch(() => {});
+    getFamilyServings().then(setFamilyServings).catch(() => {});
   }, []);
 
   const servingsFor = (id: string, base: number) => servingsMap[id] ?? base;
-  const changeServings = (id: string, base: number, delta: number) => {
-    const nextVal = Math.max(1, servingsFor(id, base) + delta);
-    setServingsMap(prev => ({ ...prev, [id]: nextVal }));
-    setServingsStore(id, nextVal);
+  const setServingsExact = (id: string, val: number) => {
+    const next = Math.max(1, val);
+    setServingsMap(prev => ({ ...prev, [id]: next }));
+    setServingsStore(id, next);
   };
+  const changeServings = (id: string, base: number, delta: number) =>
+    setServingsExact(id, servingsFor(id, base) + delta);
 
   const PRESETS = ['Healthy', 'Easy', 'Quick', 'Dinner', 'Dessert'];
   // Collections that actually have recipes, plus the presets, for the chips.
@@ -191,6 +196,17 @@ export default function FavoritesScreen() {
                       <TouchableOpacity style={styles.servBtn} onPress={() => changeServings(recipe.id, recipe.servings, 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                         <Ionicons name="add" size={14} color={COLORS.navy} />
                       </TouchableOpacity>
+                      {familyServings != null && (
+                        <TouchableOpacity
+                          style={[styles.familyBtn, servingsFor(recipe.id, recipe.servings) === familyServings && styles.familyBtnActive]}
+                          onPress={() => setServingsExact(recipe.id, familyServings)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Text style={[styles.familyBtnText, servingsFor(recipe.id, recipe.servings) === familyServings && styles.familyBtnTextActive]}>
+                            👨‍👩‍👧 Family
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -316,7 +332,11 @@ const styles = StyleSheet.create({
   collTagText: { fontSize: 11, color: COLORS.warmGray, fontWeight: '600', maxWidth: 140 },
   collTagTextActive: { color: COLORS.orange },
   // Per-card servings stepper
-  servRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  servRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' },
+  familyBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: '#F6F1EA' },
+  familyBtnActive: { backgroundColor: COLORS.navy },
+  familyBtnText: { fontSize: 11, fontWeight: '700', color: COLORS.navy },
+  familyBtnTextActive: { color: '#FFF' },
   servBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#F6F1EA', justifyContent: 'center', alignItems: 'center' },
   servVal: { fontSize: 13, fontWeight: '700', color: COLORS.navy, minWidth: 16, textAlign: 'center' },
   // Assign modal
