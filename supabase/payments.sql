@@ -42,9 +42,9 @@ create table if not exists public.purchase_events (
   event_type   text,
   product_id   text,
   store        text,
-  price_cents  integer,          -- gross (VAT-inclusive) as charged
-  net_cents    integer,          -- proceeds after store fee + VAT (what you receive)
-  currency     text default 'EUR',
+  price_cents  integer,          -- gross price as charged
+  net_cents    integer,          -- proceeds after the store fee (what you receive)
+  currency     text default 'USD',
   creator_id   uuid,             -- Phase 2 direct attribution; Phase 1 null (pool)
   occurred_at  timestamptz,
   raw          jsonb,
@@ -174,7 +174,7 @@ begin
     'period_start',  p_start,
     'period_end',    p_end,
     'is_estimate',   true,
-    'currency',      'EUR',
+    'currency',      'USD',
     'pool_net_cents',      pool_net,
     'creator_pool_cents',  creator_pool,
     'platform_fee_pct',    platform_bps / 100.0,
@@ -223,9 +223,9 @@ begin
     insert into public.entitlements (user_id, scope, status, product_id, rc_app_user_id, current_period_end)
     values (auth.uid(), 'platform', 'active', p_product, auth.uid()::text, now() + interval '32 days');
     if coalesce(p_price_cents, 0) > 0 then
-      net := round(p_price_cents / 1.19 * 0.85);
+      net := round(p_price_cents * 0.85);  -- after 15% store fee (US: no VAT deducted)
       insert into public.purchase_events (user_id, event_type, product_id, price_cents, net_cents, currency, occurred_at)
-      values (auth.uid(), 'INITIAL_PURCHASE', p_product, p_price_cents, net, 'EUR', now());
+      values (auth.uid(), 'INITIAL_PURCHASE', p_product, p_price_cents, net, 'USD', now());
     end if;
   else
     update public.entitlements

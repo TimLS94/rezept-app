@@ -31,7 +31,7 @@ type Payout = {
   breakdown: any;
 };
 
-const euro = (cents: number) => `€ ${((cents || 0) / 100).toFixed(2).replace('.', ',')}`;
+const usd = (cents: number) => `$${((cents || 0) / 100).toFixed(2)}`;
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthLabel = (iso: string) => {
@@ -102,7 +102,7 @@ export default function EarningsScreen() {
                 <Text style={styles.liveBadgeText}>in progress</Text>
               </View>
             </View>
-            <Text style={styles.heroAmount}>{euro(estimate?.estimated_cents ?? 0)}</Text>
+            <Text style={styles.heroAmount}>{usd(estimate?.estimated_cents ?? 0)}</Text>
             <Text style={styles.heroSub}>Estimated · finalized at the end of the month</Text>
 
             <View style={styles.heroStats}>
@@ -143,12 +143,12 @@ export default function EarningsScreen() {
                 {'\n\n'}
                 <Text style={styles.bold}>Your share</Text> = your cooks ÷ all cooks × the creator pool.
                 {'\n\n'}
-                "Net" is what Apple/Google pay out after their commission (15–30%) and VAT —
+                "Net" is what Apple/Google pay out after their commission (15–30%) —
                 the store cut is the biggest deduction, not the platform fee.
               </Text>
               {estimate && (estimate.creator_pool_cents > 0) && (
                 <Text style={styles.formulaExample}>
-                  This month: creator pool {euro(estimate.creator_pool_cents)} × {estimate.my_share_pct}% = {euro(estimate.estimated_cents)}
+                  This month: creator pool {usd(estimate.creator_pool_cents)} × {estimate.my_share_pct}% = {usd(estimate.estimated_cents)}
                 </Text>
               )}
             </View>
@@ -181,16 +181,16 @@ export default function EarningsScreen() {
                   <TouchableOpacity style={styles.payoutHead} onPress={() => setOpenPayout(open ? null : p.id)} activeOpacity={0.8}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.payoutMonth}>{monthLabel(p.period_start)}</Text>
-                      <Text style={styles.payoutAmount}>{euro(p.net_cents)}</Text>
+                      <Text style={styles.payoutAmount}>{usd(p.net_cents)}</Text>
                     </View>
                     {statusChip(p.status)}
                     <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.warmGray} style={{ marginLeft: 10 }} />
                   </TouchableOpacity>
                   {open && (
                     <View style={styles.payoutDetail}>
-                      <DetailRow label="Your gross share" value={euro(p.gross_cents)} />
-                      <DetailRow label="Platform fee (25%)" value={`− ${euro(p.platform_fee_cents)}`} />
-                      <DetailRow label="Net payout" value={euro(p.net_cents)} strong />
+                      <DetailRow label="Your gross share" value={usd(p.gross_cents)} />
+                      <DetailRow label="Platform fee (25%)" value={`− ${usd(p.platform_fee_cents)}`} />
+                      <DetailRow label="Net payout" value={usd(p.net_cents)} strong />
                       {p.breakdown?.my_cooks != null && (
                         <DetailRow label="Cooks (you / total)" value={`${p.breakdown.my_cooks} / ${p.breakdown.total_cooks}`} />
                       )}

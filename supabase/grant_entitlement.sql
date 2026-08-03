@@ -24,13 +24,13 @@ begin
     values
       (auth.uid(), 'platform', 'active', p_product, auth.uid()::text, now() + interval '32 days');
 
-    -- Record the subscription revenue once (net = after 19% VAT + 15% store fee).
+    -- Record the subscription revenue once (net = after the 15% store fee).
     if coalesce(p_price_cents, 0) > 0 then
-      net := round(p_price_cents / 1.19 * 0.85);
+      net := round(p_price_cents * 0.85);  -- US: no VAT deducted
       insert into public.purchase_events
         (user_id, event_type, product_id, price_cents, net_cents, currency, occurred_at)
       values
-        (auth.uid(), 'INITIAL_PURCHASE', p_product, p_price_cents, net, 'EUR', now());
+        (auth.uid(), 'INITIAL_PURCHASE', p_product, p_price_cents, net, 'USD', now());
     end if;
   else
     update public.entitlements

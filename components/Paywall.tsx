@@ -18,7 +18,7 @@ const BENEFITS = [
 ];
 
 // Shown until the store returns the real localized price.
-const FALLBACK_PRICE = '€9,99';
+const FALLBACK_PRICE = '$9.99';
 
 export default function Paywall({ visible, onClose, onSubscribed, creatorName }: Props) {
   const [price, setPrice] = useState<string>(FALLBACK_PRICE);

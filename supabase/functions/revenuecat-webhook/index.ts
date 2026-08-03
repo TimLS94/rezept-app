@@ -8,8 +8,7 @@
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, REVENUECAT_WEBHOOK_SECRET
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Net proceeds assumptions (Germany). Adjust per market if needed.
-const VAT_RATE = 0.19;       // 19 % USt (Apple/Google remit this)
+// Net proceeds assumption (US market). Adjust per market if needed.
 const STORE_FEE = 0.15;      // Small-Business 15 % (use 0.30 above $1M/yr)
 
 const ACTIVE = ['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'UNCANCELLATION', 'NON_RENEWING_PURCHASE'];
@@ -36,7 +35,7 @@ Deno.serve(async (req) => {
   const type: string = e.type;
   const priceCents = e.price != null ? Math.round(Number(e.price) * 100) : null;
   const netCents = priceCents != null
-    ? Math.round((priceCents / (1 + VAT_RATE)) * (1 - STORE_FEE))
+    ? Math.round(priceCents * (1 - STORE_FEE))
     : null;
   const store = e.store === 'APP_STORE' ? 'app_store' : e.store === 'PLAY_STORE' ? 'play_store' : (e.store ?? null);
   const periodEnd = e.expiration_at_ms ? new Date(e.expiration_at_ms).toISOString() : null;
@@ -51,7 +50,7 @@ Deno.serve(async (req) => {
       store,
       price_cents: priceCents,
       net_cents: netCents,
-      currency: e.currency ?? 'EUR',
+      currency: e.currency ?? 'USD',
       occurred_at: occurredAt,
       raw: e,
     });
