@@ -161,6 +161,28 @@ export default function ShoppingScreen() {
     );
   };
 
+  // Delete a single ingredient.
+  const deleteItem = async (id: string) => {
+    setItems(prev => prev.filter(i => i.id !== id));
+    await supabase.from('shopping_items').delete().eq('id', id);
+  };
+
+  // Delete every ingredient that belongs to one recipe/group.
+  const deleteRecipeGroup = (groupItems: ShoppingItem[], name: string) => {
+    const ids = groupItems.map(i => i.id);
+    if (ids.length === 0) return;
+    Alert.alert('Remove recipe', `Remove all ${ids.length} ingredients from “${name}”?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove', style: 'destructive',
+        onPress: async () => {
+          setItems(prev => prev.filter(i => !ids.includes(i.id)));
+          await supabase.from('shopping_items').delete().in('id', ids);
+        },
+      },
+    ]);
+  };
+
   const clearAll = async () => {
     Alert.alert(
       'Clear All Items',
@@ -404,6 +426,9 @@ export default function ShoppingScreen() {
                       <Text style={styles.itemRecipe}>for {item.recipe_name}</Text>
                     )}
                   </View>
+                  <TouchableOpacity style={styles.itemDelete} onPress={() => deleteItem(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Text style={styles.itemDeleteText}>✕</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
               ))}
             </View>
@@ -437,6 +462,9 @@ export default function ShoppingScreen() {
                   >
                     <Text style={styles.mealHeaderArrow}>→</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteRecipeGroup(group.items, recipe.title)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Text style={styles.groupDelete}>🗑</Text>
+                  </TouchableOpacity>
                   <Text style={styles.chevron}>{isExpanded ? '▾' : '▸'}</Text>
                 </TouchableOpacity>
               ) : (
@@ -446,6 +474,9 @@ export default function ShoppingScreen() {
                     <Text style={styles.recipeCount}>
                       {group.items.filter(i => !i.checked).length} items
                     </Text>
+                    <TouchableOpacity onPress={() => deleteRecipeGroup(group.items, group.name)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Text style={styles.groupDelete}>🗑</Text>
+                    </TouchableOpacity>
                     <Text style={styles.chevron}>{isExpanded ? '▾' : '▸'}</Text>
                   </View>
                 </TouchableOpacity>
@@ -465,6 +496,9 @@ export default function ShoppingScreen() {
                       {formatAmount(item.amount, item.unit)} {item.name}
                     </Text>
                   </View>
+                  <TouchableOpacity style={styles.itemDelete} onPress={() => deleteItem(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Text style={styles.itemDeleteText}>✕</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
               ))}
             </View>
@@ -542,6 +576,9 @@ const styles = StyleSheet.create({
   recipeHeaderRight: { flexDirection: 'row', alignItems: 'center' },
   recipeName: { fontSize: 16, fontWeight: '700', color: '#F57C00' },
   recipeCount: { fontSize: 13, color: '#888' },
+  itemDelete: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  itemDeleteText: { fontSize: 15, color: '#C8BEB0', fontWeight: '700' },
+  groupDelete: { fontSize: 16, marginLeft: 10 },
   itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 14, borderRadius: 10, marginBottom: 6 },
   itemRowChecked: { backgroundColor: '#F5F5F5' },
   checkbox: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: '#DDD', marginRight: 14, justifyContent: 'center', alignItems: 'center' },

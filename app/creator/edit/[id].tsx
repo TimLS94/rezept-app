@@ -13,6 +13,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
 import { pickAndUploadImage } from '../../../lib/storage';
+import { DIETARY_TAGS } from '../../../data/recipes';
 
 type Ingredient = {
   name: string;
@@ -340,6 +341,28 @@ export default function EditRecipeScreen() {
           </View>
         </View>
 
+        {/* Dietary tags */}
+        <View style={styles.card}>
+          <Text style={styles.label}>Dietary tags</Text>
+          <View style={styles.tagPickRow}>
+            {DIETARY_TAGS.map(tag => {
+              const active = recipe.tags.includes(tag.id);
+              return (
+                <TouchableOpacity
+                  key={tag.id}
+                  style={[styles.tagPick, active && styles.tagPickActive]}
+                  onPress={() => setRecipe({
+                    ...recipe,
+                    tags: active ? recipe.tags.filter(t => t !== tag.id) : [...recipe.tags, tag.id],
+                  })}
+                >
+                  <Text style={[styles.tagPickText, active && styles.tagPickTextActive]}>{tag.icon} {tag.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* Premium Toggle */}
         <View style={styles.card}>
           <View style={styles.toggleRow}>
@@ -486,6 +509,11 @@ const styles = StyleSheet.create({
   imageOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   card: { backgroundColor: '#FFF', margin: 16, marginBottom: 0, borderRadius: 16, padding: 16 },
   label: { fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 6, marginTop: 8 },
+  tagPickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  tagPick: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F6F1EA', borderWidth: 1, borderColor: '#EEE' },
+  tagPickActive: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
+  tagPickText: { fontSize: 13, color: '#666', fontWeight: '600' },
+  tagPickTextActive: { color: '#FFF' },
   input: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 14, fontSize: 16, color: '#1A1A1A' },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
   metaRow: { flexDirection: 'row', marginTop: 8, gap: 8 },

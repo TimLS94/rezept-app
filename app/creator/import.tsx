@@ -18,7 +18,7 @@ import { extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideoAud
 import { createRecipe } from '../../lib/recipes';
 import { uploadBase64Image, pickAndUploadImage } from '../../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
-import { DietaryTag, Ingredient } from '../../data/recipes';
+import { DietaryTag, Ingredient, DIETARY_TAGS } from '../../data/recipes';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
 type InputMode = 'url' | 'screenshot' | 'video' | 'text';
@@ -517,6 +517,25 @@ export default function ImportRecipeScreen() {
                   />
                 </View>
               </View>
+
+              <Text style={styles.editLabel}>Dietary tags <Text style={styles.editHint}>· AI-suggested, tap to change</Text></Text>
+              <View style={styles.tagPickRow}>
+                {DIETARY_TAGS.map(tag => {
+                  const active = recipe.dietary.includes(tag.id);
+                  return (
+                    <TouchableOpacity
+                      key={tag.id}
+                      style={[styles.tagPick, active && styles.tagPickActive]}
+                      onPress={() => setRecipe({
+                        ...recipe,
+                        dietary: active ? recipe.dietary.filter(d => d !== tag.id) : [...recipe.dietary, tag.id],
+                      })}
+                    >
+                      <Text style={[styles.tagPickText, active && styles.tagPickTextActive]}>{tag.icon} {tag.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             <View style={styles.section}>
@@ -839,6 +858,12 @@ const styles = StyleSheet.create({
   removeVideoText: { fontSize: 14, color: '#E53935', fontWeight: '600' },
   // Edit styles for review step
   editLabel: { fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 6, marginTop: 12 },
+  editHint: { fontSize: 11, fontWeight: '500', color: '#AAA' },
+  tagPickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tagPick: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F6F1EA', borderWidth: 1, borderColor: '#EEE' },
+  tagPickActive: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
+  tagPickText: { fontSize: 13, color: '#666', fontWeight: '600' },
+  tagPickTextActive: { color: '#FFF' },
   editInput: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 14, fontSize: 16, color: '#1A1A1A' },
   editTextArea: { minHeight: 80, textAlignVertical: 'top' },
   metaEditRow: { flexDirection: 'row', marginTop: 16, gap: 8 },
