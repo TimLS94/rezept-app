@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, getCurrentUser } from './supabase';
 
 // How many servings the household needs, for the one-tap "Family" button.
 // Prefers the sum of family members' portion multipliers (e.g. 2 adults @1.0 +
@@ -7,7 +7,7 @@ let cache: number | null = null;
 
 export async function getFamilyServings(force = false): Promise<number> {
   if (cache != null && !force) return cache;
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return 2;
 
   const { data: members } = await supabase

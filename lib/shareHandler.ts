@@ -1,7 +1,10 @@
-// Handle incoming shared URLs from Instagram/TikTok
-import * as Linking from 'expo-linking';
-import { router } from 'expo-router';
-import { isValidInstagramUrl } from './instagram';
+// URL extractors for incoming shared content from Instagram/TikTok.
+//
+// Routing lives elsewhere on purpose: `app/+native-intent.ts` handles deep
+// links (it runs before route matching) and `app/shareintent.tsx` handles the
+// share sheet. An earlier version also navigated from here via a Linking
+// listener, which raced Expo Router's own linking and double-navigated — hence
+// only the pure helpers remain.
 
 // Extract Instagram URL from shared text
 export function extractInstagramUrl(text: string): string | null {
@@ -36,81 +39,4 @@ export function extractTikTokUrl(text: string): string | null {
   }
 
   return null;
-}
-
-// Handle incoming URL (from deep link or share)
-export function handleIncomingUrl(url: string): void {
-  console.log('Incoming URL:', url);
-
-  // Check if it's an Instagram URL
-  const igUrl = extractInstagramUrl(url);
-  if (igUrl) {
-    // Navigate to import screen with the URL pre-filled
-    router.push({
-      pathname: '/cookbook/import',
-      params: { sharedUrl: igUrl },
-    });
-    return;
-  }
-
-  // Check if it's a TikTok URL
-  const ttUrl = extractTikTokUrl(url);
-  if (ttUrl) {
-    router.push({
-      pathname: '/cookbook/import',
-      params: { sharedUrl: ttUrl },
-    });
-    return;
-  }
-
-  // Check if it's our own deep link
-  if (url.startsWith('feedfamily://')) {
-    const parsed = Linking.parse(url);
-    if (parsed.path) {
-      router.push(parsed.path as any);
-    }
-  }
-}
-
-// Handle shared text (from Android SEND intent)
-export function handleSharedText(text: string): void {
-  console.log('Shared text:', text);
-
-  // Try to extract a URL from the text
-  const igUrl = extractInstagramUrl(text);
-  const ttUrl = extractTikTokUrl(text);
-  const url = igUrl || ttUrl;
-
-  if (url) {
-    router.push({
-      pathname: '/cookbook/import',
-      params: { sharedUrl: url },
-    });
-  } else {
-    // No URL found, maybe it's recipe text directly
-    router.push({
-      pathname: '/cookbook/import',
-      params: { sharedText: text },
-    });
-  }
-}
-
-// Setup URL listener
-export function setupUrlListener(): () => void {
-  // Handle URL that opened the app
-  Linking.getInitialURL().then((url) => {
-    if (url) {
-      // Small delay to ensure app is ready
-      setTimeout(() => handleIncomingUrl(url), 500);
-    }
-  });
-
-  // Listen for URLs while app is open
-  const subscription = Linking.addEventListener('url', (event) => {
-    handleIncomingUrl(event.url);
-  });
-
-  return () => {
-    subscription.remove();
-  };
 }

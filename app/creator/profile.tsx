@@ -19,6 +19,9 @@ import {
   CreatorProfile,
   emptyCreatorProfile,
 } from '../../lib/creatorProfile';
+import {
+  RECIPE_PRICE_TIERS, CREATOR_SUB_TIERS, creatorTakeHomeCents, feeBreakdown, usd,
+} from '../../lib/pricing';
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200';
 
@@ -54,6 +57,12 @@ export default function EditCreatorProfileScreen() {
     if ('error' in result) {
       Alert.alert('Could not save', result.error);
       return;
+    }
+    if (result.degraded) {
+      Alert.alert(
+        'Saved without pricing',
+        'Your profile was saved, but the recipe price needs supabase/creator_pricing.sql to be run first.',
+      );
     }
     await refresh();
     router.back();
@@ -171,12 +180,119 @@ export default function EditCreatorProfileScreen() {
           />
         </Field>
 
+        <Text style={styles.groupLabel}>Pricing</Text>
+
+        {/* Profile subscription — unlocks everything this creator publishes. */}
+        <View style={styles.priceCard}>
+          <View style={styles.priceHead}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.priceTitle}>Profile membership</Text>
+              <Text style={styles.priceSub}>
+                Members pay monthly and get <Text style={styles.priceBold}>every premium recipe you have published — and everything you publish later</Text>, for as long as they stay. They never pay per recipe.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.toggle, profile.subscriptionEnabled && styles.toggleOn]}
+              onPress={() => set('subscriptionEnabled', !profile.subscriptionEnabled)}
+            >
+              <Text style={[styles.toggleText, profile.subscriptionEnabled && styles.toggleTextOn]}>
+                {profile.subscriptionEnabled ? 'On' : 'Off'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {profile.subscriptionEnabled && (
+            <>
+              <View style={styles.tierRow}>
+                {CREATOR_SUB_TIERS.map(t => (
+                  <TouchableOpacity
+                    key={t.cents}
+                    style={[styles.tier, profile.subscriptionPriceCents === t.cents && styles.tierOn]}
+                    onPress={() => set('subscriptionPriceCents', t.cents)}
+                  >
+                    <Text style={[styles.tierText, profile.subscriptionPriceCents === t.cents && styles.tierTextOn]}>
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {profile.subscriptionPriceCents != null && (
+                <FeeRows cents={profile.subscriptionPriceCents} per="per member, per month" />
+              )}
+            </>
+          )}
+        </View>
+
+        {/* Default single-recipe price. Per-recipe overrides live on the recipe. */}
+        <View style={styles.priceCard}>
+          <Text style={styles.priceTitle}>Default price per recipe</Text>
+          <Text style={styles.priceSub}>
+            Used when you mark a recipe premium. You can override it on any individual recipe.
+          </Text>
+          <View style={styles.tierRow}>
+            {RECIPE_PRICE_TIERS.map(t => (
+              <TouchableOpacity
+                key={t.cents}
+                style={[styles.tier, profile.defaultRecipePriceCents === t.cents && styles.tierOn]}
+                onPress={() => set('defaultRecipePriceCents',
+                  profile.defaultRecipePriceCents === t.cents ? null : t.cents)}
+              >
+                <Text style={[styles.tierText, profile.defaultRecipePriceCents === t.cents && styles.tierTextOn]}>
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {profile.defaultRecipePriceCents != null ? (
+            <FeeRows cents={profile.defaultRecipePriceCents} per="per sale" />
+          ) : (
+            <Text style={styles.priceSub}>
+              No price set — premium recipes will only be available through subscriptions.
+            </Text>
+          )}
+        </View>
+
+        <Text style={styles.priceFootnote}>
+          You keep 75% of the net on everything you sell here, and it's yours alone —
+          app Premium does not give anyone access to your recipes, so nothing you
+          price is given away by a subscription you see no money from.
+          {'\n\n'}
+          Prices are fixed tiers because Apple and Google only bill through pre-registered products.
+        </Text>
+
         <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving}>
           <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save profile'}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 60 }} />
       </ScrollView>
+    </View>
+  );
+}
+
+// Where the money actually goes. Showing only the take-home invites "why not
+// the full $4.99?", and the honest answer is that the larger deduction is
+// Apple's and Google's, not ours — so it's spelled out rather than summarised.
+function FeeRows({ cents, per }: { cents: number; per: string }) {
+  const f = feeBreakdown(cents);
+  return (
+    <View style={styles.feeBox}>
+      <View style={styles.feeRow}>
+        <Text style={styles.feeLabel}>Buyer pays</Text>
+        <Text style={styles.feeValue}>{usd(f.price)}</Text>
+      </View>
+      <View style={styles.feeRow}>
+        <Text style={styles.feeLabel}>− {f.storeFeeLabel}</Text>
+        <Text style={styles.feeValue}>− {usd(f.storeFee)}</Text>
+      </View>
+      <View style={styles.feeRow}>
+        <Text style={styles.feeLabel}>− {f.platformFeeLabel}</Text>
+        <Text style={styles.feeValue}>− {usd(f.platformFee)}</Text>
+      </View>
+      <View style={[styles.feeRow, styles.feeTotal]}>
+        <Text style={styles.feeLabelStrong}>You keep {per}</Text>
+        <Text style={styles.feeValueStrong}>{usd(f.takeHome)}</Text>
+      </View>
     </View>
   );
 }
@@ -226,6 +342,34 @@ const styles = StyleSheet.create({
   handleInput: { flex: 1, padding: 14, fontSize: 15 },
   groupLabel: { fontSize: 13, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12, marginTop: 4 },
 
+  priceCard: {
+    backgroundColor: '#FFF', borderRadius: 14, borderWidth: 1, borderColor: '#EFE7DC',
+    padding: 16, marginBottom: 12,
+  },
+  priceHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  priceTitle: { fontSize: 15, fontWeight: '700', color: '#0D2B63' },
+  priceSub: { fontSize: 12.5, color: '#6F6F6F', marginTop: 3, lineHeight: 18 },
+  priceBold: { fontWeight: '700', color: '#0D2B63' },
+  toggle: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: '#F1EADF' },
+  toggleOn: { backgroundColor: '#F57C00' },
+  toggleText: { fontSize: 13, fontWeight: '700', color: '#6F6F6F' },
+  toggleTextOn: { color: '#FFF' },
+  tierRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  tier: {
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18,
+    borderWidth: 1, borderColor: '#EFE7DC', backgroundColor: '#FFF9F2',
+  },
+  tierOn: { backgroundColor: '#0D2B63', borderColor: '#0D2B63' },
+  tierText: { fontSize: 13.5, fontWeight: '600', color: '#0D2B63' },
+  tierTextOn: { color: '#FFF' },
+  feeBox: { marginTop: 14, borderTopWidth: 1, borderTopColor: '#EFE7DC', paddingTop: 10 },
+  feeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
+  feeLabel: { fontSize: 12.5, color: '#6F6F6F' },
+  feeValue: { fontSize: 12.5, color: '#6F6F6F' },
+  feeTotal: { borderTopWidth: 1, borderTopColor: '#EFE7DC', marginTop: 6, paddingTop: 7 },
+  feeLabelStrong: { fontSize: 13, color: '#3C8D40', fontWeight: '700' },
+  feeValueStrong: { fontSize: 13, color: '#3C8D40', fontWeight: '700' },
+  priceFootnote: { fontSize: 11.5, color: '#6F6F6F', lineHeight: 17, marginBottom: 16 },
   saveButton: { backgroundColor: '#F57C00', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
   saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

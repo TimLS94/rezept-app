@@ -14,9 +14,13 @@ import {
   ActionSheetIOS,
 } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '../../lib/supabase';
+import { supabase, getCurrentUser } from '../../lib/supabase';
+import { buildInstacartLink, openUrl } from '../../lib/instacart';
+import { FEATURES } from '../../lib/features';
+import * as Clipboard from 'expo-clipboard';
 import { getRecipeById, Recipe } from '../../data/recipes';
 import { fetchDbRecipeById } from '../../lib/recipes';
+import SwipeToDelete from '../../components/SwipeToDelete';
 
 type ShoppingItem = {
   id: string;
@@ -50,6 +54,7 @@ export default function ShoppingScreen() {
   // Creator recipes live in the DB (uuid ids), not the local seed catalogue —
   // resolve them so their meal card shows the image/title.
   const [dbRecipes, setDbRecipes] = useState<Record<string, Recipe>>({});
+  const [sendingToInstacart, setSendingToInstacart] = useState(false);
 
   useEffect(() => {
     const ids = [...new Set(items.map(i => i.recipe_id).filter((x): x is string => !!x))];
@@ -83,7 +88,7 @@ export default function ShoppingScreen() {
   }, []);
 
   const loadItems = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return;
 
     const { data } = await supabase
@@ -115,7 +120,7 @@ export default function ShoppingScreen() {
   const addItem = async () => {
     if (!newItemName.trim()) return;
     
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return;
 
     const { data, error } = await supabase
@@ -193,7 +198,7 @@ export default function ShoppingScreen() {
           text: 'Clear All', 
           style: 'destructive',
           onPress: async () => {
-            const { data: { user } } = await supabase.auth.getUser();
+            const user = await getCurrentUser();
             if (!user) return;
             await supabase
               .from('shopping_items')
@@ -240,59 +245,125 @@ export default function ShoppingScreen() {
   };
 
   // Generate shopping list text for sharing
+  // Grouped by recipe, because a bare list of twenty ingredients doesn't tell
+  // whoever you sent it to what any of it is for. Items added by hand have no
+  // recipe and go in their own block at the end.
   const generateListText = (): string => {
-    const uncheckedItems = items.filter(i => !i.checked);
-    return uncheckedItems
-      .map(i => `• ${formatAmount(i.amount, i.unit)} ${i.name}`)
-      .join('\n');
+    const unchecked = items.filter(i => !i.checked);
+    const groups = new Map<string, typeof unchecked>();
+    for (const i of unchecked) {
+      const key = i.recipe_name || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(i);
+    }
+
+    const named = [...groups.entries()].filter(([k]) => k);
+    const loose = groups.get('') ?? [];
+    const line = (i: typeof unchecked[number]) => `• ${formatAmount(i.amount, i.unit)} ${i.name}`;
+
+    const blocks: string[] = [];
+    for (const [recipe, group] of named) {
+      blocks.push(`${recipe}\n${group.map(line).join('\n')}`);
+    }
+    if (loose.length) {
+      blocks.push(`${named.length ? 'Other\n' : ''}${loose.map(line).join('\n')}`);
+    }
+    return blocks.join('\n\n');
   };
 
   // Export options
   const showExportOptions = () => {
+    // Building the Instacart page is a network round trip with no visible
+    // progress once the sheet has closed; a second tap would fire it twice.
+    if (sendingToInstacart) return;
+
     const uncheckedItems = items.filter(i => !i.checked);
     if (uncheckedItems.length === 0) {
       Alert.alert('Empty List', 'Add some items first');
       return;
     }
 
+    // Retailer hand-off is labelled rather than hidden: it's on the roadmap and
+    // worth signalling, but tapping it must not open a search that finds
+    // nothing. Sharing and copying work today and stay first.
+    const soon = FEATURES.partnerCheckout ? '' : ' (coming soon)';
+    const retailer = (name: string, action: () => void) => () => {
+      if (FEATURES.partnerCheckout) { action(); return; }
+      Alert.alert(
+        `${name} — coming soon`,
+        `Sending your list straight to ${name} needs their approval, which we're working on. Until then, share the list or copy it — both include the amounts.`,
+        [
+          { text: 'OK', style: 'cancel' },
+          { text: 'Share list', onPress: shareList },
+        ],
+      );
+    };
+
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancel', '🛒 Open in Instacart', '🏪 Open in Walmart', '📤 Share List', '📋 Copy to Clipboard'],
+          options: [
+            'Cancel',
+            '📤 Share List',
+            '📋 Copy to Clipboard',
+            `🛒 Open in Instacart${soon}`,
+            `🏪 Open in Walmart${soon}`,
+          ],
           cancelButtonIndex: 0,
+          disabledButtonIndices: FEATURES.partnerCheckout ? [] : [3, 4],
         },
         (buttonIndex) => {
-          if (buttonIndex === 1) openInInstacart();
-          else if (buttonIndex === 2) openInWalmart();
-          else if (buttonIndex === 3) shareList();
-          else if (buttonIndex === 4) copyToClipboard();
+          if (buttonIndex === 1) shareList();
+          else if (buttonIndex === 2) copyToClipboard();
+          else if (buttonIndex === 3) retailer('Instacart', openInInstacart)();
+          else if (buttonIndex === 4) retailer('Walmart', openInWalmart)();
         }
       );
     } else {
       Alert.alert('Export Shopping List', 'Choose where to send your list', [
         { text: 'Cancel', style: 'cancel' },
-        { text: '🛒 Instacart', onPress: openInInstacart },
-        { text: '🏪 Walmart', onPress: openInWalmart },
         { text: '📤 Share', onPress: shareList },
+        { text: '📋 Copy', onPress: copyToClipboard },
+        { text: `🛒 Instacart${soon}`, onPress: retailer('Instacart', openInInstacart) },
+        { text: `🏪 Walmart${soon}`, onPress: retailer('Walmart', openInWalmart) },
       ]);
     }
   };
 
   const openInInstacart = async () => {
-    // Instacart search URL - opens app if installed, otherwise web
-    const uncheckedItems = items.filter(i => !i.checked);
-    const searchQuery = uncheckedItems.map(i => i.name).join(', ');
-    const instacartUrl = `https://www.instacart.com/store/search/${encodeURIComponent(searchQuery)}`;
-    
-    // Try to open Instacart app first
-    const instacartAppUrl = `instacart://search?query=${encodeURIComponent(searchQuery)}`;
-    const canOpenApp = await Linking.canOpenURL(instacartAppUrl);
-    
-    if (canOpenApp) {
-      await Linking.openURL(instacartAppUrl);
-    } else {
-      await Linking.openURL(instacartUrl);
+    const unchecked = items.filter(i => !i.checked);
+    if (!unchecked.length) {
+      Alert.alert('Nothing to send', 'Everything on your list is already ticked off.');
+      return;
     }
+
+    setSendingToInstacart(true);
+    const result = await buildInstacartLink(
+      unchecked.map(i => ({ name: i.name, amount: i.amount, unit: i.unit })),
+      'FeedFamily shopping list',
+    );
+    setSendingToInstacart(false);
+
+    if (result.kind === 'error') {
+      Alert.alert('Could not open Instacart', 'Please try again.');
+      return;
+    }
+
+    if (result.kind === 'search') {
+      // Be honest that this is the degraded path rather than pretending the
+      // list was transferred — Instacart will just show a search result.
+      Alert.alert(
+        'Opening Instacart search',
+        "Your list will be searched rather than filled into a cart — that needs the Instacart integration to be set up. Continue?",
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open', onPress: () => openUrl(result.url) },
+        ],
+      );
+      return;
+    }
+
+    await openUrl(result.url);
   };
 
   const openInWalmart = async () => {
@@ -314,11 +385,11 @@ export default function ShoppingScreen() {
   };
 
   const copyToClipboard = async () => {
-    const listText = generateListText();
-    // Use native clipboard via Linking workaround or alert
-    Alert.alert('Shopping List', listText, [
-      { text: 'OK' }
-    ]);
+    // Previously this only showed the list in an alert — the menu said "Copy to
+    // Clipboard" and nothing ever reached the clipboard. RN dropped the core
+    // Clipboard module, hence expo-clipboard.
+    await Clipboard.setStringAsync(generateListText());
+    Alert.alert('Copied', 'Your shopping list is on the clipboard.');
   };
 
   return (
@@ -410,26 +481,29 @@ export default function ShoppingScreen() {
               </View>
               
               {category.items.map((item) => (
-                <TouchableOpacity 
-                  key={item.id} 
-                  style={[styles.itemRow, item.checked && styles.itemRowChecked]}
-                  onPress={() => toggleItem(item.id)}
-                >
-                  <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
-                    {item.checked && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                  <View style={styles.itemInfo}>
-                    <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>
-                      {formatAmount(item.amount, item.unit)} {item.name}
-                    </Text>
-                    {item.recipe_name && (
-                      <Text style={styles.itemRecipe}>for {item.recipe_name}</Text>
-                    )}
-                  </View>
-                  <TouchableOpacity style={styles.itemDelete} onPress={() => deleteItem(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Text style={styles.itemDeleteText}>✕</Text>
+                <SwipeToDelete key={item.id} onDelete={() => deleteItem(item.id)} style={styles.swipeRow}>
+                  <TouchableOpacity
+                    style={[styles.itemRow, item.checked && styles.itemRowChecked]}
+                    onPress={() => toggleItem(item.id)}
+                    // No press fade. The swipe handler can steal the responder
+                    // mid-press, and then TouchableOpacity never gets its
+                    // onPressOut — the row stays at 0.2 opacity and reads as a
+                    // stuck grey highlight. The checkbox is the feedback.
+                    activeOpacity={1}
+                  >
+                    <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
+                      {item.checked && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                    <View style={styles.itemInfo}>
+                      <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>
+                        {formatAmount(item.amount, item.unit)} {item.name}
+                      </Text>
+                      {item.recipe_name && (
+                        <Text style={styles.itemRecipe}>for {item.recipe_name}</Text>
+                      )}
+                    </View>
                   </TouchableOpacity>
-                </TouchableOpacity>
+                </SwipeToDelete>
               ))}
             </View>
           ))
@@ -442,65 +516,80 @@ export default function ShoppingScreen() {
             const isExpanded = expandedRecipes.has(key);
             return (
             <View key={index} style={styles.recipeSection}>
+              {/* One surface, one meaning. The card used to be an expander
+                  containing three more tap targets — "open recipe", "delete
+                  everything" and a chevron — with overlapping hitSlops, so a
+                  thumb aimed at the recipe could wipe the whole group instead.
+                  Now: the card opens the recipe, the chevron expands, and
+                  removing lives inside the group where it can't be hit by
+                  accident. */}
               {recipe ? (
+                <SwipeToDelete
+                  label={`Remove\n${group.items.length} items`}
+                  onDelete={() => deleteRecipeGroup(group.items, recipe.title)}
+                  style={styles.swipeCard}
+                >
                 <TouchableOpacity
                   style={styles.mealHeaderCard}
-                  activeOpacity={0.85}
+                  activeOpacity={1}
                   onPress={() => toggleRecipe(key)}
                 >
                   <Image source={{ uri: recipe.image }} style={styles.mealHeaderImage} />
                   <View style={styles.mealHeaderInfo}>
-                    <Text style={styles.mealHeaderLabel}>MEAL</Text>
                     <Text style={styles.mealHeaderTitle} numberOfLines={1}>{recipe.title}</Text>
                     <Text style={styles.mealHeaderMeta}>
-                      ⏱ {recipe.prepTime + recipe.cookTime} min • {doneCount}/{group.items.length} items
+                      {doneCount} of {group.items.length} picked up
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => router.push(`/recipe/${recipe.id}`)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Text style={styles.mealHeaderArrow}>→</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => deleteRecipeGroup(group.items, recipe.title)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Text style={styles.groupDelete}>🗑</Text>
-                  </TouchableOpacity>
                   <Text style={styles.chevron}>{isExpanded ? '▾' : '▸'}</Text>
                 </TouchableOpacity>
+                </SwipeToDelete>
               ) : (
                 <TouchableOpacity style={styles.recipeHeader} activeOpacity={0.85} onPress={() => toggleRecipe(key)}>
                   <Text style={styles.recipeName}>{group.name}</Text>
                   <View style={styles.recipeHeaderRight}>
                     <Text style={styles.recipeCount}>
-                      {group.items.filter(i => !i.checked).length} items
+                      {group.items.filter(i => !i.checked).length} left
                     </Text>
-                    <TouchableOpacity onPress={() => deleteRecipeGroup(group.items, group.name)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Text style={styles.groupDelete}>🗑</Text>
-                    </TouchableOpacity>
                     <Text style={styles.chevron}>{isExpanded ? '▾' : '▸'}</Text>
                   </View>
                 </TouchableOpacity>
               )}
 
               {isExpanded && group.items.map((item) => (
-                <TouchableOpacity 
-                  key={item.id} 
-                  style={[styles.itemRow, item.checked && styles.itemRowChecked]}
-                  onPress={() => toggleItem(item.id)}
-                >
-                  <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
-                    {item.checked && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                  <View style={styles.itemInfo}>
-                    <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>
-                      {formatAmount(item.amount, item.unit)} {item.name}
-                    </Text>
-                  </View>
-                  <TouchableOpacity style={styles.itemDelete} onPress={() => deleteItem(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Text style={styles.itemDeleteText}>✕</Text>
+                <SwipeToDelete key={item.id} onDelete={() => deleteItem(item.id)} style={styles.swipeRow}>
+                  <TouchableOpacity
+                    style={[styles.itemRow, item.checked && styles.itemRowChecked]}
+                    onPress={() => toggleItem(item.id)}
+                    // No press fade. The swipe handler can steal the responder
+                    // mid-press, and then TouchableOpacity never gets its
+                    // onPressOut — the row stays at 0.2 opacity and reads as a
+                    // stuck grey highlight. The checkbox is the feedback.
+                    activeOpacity={1}
+                  >
+                    <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
+                      {item.checked && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                    <View style={styles.itemInfo}>
+                      <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>
+                        {formatAmount(item.amount, item.unit)} {item.name}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
-                </TouchableOpacity>
+                </SwipeToDelete>
               ))}
+
+              {/* No visible delete: swiping left is the only way, which is how
+                  Mail, Reminders and Notes have worked for years. "View recipe"
+                  stays — the card now expands instead of navigating, so this is
+                  the only route to the recipe itself. */}
+              {isExpanded && recipe && (
+                <View style={styles.groupActions}>
+                  <TouchableOpacity onPress={() => router.push(`/recipe/${recipe.id}`)} style={styles.groupAction}>
+                    <Text style={styles.groupActionText}>View recipe →</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
             );
           })
@@ -564,22 +653,23 @@ const styles = StyleSheet.create({
   categoryName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
   categoryCount: { fontSize: 14, fontWeight: '600', color: '#888', backgroundColor: '#FFF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   recipeSection: { marginHorizontal: 20, marginBottom: 16 },
-  mealHeaderCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, padding: 10, marginBottom: 8, borderLeftWidth: 4, borderLeftColor: '#F57C00' },
+  mealHeaderCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, padding: 10, borderLeftWidth: 4, borderLeftColor: '#F57C00' },
   mealHeaderImage: { width: 52, height: 52, borderRadius: 10, marginRight: 12 },
   mealHeaderInfo: { flex: 1 },
-  mealHeaderLabel: { fontSize: 10, fontWeight: '700', color: '#F57C00', letterSpacing: 1 },
   mealHeaderTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginTop: 1 },
   mealHeaderMeta: { fontSize: 12, color: '#888', marginTop: 2 },
-  mealHeaderArrow: { fontSize: 18, color: '#CCC', marginLeft: 8 },
+  swipeCard: { borderRadius: 12, marginBottom: 8 },
+  swipeRow: { borderRadius: 10, marginBottom: 6 },
+  groupActions: { flexDirection: 'row', gap: 18, paddingVertical: 10, paddingHorizontal: 4, marginBottom: 4 },
+  groupAction: { paddingVertical: 2 },
+  groupActionText: { fontSize: 12.5, color: '#0D2B63', fontWeight: '600' },
   chevron: { fontSize: 14, color: '#B8AFA2', marginLeft: 10, width: 14, textAlign: 'center' },
   recipeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: '#F57C00', marginBottom: 8 },
   recipeHeaderRight: { flexDirection: 'row', alignItems: 'center' },
   recipeName: { fontSize: 16, fontWeight: '700', color: '#F57C00' },
   recipeCount: { fontSize: 13, color: '#888' },
-  itemDelete: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
-  itemDeleteText: { fontSize: 15, color: '#C8BEB0', fontWeight: '700' },
   groupDelete: { fontSize: 16, marginLeft: 10 },
-  itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 14, borderRadius: 10, marginBottom: 6 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 14, borderRadius: 10 },
   itemRowChecked: { backgroundColor: '#F5F5F5' },
   checkbox: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: '#DDD', marginRight: 14, justifyContent: 'center', alignItems: 'center' },
   checkboxChecked: { backgroundColor: '#3C8D40', borderColor: '#3C8D40' },

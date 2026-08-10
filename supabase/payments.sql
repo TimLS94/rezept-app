@@ -133,6 +133,9 @@ grant execute on function public.get_recipe_full(uuid) to anon, authenticated;
 
 -- Was the user an active subscriber at a given time? (Model B: only subscriber
 -- cooks earn money — Sybil-resistant, since fake accounts would have to pay.)
+-- Mirrors the access check in get_recipe_full: a real entitlement OR the legacy
+-- `profiles.is_premium` flag (comped/test accounts). is_premium has no time
+-- dimension, so for those accounts "was subscriber" means "is premium now".
 create or replace function public.was_subscriber_at(p_user uuid, p_when timestamptz)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
@@ -141,6 +144,9 @@ returns boolean language sql stable security definer set search_path = public as
       and e.scope = 'platform'
       and e.created_at <= p_when
       and coalesce(e.current_period_end, now()) >= p_when
+  ) or exists (
+    select 1 from public.profiles pr
+    where pr.id = p_user and pr.is_premium = true
   );
 $$;
 grant execute on function public.was_subscriber_at(uuid, timestamptz) to authenticated;

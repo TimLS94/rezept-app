@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { supabase, getCurrentUser } from './supabase';
 import { FEATURES } from './features';
 import { initPurchases, logOutPurchases } from './purchases';
 
@@ -10,6 +10,12 @@ export type Role = 'user' | 'creator' | 'admin';
 // uploads flag is on. Guests (role null) can never upload.
 export const canUploadRecipes = (role: Role | null): boolean =>
   role === 'creator' || role === 'admin' || (FEATURES.publicRecipeUploads && role != null);
+
+// Importing a recipe into your OWN cookbook is not publishing — nobody else
+// ever sees it. The two were gated by the same check, which meant sharing a
+// reel from Instagram landed a normal user on "Creators only". Anyone signed in
+// may import; how many times is a Premium question, not a role question.
+export const canImportToCookbook = (role: Role | null): boolean => role != null;
 
 type AuthValue = {
   user: User | null;
@@ -39,33 +45,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
     initPurchases(u.id); // inert until real RevenueCat keys + dev build
-    const { data } = await supabase
-      .from('profiles')
-      .select('role, is_premium')
-      .eq('id', u.id)
-      .single();
-    const resolved = (data?.role as Role) ?? 'user';
-    setRole(resolved);
-
-    // App-wide premium = legacy is_premium flag OR an active platform entitlement
-    // (written by the RevenueCat webhook). Failure is non-fatal (stays false).
-    let premium = !!data?.is_premium;
-    if (!premium) {
-      const { data: ent } = await supabase
+    // Both run in parallel: this is the app-start critical path, and chaining
+    // them cost a second round trip for every non-premium user (the common case).
+    const [{ data }, { data: ent }] = await Promise.all([
+      supabase.from('profiles').select('role, is_premium').eq('id', u.id).single(),
+      supabase
         .from('entitlements')
         .select('id')
         .eq('user_id', u.id)
         .eq('scope', 'platform')
         .eq('status', 'active')
-        .limit(1);
-      premium = !!ent && ent.length > 0;
-    }
-    setIsPremium(premium);
+        .limit(1),
+    ]);
+    const resolved = (data?.role as Role) ?? 'user';
+    setRole(resolved);
+
+    // App-wide premium = legacy is_premium flag OR an active platform entitlement
+    // (written by the RevenueCat webhook). Failure is non-fatal (stays false).
+    setIsPremium(!!data?.is_premium || (ent?.length ?? 0) > 0);
     return resolved;
   }, []);
 
   const refresh = useCallback(async (): Promise<Role | null> => {
-    const { data: { user: u } } = await supabase.auth.getUser();
+    const u = await getCurrentUser();
     setUser(u);
     return loadProfile(u);
   }, [loadProfile]);

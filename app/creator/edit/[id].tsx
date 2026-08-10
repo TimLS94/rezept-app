@@ -11,9 +11,10 @@ import {
   Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { supabase } from '../../../lib/supabase';
+import { supabase, updateByIdTolerant } from '../../../lib/supabase';
 import { pickAndUploadImage } from '../../../lib/storage';
 import { DIETARY_TAGS } from '../../../data/recipes';
+import { RECIPE_PRICE_TIERS, creatorTakeHomeCents, usd } from '../../../lib/pricing';
 
 type Ingredient = {
   name: string;
@@ -32,6 +33,7 @@ type RecipeData = {
   servings: number;
   calories: number;
   is_paid: boolean;
+  price_cents: number | null;   // null = use the creator's default price
   tags: string[];
   ingredients: Ingredient[];
   instructions: string[];
@@ -54,14 +56,15 @@ export default function EditRecipeScreen() {
   const loadRecipe = async () => {
     if (!id) return;
     
-    const { data, error } = await supabase
-      .from('recipes')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Ingredients and instructions are no longer directly readable (see
+    // supabase/lock_recipe_content.sql); this RPC returns the full row, but
+    // only to the recipe's owner.
+    const { data, error } = await supabase.rpc('get_recipe_for_edit', { p_recipe_id: id });
 
-    if (error) {
-      Alert.alert('Error', 'Could not load recipe');
+    if (error || !data || (data as any).error) {
+      Alert.alert('Error', (data as any)?.error === 'not_owner'
+        ? 'You can only edit your own recipes.'
+        : 'Could not load recipe');
       router.back();
       return;
     }
@@ -78,6 +81,7 @@ export default function EditRecipeScreen() {
       servings: data.servings || 4,
       calories: data.calories || 0,
       is_paid: data.is_paid || false,
+      price_cents: data.price_cents ?? null,
       tags: data.tags || [],
       ingredients: data.ingredients || [],
       instructions: instr.map(s => (typeof s === 'string' ? s : (s?.text ?? ''))),
@@ -97,9 +101,7 @@ export default function EditRecipeScreen() {
 
     setSaving(true);
 
-    const { error } = await supabase
-      .from('recipes')
-      .update({
+    const { error, degraded } = await updateByIdTolerant('recipes', recipe.id, {
         title: recipe.title,
         description: recipe.description,
         image_url: recipe.image_url,
@@ -108,6 +110,9 @@ export default function EditRecipeScreen() {
         servings: recipe.servings,
         calories: recipe.calories,
         is_paid: recipe.is_paid,
+        // Only meaningful on a premium recipe; clearing it on a free one keeps
+        // a stale price from reappearing if it's flipped back to premium later.
+        price_cents: recipe.is_paid ? recipe.price_cents : null,
         tags: recipe.tags,
         ingredients: recipe.ingredients,
         instructions: recipe.instructions.map((text, i) => {
@@ -115,19 +120,25 @@ export default function EditRecipeScreen() {
           const timer = recipe.stepTimers[i];
           return image || timer ? { text, ...(image ? { image } : {}), ...(timer ? { timer } : {}) } : text;
         }),
-      })
-      .eq('id', recipe.id);
+      },
+      // Dropped automatically if creator_pricing.sql hasn't been run yet.
+      ['price_cents'],
+    );
 
     setSaving(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error);
       return;
     }
 
-    Alert.alert('Saved', 'Recipe updated successfully', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
+    Alert.alert(
+      'Saved',
+      degraded
+        ? 'Recipe updated — but the price was not saved. Run supabase/creator_pricing.sql to enable per-recipe pricing.'
+        : 'Recipe updated successfully',
+      [{ text: 'OK', onPress: () => router.back() }],
+    );
   };
 
   const pickImage = async () => {
@@ -379,6 +390,39 @@ export default function EditRecipeScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {recipe.is_paid && (
+            <View style={styles.priceBlock}>
+              <Text style={styles.priceLabel}>Price for this recipe</Text>
+              <Text style={styles.toggleHint}>
+                Leave on “Default” to follow the price set in your creator profile.
+              </Text>
+              <View style={styles.tierRow}>
+                <TouchableOpacity
+                  style={[styles.tier, recipe.price_cents == null && styles.tierOn]}
+                  onPress={() => setRecipe({ ...recipe, price_cents: null })}
+                >
+                  <Text style={[styles.tierText, recipe.price_cents == null && styles.tierTextOn]}>Default</Text>
+                </TouchableOpacity>
+                {RECIPE_PRICE_TIERS.map(t => (
+                  <TouchableOpacity
+                    key={t.cents}
+                    style={[styles.tier, recipe.price_cents === t.cents && styles.tierOn]}
+                    onPress={() => setRecipe({ ...recipe, price_cents: t.cents })}
+                  >
+                    <Text style={[styles.tierText, recipe.price_cents === t.cents && styles.tierTextOn]}>
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {recipe.price_cents != null && (
+                <Text style={styles.takeHome}>
+                  You keep {usd(creatorTakeHomeCents(recipe.price_cents))} per sale
+                </Text>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Ingredients */}
@@ -522,6 +566,17 @@ const styles = StyleSheet.create({
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   toggleLabel: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
   toggleHint: { fontSize: 13, color: '#888', marginTop: 2 },
+  priceBlock: { marginTop: 16, borderTopWidth: 1, borderTopColor: '#EFE7DC', paddingTop: 14 },
+  priceLabel: { fontSize: 15, fontWeight: '700', color: '#0D2B63' },
+  tierRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  tier: {
+    paddingHorizontal: 13, paddingVertical: 8, borderRadius: 18,
+    borderWidth: 1, borderColor: '#EFE7DC', backgroundColor: '#FFF9F2',
+  },
+  tierOn: { backgroundColor: '#0D2B63', borderColor: '#0D2B63' },
+  tierText: { fontSize: 13, fontWeight: '600', color: '#0D2B63' },
+  tierTextOn: { color: '#FFF' },
+  takeHome: { fontSize: 12.5, color: '#3C8D40', fontWeight: '600', marginTop: 11 },
   toggle: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: '#F0F0F0' },
   toggleActive: { backgroundColor: '#F57C00' },
   toggleText: { fontSize: 14, fontWeight: '600', color: '#888' },

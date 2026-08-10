@@ -52,17 +52,6 @@
             "BROWSABLE",
             "DEFAULT"
           ]
-        },
-        {
-          "action": "SEND",
-          "category": [
-            "DEFAULT"
-          ],
-          "data": [
-            {
-              "mimeType": "text/plain"
-            }
-          ]
         }
       ]
     },
@@ -74,13 +63,25 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow FeedFamily to access your photos to upload recipe and profile images."
+          "photosPermission": "Allow FeedFamily to access your photos to upload recipe and profile images.",
+          "cameraPermission": "Allow FeedFamily to use your camera to scan your fridge for recipe ideas."
         }
       ],
       "expo-secure-store",
       "expo-font",
       "expo-audio",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
+            "NSExtensionActivationSupportsText": true
+          },
+          "androidIntentFilters": ["text/*"]
+        }
+      ]
     ],
     "scheme": "feedfamily",
     "newArchEnabled": true

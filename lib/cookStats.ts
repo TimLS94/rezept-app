@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from './supabase';
+import { supabase, getCurrentUser } from './supabase';
 import type { Recipe } from '../data/recipes';
 
 // How many recipes the user has cooked (finished all steps in Cook Mode).
@@ -53,7 +53,7 @@ export function nextAward(count: number): Award | null {
 // Log a finished cook session. Returns the new row id so a rating can be
 // attached later, or null for guests / on error.
 export async function logCook(recipe: Recipe): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
   const { data } = await supabase
     .from('cook_log')

@@ -13,11 +13,11 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '../lib/supabase';
+import { supabase, getCurrentUser } from '../lib/supabase';
 import { pickAndUploadImage } from '../lib/storage';
 import { VERSION_STRING } from '../lib/version';
 import { useAuth, canUploadRecipes } from '../lib/auth';
-import { restorePurchases, grantPlatformEntitlement } from '../lib/purchases';
+import { restorePurchases, grantPlatformEntitlement, revokePlatformEntitlement } from '../lib/purchases';
 import Paywall from '../components/Paywall';
 
 const DEFAULT_AVATAR =
@@ -51,6 +51,34 @@ export default function SettingsScreen() {
       g.ok ? 'Unlocked ✓' : 'Failed',
       `grant: ${g.ok ? 'ok' : (g.error ?? 'error')}\n` +
       `rows: ${error ? error.message : JSON.stringify(data)}`
+    );
+  };
+
+  // Testing counterpart to debugSync. Kept explicitly separate from "Manage /
+  // cancel subscription": that one sends you to Apple and actually stops the
+  // billing, this one only makes the app forget you're premium. Conflating them
+  // would be how someone thinks they cancelled and keeps getting charged.
+  const debugResetPremium = async () => {
+    Alert.alert(
+      'Reset Premium?',
+      'For testing: the app will forget you have Premium so you can see the paywall again.\n\nThis does NOT cancel a real subscription — Apple keeps billing, and the next purchase sync will restore access.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            const r = await revokePlatformEntitlement();
+            await refresh();
+            Alert.alert(
+              r.ok ? 'Premium reset ✓' : 'Failed',
+              r.ok
+                ? 'You are back to a free account.'
+                : `${r.error ?? 'error'}\n\nIf this says the function is missing, run supabase/run_now.sql.`,
+            );
+          },
+        },
+      ],
     );
   };
 
@@ -94,7 +122,7 @@ export default function SettingsScreen() {
   }, []);
 
   const loadAccount = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) {
       setLoading(false);
       return;
@@ -330,14 +358,24 @@ export default function SettingsScreen() {
           {isPremium ? (
             <>
               <Text style={styles.subActive}>✓ Premium active</Text>
-              <Text style={styles.subHint}>You have access to all premium recipes.</Text>
+              <Text style={styles.subHint}>
+                Fridge Scan, recipe import, meal planning and family portions are unlocked.
+                Creator recipes are bought separately from each creator.
+              </Text>
               <TouchableOpacity style={styles.secondaryButton} onPress={manageSubscription}>
                 <Text style={styles.secondaryButtonText}>Manage / cancel subscription</Text>
               </TouchableOpacity>
+              <Text style={styles.subFootnote}>
+                Cancelling happens in your {Platform.OS === 'ios' ? 'Apple' : 'Google'} account
+                settings — we can't do it from inside the app.
+              </Text>
             </>
           ) : (
             <>
-              <Text style={styles.subHint}>Unlock all premium recipes and support the creators.</Text>
+              <Text style={styles.subHint}>
+                Unlock Fridge Scan, recipe import, meal planning and family portions.
+                Creator recipes are sold by the creators themselves and aren't included.
+              </Text>
               <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPaywall(true)}>
                 <Text style={styles.primaryButtonText}>Unlock Premium</Text>
               </TouchableOpacity>
@@ -349,6 +387,11 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.restoreLink} onPress={debugSync}>
             <Text style={[styles.restoreLinkText, { color: '#888' }]}>Debug: unlock &amp; check status</Text>
           </TouchableOpacity>
+          {isPremium && (
+            <TouchableOpacity style={styles.restoreLink} onPress={debugResetPremium}>
+              <Text style={[styles.restoreLinkText, { color: '#888' }]}>Debug: reset Premium (testing)</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Legal */}
@@ -421,6 +464,7 @@ const styles = StyleSheet.create({
   legalArrow: { fontSize: 20, color: '#CCC' },
   subActive: { fontSize: 16, fontWeight: '700', color: '#3C8D40', marginBottom: 6 },
   subHint: { fontSize: 13, color: '#888', marginBottom: 12, lineHeight: 19 },
+  subFootnote: { fontSize: 11.5, color: '#999', lineHeight: 17, marginTop: 8 },
   restoreLink: { alignItems: 'center', paddingVertical: 12, marginTop: 6 },
   restoreLinkText: { fontSize: 14, color: '#0D2B63', fontWeight: '600' },
   versionContainer: { alignItems: 'center', marginTop: 24 },

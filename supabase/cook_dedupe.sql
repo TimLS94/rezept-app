@@ -1,3 +1,7 @@
+-- ⚠️ SUPERSEDED — historical. This is the pre-Model-B version and returns the
+-- OLD field names (my_cooks/total_cooks) the app no longer reads. Running it
+-- would silently zero the earnings dashboard. Use supabase/payments.sql.
+--
 -- Anti-abuse: earnings count DEDUPED cooks — at most one per user, per recipe,
 -- per day. Repeatedly tapping "finished cooking" no longer inflates payouts.
 -- The raw cook_log still stores every event (for the user's own streak/reward

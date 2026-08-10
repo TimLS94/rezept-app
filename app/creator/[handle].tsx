@@ -12,8 +12,11 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Recipe, DIETARY_TAGS, DietaryTag } from '../../data/recipes';
-import { mapDbRecipe } from '../../lib/recipes';
+import { mapDbRecipe, RECIPE_LIST_COLUMNS } from '../../lib/recipes';
 import { useAuth } from '../../lib/auth';
+import { purchaseCreatorSubscription } from '../../lib/purchases';
+import { usd, findCreatorSubTier } from '../../lib/pricing';
+import { Alert } from 'react-native';
 
 type CreatorProfile = {
   id: string;
@@ -24,11 +27,17 @@ type CreatorProfile = {
   instagram_url: string;
   tiktok_url: string;
   website: string;
+  // Paid membership config. Null/false until the creator sets it in the studio;
+  // absent entirely on a DB where creator_pricing.sql hasn't been run.
+  subscription_enabled?: boolean | null;
+  subscription_price_cents?: number | null;
 };
 
 export default function CreatorProfileScreen() {
   const { handle } = useLocalSearchParams<{ handle: string }>();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
+  const [subscribing, setSubscribing] = useState(false);
+  const [hasCreatorAccess, setHasCreatorAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creator, setCreator] = useState<CreatorProfile | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -106,9 +115,11 @@ export default function CreatorProfileScreen() {
     // Load recipes
     // Show all recipes (free + premium). Premium ones appear as locked teasers
     // so users can preview them and subscribe.
+    // Listing columns only — the paid recipes' ingredients and steps are not
+    // readable here, which is the point: this page used to hand them out in full.
     const { data: recipeData } = await supabase
       .from('recipes')
-      .select('*')
+      .select(RECIPE_LIST_COLUMNS)
       .eq('influencer_id', creatorId)
       .order('created_at', { ascending: false });
 
@@ -134,6 +145,53 @@ export default function CreatorProfileScreen() {
         .single();
 
       setIsSubscribed(!!sub);
+
+      // Only a membership with THIS creator grants access — app Premium buys
+      // app features, not creator content. Errors are non-fatal: worst case we
+      // show the join button to someone who already joined, and the server
+      // still gates the content either way.
+      const { data: ent } = await supabase
+        .from('entitlements')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('scope', 'creator')
+        .eq('creator_id', creatorId)
+        .eq('status', 'active')
+        .limit(1);
+      setHasCreatorAccess((ent?.length ?? 0) > 0);
+    }
+  };
+
+  const isOwnProfile = !!user && !!creator && user.id === creator.id;
+
+  const subscribeToCreator = async () => {
+    if (!user) { router.push('/login'); return; }
+    const price = creator?.subscription_price_cents;
+    if (!creator || price == null) return;
+
+    const tier = findCreatorSubTier(price);
+    if (!tier) {
+      // No registered store product for this price, so nothing could be
+      // charged — say so rather than failing at the payment sheet.
+      Alert.alert('Unavailable', 'This membership price is not currently purchasable.');
+      return;
+    }
+
+    setSubscribing(true);
+    try {
+      const { result, error } = await purchaseCreatorSubscription(creator.id, tier.cents, tier.productId);
+      if (result === 'success') {
+        setHasCreatorAccess(true);
+        await refresh();
+        await loadCreatorData(creator.id);   // premium teasers become full recipes
+        Alert.alert('You\u2019re in 🎉', `You now have access to every premium recipe by ${creator.full_name || 'this creator'}.`);
+      } else if (result === 'unavailable') {
+        Alert.alert('Not available yet', "Memberships aren't active in this build. They work once the price tiers are registered as products in RevenueCat.");
+      } else if (result === 'error') {
+        Alert.alert('Purchase failed', error ?? 'Please try again later.');
+      }
+    } finally {
+      setSubscribing(false);
     }
   };
 
@@ -216,18 +274,49 @@ export default function CreatorProfileScreen() {
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>{subscriberCount}</Text>
-              <Text style={styles.statLabel}>Subscribers</Text>
+              <Text style={styles.statLabel}>Followers</Text>
             </View>
           </View>
 
+          {/* Free follow. Deliberately NOT called "Subscribe" any more: the paid
+              membership below now owns that word, and two buttons saying the
+              same thing with different consequences is how people get billed by
+              accident. */}
           <TouchableOpacity
             style={[styles.subscribeButton, isSubscribed && styles.subscribedButton]}
             onPress={toggleSubscribe}
           >
             <Text style={[styles.subscribeButtonText, isSubscribed && styles.subscribedButtonText]}>
-              {isSubscribed ? '✓ Subscribed' : 'Subscribe'}
+              {isSubscribed ? '✓ Following' : 'Follow'}
             </Text>
           </TouchableOpacity>
+
+          {/* Paid membership — only shown when the creator turned it on and
+              picked a price. Hidden entirely otherwise, so there's never a
+              buy button with no price behind it. */}
+          {creator.subscription_enabled && creator.subscription_price_cents != null && !isOwnProfile && (
+            <View style={styles.memberCard}>
+              <Text style={styles.memberTitle}>
+                {hasCreatorAccess ? '✓ You’re a member' : `Member · ${usd(creator.subscription_price_cents)}/month`}
+              </Text>
+              <Text style={styles.memberText}>
+                {hasCreatorAccess
+                  ? `You have access to every premium recipe by ${creator.full_name || 'this creator'}.`
+                  : `Unlock every premium recipe by ${creator.full_name || 'this creator'} — including everything they publish next. Cancel anytime.`}
+              </Text>
+              {!hasCreatorAccess && (
+                <TouchableOpacity
+                  style={styles.memberButton}
+                  onPress={subscribeToCreator}
+                  disabled={subscribing}
+                >
+                  <Text style={styles.memberButtonText}>
+                    {subscribing ? 'Subscribing…' : `Become a member · ${usd(creator.subscription_price_cents)}/mo`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {/* Social Links */}
           {(creator.instagram_url || creator.tiktok_url || creator.website) && (
@@ -373,6 +462,17 @@ const styles = StyleSheet.create({
   subscribedButton: { backgroundColor: '#E8F5E9' },
   subscribeButtonText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
   subscribedButtonText: { color: '#3C8D40' },
+  memberCard: {
+    alignSelf: 'stretch', marginTop: 14, marginHorizontal: 4, padding: 16,
+    backgroundColor: '#FFF', borderRadius: 14, borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  memberTitle: { fontSize: 15, fontWeight: '700', color: '#0D2B63' },
+  memberText: { fontSize: 13, color: '#6F6F6F', lineHeight: 19, marginTop: 5 },
+  memberButton: {
+    backgroundColor: '#0D2B63', borderRadius: 12, paddingVertical: 13,
+    alignItems: 'center', marginTop: 13,
+  },
+  memberButtonText: { color: '#FFF', fontSize: 14.5, fontWeight: '700' },
   socialRow: { flexDirection: 'row', marginTop: 16, gap: 12 },
   socialButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
   socialIcon: { fontSize: 20 },

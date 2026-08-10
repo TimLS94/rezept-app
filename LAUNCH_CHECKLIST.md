@@ -1,80 +1,106 @@
 # FeedFamily Launch Checklist
 
-## Version 1.0.0 - Initial Release
+## Version 1.0.0 — Initial Release
+
+Status verified against the live project on 2026-08-06.
 
 ---
 
-## ✅ Completed
+## ✅ Done (verified)
 
 - [x] Core functionality (browse, save, plan, shop)
 - [x] Swipe discovery with category filters
 - [x] AI recipe import (photo, video, text)
-- [x] Creator profiles and subscriptions
-- [x] Google Sign-In
-- [x] Guest mode with limited access
-- [x] Account deletion (GDPR/CCPA)
-- [x] Privacy Policy page
-- [x] Terms of Service page
-- [x] Version management system
-- [x] Row Level Security on all tables
-- [x] Secure API key handling
+- [x] Fridge Scan (Premium, 3 per rolling week, enforced server-side)
+- [x] Creator pricing: per-recipe and profile memberships
+- [x] Account deletion (GDPR/CCPA) — `delete_account()` RPC + web page
+- [x] Privacy Policy and Terms pages (`docs/`)
+- [x] Sign in with Apple — implemented in `app/login.tsx`
+- [x] All SQL applied to production: payments, run_now, creator_pricing,
+      harden_profiles, lock_recipe_content
+- [x] Recipe content locked at the database — `ingredients`/`instructions` are
+      not directly selectable; only `get_recipe_full` (paywalled) and
+      `get_recipe_for_edit` (owner) return them
+- [x] Privilege columns locked — `profiles.role` and `is_premium` are no longer
+      client-writable
 
 ---
 
-## 🔴 Blocking (Must Fix Before Launch)
+## 🔴 Blocking
 
-### Apple App Store
+### Security — must not ship as-is
 
-- [ ] **Sign in with Apple** - Required when offering Google Sign-In
-  - Add `expo-apple-authentication` package
-  - Configure in Apple Developer Console
-  - Add to login screen
+- [ ] **Purchase grants are self-serve.** `grant_platform_entitlement`,
+      `grant_recipe_purchase` and `grant_creator_entitlement` are SECURITY
+      DEFINER, executable by any authenticated user, and verify no receipt.
+      One RPC call with the anon key from the app bundle = free Premium, a free
+      paid recipe, or a free membership. This defeats the entire paywall.
+      → Move the grants into `supabase/functions/revenuecat-webhook` (service
+        role, signed store event), then run the three `revoke execute`
+        statements at the bottom of `supabase/harden_profiles.sql`.
+      → Removes the debug unlock in Settings and the dev unlock in the paywall.
+        Both are already `__DEV__`-only, so they never shipped anyway.
 
-- [ ] **App Store Connect Setup**
-  - [ ] Create app in App Store Connect
-  - [ ] Fill out App Privacy questionnaire
-  - [ ] Add Privacy Policy URL
-  - [ ] Set age rating (4+)
-  - [ ] Export compliance (HTTPS only = exempt)
+- [ ] **AI keys ship inside the app.** `EXPO_PUBLIC_GEMINI_API_KEY` and
+      `EXPO_PUBLIC_GROQ_API_KEY` are in the bundle (5 usages across
+      `lib/openai.ts` and `lib/fridge.ts`). Anyone who unpacks the IPA/APK can
+      spend them on anything. `supabase/functions/extract-video-recipe` and
+      `instacart-list` already show the pattern: move the calls server-side.
+      → Interim mitigation: set a hard budget cap in the Google Cloud console.
 
-- [ ] **Screenshots**
-  - [ ] iPhone 6.7" (1290 x 2796)
-  - [ ] iPhone 6.5" (1284 x 2778)
-  - [ ] iPhone 5.5" (1242 x 2208)
-  - [ ] iPad Pro 12.9" (2048 x 2732)
+- [ ] **Creator onboarding is broken.** `app/influencer-login.tsx` promotes
+      whoever signs in on that screen to `role = 'creator'`. That write now
+      fails (harden_profiles closed it) and only logs a warning — so nobody
+      becomes a creator any more. Decide: assign the role by hand in SQL, or
+      build a real invite flow. It must not go back to self-promotion.
 
-- [ ] **App Icon** - Verify all sizes exist
-  - [ ] 1024x1024 for App Store
-  - [ ] Check `assets/icon.png`
+### Payments
 
-### Google Play Store
+- [ ] **RevenueCat still uses the test key** (`test_jEJSpmuLjQmQ…` in
+      `lib/purchases.ts`). Replace with the real `appl_…` / `goog_…` keys.
+- [ ] **Register every price point as a store product.** The app advertises
+      $4.99/mo and $39.99/yr, and creators pick from fixed tiers. That is
+      12 products in App Store Connect *and* Play Console *and* RevenueCat:
+      - Premium monthly $4.99, yearly $39.99
+      - Recipe unlock: $0.99 / $1.99 / $2.99 / $4.99 / $9.99
+      - Creator membership: $2.99 / $4.99 / $6.99 / $9.99 / $14.99
+      Product ids must match `RECIPE_PRICE_TIERS` / `CREATOR_SUB_TIERS` in
+      `lib/pricing.ts` exactly, and the tier values must match the check
+      constraints in `supabase/creator_pricing.sql`.
+- [ ] Confirm the store price matches the in-app price. The app now says
+      $4.99; a product still priced at $9.99 would charge the wrong amount.
 
-- [ ] **Play Console Setup**
-  - [ ] Create app in Play Console
-  - [ ] Fill out Data Safety form
-  - [ ] Add Privacy Policy URL
-  - [ ] Complete content rating questionnaire
-  - [ ] Set up signing key
+### Build
 
-- [ ] **Screenshots**
-  - [ ] Phone (1080 x 1920 minimum)
-  - [ ] 7" Tablet (optional)
-  - [ ] 10" Tablet (optional)
+- [ ] `npx expo prebuild --clean` — the iOS Share Extension target only exists
+      after this. Sharing from Instagram has never been tested on a device.
+- [ ] EAS production builds for both platforms.
+- [ ] Bump `version` / `buildNumber` / `versionCode` in `app.json` (still 1.0.0 / 1 / 1).
 
-- [ ] **Feature Graphic** (1024 x 500)
+### Store setup
 
-### Supabase Production
+- [ ] App Store Connect: create app, privacy questionnaire, privacy policy URL,
+      age rating, export compliance.
+- [ ] Play Console: create app, Data Safety form, privacy policy URL, content
+      rating, signing key.
+- [ ] Screenshots — iPhone 6.7"/6.5", iPad 12.9", Android phone.
+- [ ] Feature graphic (1024 x 500, Android).
+- [ ] App icon 1024x1024.
+- [ ] Google OAuth configured for the production Supabase project.
 
-- [ ] **Google OAuth**
-  - [ ] Create Google Cloud project
-  - [ ] Configure OAuth consent screen
-  - [ ] Add Client ID/Secret to Supabase
-  - [ ] Add redirect URLs
+---
 
-- [ ] **Environment**
-  - [ ] Verify production Supabase URL
-  - [ ] Check all API keys are production keys
-  - [ ] Test all migrations on production DB
+## 🟢 Deliberately deferred (not blocking)
+
+- [ ] **Instacart / Walmart hand-off** — shows "coming soon". The Instacart
+      Developer Platform is invite-only and quotes 30–40 days from application
+      to a production key. `supabase/functions/instacart-list` is built and
+      deployed; set `INSTACART_API_KEY` and flip `FEATURES.partnerCheckout`.
+      Apply early, the clock runs in parallel with everything else.
+- [ ] **Premium is thin.** Only Fridge Scan and recipe import are gated. At
+      $4.99/mo consider also gating family portions and multi-week planning.
+- [ ] `FEATURES.payments` is declared but read nowhere — wire it up or delete
+      it before someone relies on it.
 
 ---
 

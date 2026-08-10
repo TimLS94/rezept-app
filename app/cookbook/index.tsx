@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -28,14 +28,12 @@ export default function CookbookScreen() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (!isGuest) loadRecipes();
-    else setLoading(false);
-  }, [isGuest]);
-
+  // useFocusEffect already fires on mount, so a separate mount effect would
+  // just fetch the same list twice on the way in.
   useFocusEffect(
     useCallback(() => {
       if (!isGuest) loadRecipes();
+      else setLoading(false);
     }, [isGuest])
   );
 

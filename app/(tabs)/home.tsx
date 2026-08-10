@@ -4,8 +4,8 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { RECIPES, getRecipesByCategory, Recipe } from '../../data/recipes';
-import { supabase } from '../../lib/supabase';
-import { useAuth, canUploadRecipes } from '../../lib/auth';
+import { supabase, getCurrentUser } from '../../lib/supabase';
+import { useAuth, canImportToCookbook } from '../../lib/auth';
 import { fetchRecipeOfTheWeek } from '../../lib/recipes';
 import { COLORS, FONTS, RADIUS } from '../../lib/theme';
 
@@ -36,24 +36,32 @@ function NavCard({ icon, title, subtitle, onPress }: { icon: IoniconName; title:
 
 export default function HomeScreen() {
   const { user, role } = useAuth();
+  const userId = user?.id;
   const [activeCategory, setActiveCategory] = useState<string>('kids');
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
   const [weekRecipe, setWeekRecipe] = useState<Recipe>(RECIPES[0]);
 
   const filteredRecipes = getRecipesByCategory(activeCategory as any);
 
+  // Both requests start together and neither blocks the render — the screen is
+  // already on-screen with the previous values while they land. The signed-in
+  // user comes from the auth context, so there's no lookup just to get an id.
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      (async () => {
-        fetchRecipeOfTheWeek().then(r => { if (active && r) setWeekRecipe(r); });
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data } = await supabase.from('profiles').select('avatar_url').eq('id', user.id).single();
-        if (active && data?.avatar_url) setAvatar(data.avatar_url);
-      })();
+      fetchRecipeOfTheWeek().then(r => { if (active && r) setWeekRecipe(r); });
+      if (userId) {
+        supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', userId)
+          .single()
+          .then(({ data }) => { if (active && data?.avatar_url) setAvatar(data.avatar_url); });
+      }
       return () => { active = false; };
-    }, [])
+      // Keyed on the id, not the user object: a token refresh hands back a new
+      // object every time and would re-run this for nothing.
+    }, [userId])
   );
 
   return (
@@ -110,8 +118,9 @@ export default function HomeScreen() {
         {/* Shortcuts */}
         <View style={styles.navGroup}>
           <NavCard icon="flame" title="Discover" subtitle="Swipe to save your favorites" onPress={() => router.push('/discover')} />
+          <NavCard icon="scan" title="Fridge Scan" subtitle="Snap your fridge • Cook without shopping" onPress={() => router.push('/fridge')} />
           <NavCard icon="heart" title="Favorites" subtitle="Cook, plan or add to cart" onPress={() => router.push('/favorites')} />
-          {canUploadRecipes(role) && (
+          {canImportToCookbook(role) && (
             <NavCard icon="book" title="My Cookbook" subtitle="Your own & imported recipes" onPress={() => router.push('/cookbook')} />
           )}
           <NavCard icon="calendar" title="Meal Planner" subtitle="Plan your week • Build your list" onPress={() => router.push('/budget')} />

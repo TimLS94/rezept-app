@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, getCurrentUser } from './supabase';
 import { RECIPES, Recipe, Ingredient, DietaryTag } from '../data/recipes';
 
 const DEFAULT_AVATAR =
@@ -45,8 +45,19 @@ export function mapDbRecipe(row: any): Recipe {
     ingredientsCount: row.ingredients_count ?? (Array.isArray(row.ingredients) ? row.ingredients.length : 0),
     stepsCount: row.steps_count ?? (Array.isArray(row.instructions) ? row.instructions.length : 0),
     locked: row.locked ?? false,
+    unlockPriceCents: row.unlock_price_cents ?? null,
+    creatorSubPriceCents: row.creator_subscription_price_cents ?? null,
   };
 }
+
+// Everything a listing may read. `ingredients` and `instructions` are absent on
+// purpose — the database no longer grants them (supabase/lock_recipe_content.sql),
+// because a plain select on them bypassed the paywall entirely. Full content
+// comes from get_recipe_full (paywalled) or get_recipe_for_edit (owner only).
+export const RECIPE_LIST_COLUMNS =
+  'id, title, description, image_url, prep_time, cook_time, servings, calories, cost, ' +
+  'difficulty, tags, kid_approved, is_paid, price_cents, influencer_id, influencer_name, ' +
+  'influencer_handle, influencer_avatar, created_at, ingredients_count, steps_count';
 
 // Shared in-memory cache so Discover/Search/Home don't re-hit the network on
 // every mount. Short TTL; invalidated when a recipe is created/changed.
@@ -65,11 +76,12 @@ export async function fetchDbRecipes(force = false): Promise<Recipe[]> {
   }
   const { data, error } = await supabase
     .from('recipes')
-    .select('*, profiles:influencer_id(id, full_name, username, avatar_url)')
+    .select(`${RECIPE_LIST_COLUMNS}, profiles:influencer_id(id, full_name, username, avatar_url)`)
     .order('created_at', { ascending: false });
   if (error || !data) return recipeCache?.data ?? [];
   // Only surface uploads that actually carry ingredients (skips bare seed rows).
-  const mapped = data.map(mapDbRecipe).filter(r => r.ingredients.length > 0);
+  // Uses the server-side count now that the array itself isn't readable here.
+  const mapped = data.map(mapDbRecipe).filter(r => (r.ingredientsCount ?? 0) > 0);
   recipeCache = { data: mapped, at: Date.now() };
   return mapped;
 }
@@ -81,9 +93,18 @@ export async function fetchDbRecipes(force = false): Promise<Recipe[]> {
 export async function fetchRecipeOfTheWeek(): Promise<Recipe | null> {
   const { data, error } = await supabase.rpc('recipe_of_the_week');
   if (error || !data) return null;
+
+  // Current function resolves the live row server-side and returns
+  // { live, snapshot } — one round trip, already premium-gated.
+  if ('live' in data || 'snapshot' in data) {
+    if (data.live) return mapDbRecipe(data.live);
+    return (data.snapshot as Recipe) ?? null;
+  }
+
+  // Older deployed function returns the bare favorite snapshot, whose image can
+  // be stale/mismatched — costs a second round trip to refresh. Drops away once
+  // run_now.sql has been applied.
   const stored = data as Recipe;
-  // The favorite blob is a snapshot from whenever it was saved, so its image can
-  // be stale/mismatched. Re-fetch the live recipe by id so title + image match.
   if (stored?.id) {
     const fresh = await fetchDbRecipeById(stored.id).catch(() => undefined);
     if (fresh) return fresh;
@@ -97,27 +118,42 @@ export async function fetchAllRecipes(): Promise<Recipe[]> {
   return [...db, ...RECIPES];
 }
 
+// Recipes with their full ingredient lists — needed by anything that reasons
+// about ingredients rather than just displaying a card (the fridge scan).
+// fetchDbRecipes can't be used for that any more: it reads listing columns, so
+// every DB recipe would arrive with an empty ingredient list and silently drop
+// out of the matching. The RPC returns only what the caller may actually see.
+export async function fetchCookableRecipes(): Promise<Recipe[]> {
+  const { data, error } = await supabase.rpc('cookable_recipes');
+  const db = (!error && Array.isArray(data)) ? (data as any[]).map(mapDbRecipe) : [];
+  return [...db, ...RECIPES];
+}
+
 // Look up a single uploaded recipe by its uuid (used when it's not in the
 // local catalogue).
 export async function fetchDbRecipeById(id: string): Promise<Recipe | undefined> {
   // Server-side gate: premium ingredients/steps are stripped for unentitled
-  // users (returns a teaser instead). Falls back to a plain select on error
-  // (e.g. before payments.sql is applied).
+  // users (returns a teaser instead).
   const { data, error } = await supabase.rpc('get_recipe_full', { p_recipe_id: id });
   if (!error && data) return mapDbRecipe(data);
 
+  // Fallback for when the RPC is unavailable. It used to select('*'), which
+  // meant any error on the gate handed back the FULL paid recipe — the gate
+  // failed open. Listing columns only, and anything paid is treated as locked,
+  // so a failure can never be more permissive than success.
   const { data: row } = await supabase
     .from('recipes')
-    .select('*, profiles:influencer_id(id, full_name, username, avatar_url)')
+    .select(`${RECIPE_LIST_COLUMNS}, profiles:influencer_id(id, full_name, username, avatar_url)`)
     .eq('id', id)
     .single();
-  return row ? mapDbRecipe(row) : undefined;
+  if (!row) return undefined;
+  return mapDbRecipe({ ...row, locked: !!(row as any).is_paid });
 }
 
 export async function fetchRecipesByCreator(creatorId: string): Promise<Recipe[]> {
   const { data, error } = await supabase
     .from('recipes')
-    .select('*')
+    .select(RECIPE_LIST_COLUMNS)
     .eq('influencer_id', creatorId)
     .order('created_at', { ascending: false });
   if (error || !data) return [];
@@ -146,7 +182,7 @@ type CreateResult = { id: string } | { error: string };
 
 // Insert a new recipe authored by the signed-in user.
 export async function createRecipe(input: NewRecipeInput): Promise<CreateResult> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: 'not-authenticated' };
 
   const { data: profile } = await supabase
@@ -186,7 +222,9 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
       influencer_handle: `@${handleBase}`,
       influencer_avatar: profile?.avatar_url || DEFAULT_AVATAR,
     })
-    .select()
+    // Only the id: a bare .select() means "*", which now hits the revoked
+    // ingredients/instructions columns and would fail every creation.
+    .select('id')
     .single();
 
   if (error || !data) return { error: error?.message || 'insert-failed' };

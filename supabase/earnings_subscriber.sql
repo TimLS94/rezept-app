@@ -1,3 +1,6 @@
+-- ⚠️ SUPERSEDED — historical. supabase/payments.sql carries the current Model B
+-- functions (incl. the is_premium fallback in was_subscriber_at). Run that one.
+--
 -- Model B: only cooks by active SUBSCRIBERS earn money (Sybil-resistant).
 -- All cooks still count as reach; the earnings share uses subscriber cooks only.
 -- Re-run in the SQL Editor after this change.

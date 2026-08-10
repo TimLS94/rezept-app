@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useAuth, canUploadRecipes } from '../../lib/auth';
+import { useAuth, canImportToCookbook } from '../../lib/auth';
 import { extractRecipeWithAI, extractRecipeFromImages, ExtractedRecipe } from '../../lib/openai';
-import { saveMyRecipe } from '../../lib/myRecipes';
+import { saveMyRecipe, countMyRecipes } from '../../lib/myRecipes';
+import Paywall from '../../components/Paywall';
 import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
 
@@ -27,8 +28,15 @@ type InputMode = 'screenshot' | 'text';
 // Vision de-dupes across images, so allow a comfortable number.
 const MAX_SCREENSHOTS = 10;
 
+// Free accounts may build a small cookbook before the paywall appears, so the
+// feature can be tried before it's bought. The AI cost of an import is ~0.24
+// cents, so a handful of free ones is cheap next to the conversion it buys.
+const FREE_IMPORT_LIMIT = 3;
+
 export default function ImportRecipeScreen() {
-  const { isGuest, role } = useAuth();
+  const { isGuest, role, isPremium, refresh } = useAuth();
+  const [ownedCount, setOwnedCount] = useState<number | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
   const params = useLocalSearchParams<{ sharedUrl?: string; sharedText?: string }>();
   
   const [step, setStep] = useState<Step>('input');
@@ -49,6 +57,11 @@ export default function ImportRecipeScreen() {
   };
 
   // Handle incoming shared URL or text
+  useEffect(() => {
+    if (isGuest || isPremium) return;
+    countMyRecipes().then(setOwnedCount);
+  }, [isGuest, isPremium]);
+
   useEffect(() => {
     if (params.sharedUrl) {
       // Keep the link as the recipe's source, but users can't extract straight
@@ -190,7 +203,7 @@ export default function ImportRecipeScreen() {
   };
 
   // Guest prompt
-  if (isGuest) {
+  if (!canImportToCookbook(role)) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -214,8 +227,10 @@ export default function ImportRecipeScreen() {
     );
   }
 
-  // Recipe creation is limited to creator accounts for now.
-  if (!canUploadRecipes(role)) {
+  // Signed in but out of free imports: offer Premium rather than a dead end.
+  // Note this gates the IMPORT, not the role — publishing as a creator is a
+  // separate thing and still lives behind canUploadRecipes.
+  if (!isPremium && ownedCount !== null && ownedCount >= FREE_IMPORT_LIMIT) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -226,13 +241,21 @@ export default function ImportRecipeScreen() {
           <View style={{ width: 60 }} />
         </View>
         <View style={styles.guestState}>
-          <Text style={styles.guestIcon}>🔒</Text>
-          <Text style={styles.guestTitle}>Creators only</Text>
+          <Text style={styles.guestIcon}>✨</Text>
+          <Text style={styles.guestTitle}>You've used your {FREE_IMPORT_LIMIT} free imports</Text>
           <Text style={styles.guestText}>
-            Importing and creating recipes is available for creator accounts right now.
-            Want to become a creator? Get in touch and we'll set you up.
+            Premium turns any Instagram or TikTok link, screenshot or pasted text into a
+            proper recipe — as often as you like.
           </Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPaywall(true)}>
+            <Text style={styles.primaryButtonText}>Unlock Premium</Text>
+          </TouchableOpacity>
         </View>
+        <Paywall
+          visible={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          onSubscribed={refresh}
+        />
       </View>
     );
   }

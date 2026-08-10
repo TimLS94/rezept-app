@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
+import { usd } from '../../lib/pricing';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { getCreatorProfile, CreatorProfile, emptyCreatorProfile } from '../../lib/creatorProfile';
 import { fetchRecipesByCreator, setRecipePaid } from '../../lib/recipes';
@@ -27,12 +28,15 @@ export default function CreatorStudioScreen() {
     useCallback(() => {
       let active = true;
       (async () => {
-        const p = await getCreatorProfile();
-        if (active && p) setProfile(p);
-        if (user) {
-          const r = await fetchRecipesByCreator(user.id);
-          if (active) setRecipes(r);
-        }
+        // In parallel — the recipe list doesn't depend on the profile, and
+        // chaining them cost a needless second round trip on every focus.
+        const [p, r] = await Promise.all([
+          getCreatorProfile(),
+          user ? fetchRecipesByCreator(user.id) : Promise.resolve(null),
+        ]);
+        if (!active) return;
+        if (p) setProfile(p);
+        if (r) setRecipes(r);
       })();
       return () => {
         active = false;
@@ -133,6 +137,22 @@ export default function CreatorStudioScreen() {
             <View style={styles.actionBody}>
               <Text style={styles.actionTitle}>Import a recipe</Text>
               <Text style={styles.actionSub}>Instagram link, screenshots or text</Text>
+            </View>
+            <Text style={styles.actionArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/creator/profile')}>
+            <Text style={styles.actionIcon}>🏷️</Text>
+            <View style={styles.actionBody}>
+              <Text style={styles.actionTitle}>Prices & memberships</Text>
+              <Text style={styles.actionSub}>
+                {profile.subscriptionEnabled && profile.subscriptionPriceCents != null
+                  ? `Membership ${usd(profile.subscriptionPriceCents)}/mo${
+                      profile.defaultRecipePriceCents != null
+                        ? ` · recipes ${usd(profile.defaultRecipePriceCents)}`
+                        : ''}`
+                  : 'Set what your recipes and your membership cost'}
+              </Text>
             </View>
             <Text style={styles.actionArrow}>→</Text>
           </TouchableOpacity>

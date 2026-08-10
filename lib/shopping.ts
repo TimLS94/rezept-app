@@ -1,9 +1,13 @@
-import { supabase } from './supabase';
-import { Recipe } from '../data/recipes';
+import { supabase, getCurrentUser } from './supabase';
+import { Recipe, Ingredient } from '../data/recipes';
 
 export type PlannedMeal = {
   recipe: Recipe;
   servings?: number;
+  // Add only these instead of the whole recipe. The fridge scan uses it to put
+  // just the missing items on the list — everything else is already at home.
+  // Still tagged with the recipe, so the list shows what they're for.
+  ingredients?: Ingredient[];
 };
 
 type AddResult =
@@ -20,7 +24,7 @@ type AddResult =
 export async function addRecipesToShoppingList(
   meals: PlannedMeal[]
 ): Promise<AddResult> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: 'not-authenticated' };
 
   const { data: existingItems } = await supabase
@@ -33,10 +37,10 @@ export async function addRecipesToShoppingList(
   let added = 0;
   let merged = 0;
 
-  for (const { recipe, servings } of meals) {
+  for (const { recipe, servings, ingredients } of meals) {
     const scale = servings ? servings / recipe.servings : 1;
 
-    for (const ing of recipe.ingredients) {
+    for (const ing of ingredients ?? recipe.ingredients) {
       const amount = ing.amount * scale;
       const existing = working.find(e =>
         e.name.toLowerCase() === ing.name.toLowerCase() && e.unit === ing.unit

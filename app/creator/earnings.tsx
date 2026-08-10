@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { COLORS, FONTS, RADIUS } from '../../lib/theme';
+import { getPayoutStatus, startPayoutOnboarding, type PayoutStatus } from '../../lib/payouts';
+import { STORE_FEE_BPS, PREMIUM_MONTHLY_CENTS, feeBreakdown } from '../../lib/pricing';
 
 type Estimate = {
   period_start: string;
@@ -16,8 +18,30 @@ type Estimate = {
   my_paid_cooks: number;   // subscriber cooks (count toward earnings)
   total_paid_cooks: number;
   my_share_pct: number;
+  // Split of the total: the cook-based share of the platform pool, plus this
+  // creator's own directly attributed sales (single recipes + memberships).
+  pool_cents: number;
+  direct_cents: number;
   estimated_cents: number;
 };
+
+// A DB that still has the pre-Model-B function returns my_cooks/total_cooks.
+// Without this the screen would read undefined and silently show 0 cooks —
+// map the old names onto the new ones (all cooks count as paid back then).
+function normalizeEstimate(raw: any): Estimate {
+  if (raw?.my_total_cooks != null) return raw as Estimate;
+  return {
+    ...raw,
+    my_total_cooks: raw?.my_cooks ?? 0,
+    my_paid_cooks: raw?.my_cooks ?? 0,
+    total_paid_cooks: raw?.total_cooks ?? 0,
+  } as Estimate;
+}
+
+// Pre-pricing databases return neither field; treat the whole estimate as pool
+// revenue rather than rendering a breakdown that doesn't add up to the total.
+const poolCents = (e: Estimate | null) => e?.pool_cents ?? e?.estimated_cents ?? 0;
+const directCents = (e: Estimate | null) => e?.direct_cents ?? 0;
 
 type Breakdown = { recipe_id: string; title: string; cooks: number };
 
@@ -47,19 +71,46 @@ export default function EarningsScreen() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [showFormula, setShowFormula] = useState(false);
   const [openPayout, setOpenPayout] = useState<string | null>(null);
+  const [payout, setPayout] = useState<PayoutStatus | null>(null);
+  const [connecting, setConnecting] = useState(false);
+
+  const connectPayouts = async () => {
+    setConnecting(true);
+    const result = await startPayoutOnboarding();
+    setConnecting(false);
+    if (result.status === 'not_configured') {
+      Alert.alert(
+        'Not available yet',
+        "Payouts aren't switched on yet. Everything is built — it needs the Stripe account to be connected on our side first.",
+      );
+      return;
+    }
+    if (result.status === 'error') {
+      Alert.alert('Could not start setup', result.detail ?? 'Please try again later.');
+      return;
+    }
+    // Stripe verifies asynchronously: finishing the form is not the same as
+    // being payable, so ask Stripe again rather than assuming success.
+    setPayout(await getPayoutStatus());
+  };
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
-        setLoading(true);
-        const [est, brk, pay] = await Promise.all([
+        // No setLoading(true) here on purpose: `loading` starts true, so the
+        // first visit shows the spinner. On every later focus the previous
+        // numbers stay on screen and are replaced when the fresh ones land —
+        // re-arming the spinner would blank a screen we can already draw.
+        const [est, brk, pay, payoutStatus] = await Promise.all([
           supabase.rpc('creator_earnings_estimate'),
           supabase.rpc('creator_engagement_breakdown'),
           supabase.from('creator_payouts').select('*').order('period_start', { ascending: false }),
+          getPayoutStatus(),
         ]);
         if (!active) return;
-        if (est.data) setEstimate(est.data as Estimate);
+        setPayout(payoutStatus);
+        if (est.data) setEstimate(normalizeEstimate(est.data));
         if (brk.data) setBreakdown(brk.data as Breakdown[]);
         if (pay.data) setPayouts(pay.data as Payout[]);
         setLoading(false);
@@ -106,6 +157,23 @@ export default function EarningsScreen() {
             <Text style={styles.heroAmount}>{usd(estimate?.estimated_cents ?? 0)}</Text>
             <Text style={styles.heroSub}>Estimated · finalized at the end of the month</Text>
 
+            {/* The two revenue streams behave completely differently — one is a
+                share of a pool you compete for, the other is money a specific
+                person paid you. Showing only the sum hides which is working. */}
+            {(poolCents(estimate) > 0 || directCents(estimate) > 0) && (
+              <View style={styles.sourceRow}>
+                <View style={styles.source}>
+                  <Text style={styles.sourceAmount}>{usd(directCents(estimate))}</Text>
+                  <Text style={styles.sourceLabel}>your sales & members</Text>
+                </View>
+                <View style={styles.sourceDivider} />
+                <View style={styles.source}>
+                  <Text style={styles.sourceAmount}>{usd(poolCents(estimate))}</Text>
+                  <Text style={styles.sourceLabel}>share of app Premium</Text>
+                </View>
+              </View>
+            )}
+
             <View style={styles.heroStats}>
               <View style={styles.stat}>
                 <Text style={styles.statNum}>{estimate?.my_total_cooks ?? 0}</Text>
@@ -125,7 +193,10 @@ export default function EarningsScreen() {
 
             {(estimate?.pool_net_cents ?? 0) === 0 && (
               <Text style={styles.poolHint}>
-                Your cooks are already counted. Earnings appear here once premium subscriptions bring in revenue — you earn a share of that revenue based on how often your recipes are cooked.
+                Your cooks are already counted. The app-Premium share appears once
+                subscriptions bring in revenue. You don't have to wait for it —
+                set a price on your recipes or open memberships in your creator
+                profile, and those sales are yours directly.
               </Text>
             )}
           </View>
@@ -139,15 +210,28 @@ export default function EarningsScreen() {
           {showFormula && (
             <View style={styles.formulaCard}>
               <Text style={styles.formulaText}>
-                Creators share <Text style={styles.bold}>75%</Text> of a month's net revenue
-                (the platform keeps 25%). It's split by <Text style={styles.bold}>cooked recipes</Text>.
+                You earn from <Text style={styles.bold}>two separate sources</Text>.
                 {'\n\n'}
-                <Text style={styles.bold}>Your share</Text> = your paid cooks ÷ all paid cooks × the creator pool.
+                <Text style={styles.bold}>1. Your own sales.</Text> When someone buys one of
+                your recipes or becomes a member of your profile, that money is attributed
+                to you directly — it is never shared with other creators. You keep 75% of
+                the net (the platform keeps 25%).
+                {'\n\n'}
+                <Text style={styles.bold}>2. A share of app Premium.</Text> People who
+                subscribe to the whole app pay into one pool. Creators share
+                <Text style={styles.bold}> 75%</Text> of it, split by <Text style={styles.bold}>cooked recipes</Text>.
+                {'\n\n'}
+                <Text style={styles.bold}>Your pool share</Text> = your paid cooks ÷ all paid cooks × the creator pool.
                 {'\n\n'}
                 Only cooks by <Text style={styles.bold}>active subscribers</Text> earn money — they're the ones paying into the pool. Free cooks still count as your <Text style={styles.bold}>reach</Text> ("total cooks"). Cooks are counted once per person per day.
                 {'\n\n'}
-                "Net" is what Apple/Google pay out after their commission (15–30%) —
-                the store cut is the biggest deduction, not the platform fee.
+                <Text style={styles.bold}>Where the rest goes.</Text> Apple and Google
+                take their commission before we see anything — {STORE_FEE_BPS / 100}% under
+                the App Store Small Business Program, 30% without it. That is the biggest
+                deduction, larger than our 25%. On a {usd(PREMIUM_MONTHLY_CENTS)} sale:
+                {'\n'}   {usd(PREMIUM_MONTHLY_CENTS)} − {usd(feeBreakdown(PREMIUM_MONTHLY_CENTS).storeFee)} store
+                − {usd(feeBreakdown(PREMIUM_MONTHLY_CENTS).platformFee)} platform
+                = {usd(feeBreakdown(PREMIUM_MONTHLY_CENTS).takeHome)} to the creator.
               </Text>
               {estimate && (estimate.creator_pool_cents > 0) && (
                 <Text style={styles.formulaExample}>
@@ -206,10 +290,33 @@ export default function EarningsScreen() {
 
           {/* Payout account */}
           <Text style={styles.sectionTitle}>Payout account</Text>
-          <TouchableOpacity style={styles.connectBtn} activeOpacity={0.85} disabled>
-            <Ionicons name="card-outline" size={18} color={COLORS.warmGray} />
-            <Text style={styles.connectText}>Set up payouts (coming soon)</Text>
-          </TouchableOpacity>
+          {payout?.status === 'ready' ? (
+            <View style={styles.payoutReady}>
+              <Ionicons name="checkmark-circle" size={18} color={COLORS.green} />
+              <Text style={styles.payoutReadyText}>
+                Your payout account is verified. Earnings are paid out monthly.
+              </Text>
+            </View>
+          ) : payout?.status === 'pending' ? (
+            <TouchableOpacity style={styles.connectBtn} onPress={connectPayouts} disabled={connecting}>
+              <Ionicons name="time-outline" size={18} color={COLORS.orange} />
+              <Text style={styles.connectText}>
+                {payout.requirements?.length
+                  ? `Stripe still needs: ${payout.requirements.slice(0, 2).join(', ')}`
+                  : 'Stripe is verifying your details'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.connectBtn} onPress={connectPayouts} disabled={connecting}>
+              <Ionicons name="card-outline" size={18} color={COLORS.warmGray} />
+              <Text style={styles.connectText}>
+                {connecting ? 'Opening…' : 'Set up payouts'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.payoutNote}>
+            Bank details and ID are entered on Stripe's own pages — they never reach this app.
+          </Text>
 
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -251,6 +358,14 @@ const styles = StyleSheet.create({
   statNum: { fontFamily: FONTS.bold, fontSize: 20, color: '#FFF' },
   statLabel: { fontFamily: FONTS.body, fontSize: 11.5, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
   statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.14)' },
+  sourceRow: {
+    flexDirection: 'row', marginTop: 16, backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14, paddingVertical: 13,
+  },
+  source: { flex: 1, alignItems: 'center' },
+  sourceAmount: { fontFamily: FONTS.bold, fontSize: 17, color: '#FFF' },
+  sourceLabel: { fontFamily: FONTS.body, fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 3, textAlign: 'center' },
+  sourceDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.14)' },
   poolHint: { fontFamily: FONTS.body, fontSize: 12.5, color: 'rgba(255,255,255,0.85)', marginTop: 16, lineHeight: 18 },
 
   formulaToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, paddingVertical: 4 },
@@ -279,5 +394,11 @@ const styles = StyleSheet.create({
   detailValue: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.charcoal },
 
   connectBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed', paddingVertical: 15 },
-  connectText: { fontFamily: FONTS.semibold, fontSize: 14, color: COLORS.warmGray },
+  connectText: { fontFamily: FONTS.semibold, fontSize: 14, color: COLORS.warmGray, flexShrink: 1, textAlign: 'center' },
+  payoutReady: {
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    backgroundColor: '#E8F5E9', borderRadius: RADIUS.md, padding: 14,
+  },
+  payoutReadyText: { flex: 1, fontFamily: FONTS.medium, fontSize: 13, color: COLORS.green, lineHeight: 18 },
+  payoutNote: { fontFamily: FONTS.body, fontSize: 11.5, color: COLORS.warmGray, marginTop: 9, lineHeight: 16 },
 });

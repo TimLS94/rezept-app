@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
+import { PREMIUM_MONTHLY_CENTS } from './pricing';
 
 // Expo Go has no native RevenueCat module — the SDK falls back to a "browser
 // mode" whose network calls fail. Skip RevenueCat entirely there; it only runs
@@ -119,13 +120,94 @@ export async function grantPlatformEntitlement(product?: string): Promise<{ ok: 
     const p = pkg?.product?.price;
     if (typeof p === 'number' && p > 0) priceCents = Math.round(p * 100);
   } catch {}
-  if (priceCents == null) priceCents = 999; // fallback $9.99 (e.g. debug/no offering)
+  // Fallback for debug/no-offering paths. Reads the list price rather than a
+  // literal, so it can't drift from what the paywall advertises.
+  if (priceCents == null) priceCents = PREMIUM_MONTHLY_CENTS;
 
   try {
     const { data, error } = await supabase.rpc('grant_platform_entitlement', {
       p_product: product ?? null,
       p_price_cents: priceCents,
     });
+    if (error) return { ok: false, error: error.message };
+    const d = data as any;
+    return { ok: !!d?.ok, error: d?.error };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'exception' };
+  }
+}
+
+// ── Phase 2: creator-set prices ────────────────────────────────────────────
+// Both flows are "charge through the store, then record it server-side", the
+// same shape as grantPlatformEntitlement. The store is the source of truth for
+// payment; the RPC is what actually opens the content gate.
+//
+// `productId` must be a registered IAP product — see lib/pricing.ts. Until the
+// products exist in RevenueCat these return 'unavailable' rather than pretending
+// to have charged anyone.
+
+async function purchaseByProductId(productId: string): Promise<PurchaseResult> {
+  const P = loadSDK();
+  if (!P || !configured) return 'unavailable';
+  try {
+    const offerings = await P.getOfferings();
+    const packages: any[] = Object.values(offerings?.all ?? {})
+      .flatMap((o: any) => o?.availablePackages ?? []);
+    const pkg = packages.find(p => p?.product?.identifier === productId);
+    if (!pkg) return 'unavailable';
+    await P.purchasePackage(pkg);
+    return 'success';
+  } catch (e: any) {
+    if (e?.userCancelled) return 'cancelled';
+    return 'error';
+  }
+}
+
+// Buy a single recipe outright (permanent unlock).
+export async function purchaseRecipe(
+  recipeId: string,
+  priceCents: number,
+  productId: string,
+): Promise<{ result: PurchaseResult; error?: string }> {
+  const result = await purchaseByProductId(productId);
+  if (result !== 'success') return { result };
+
+  const { data, error } = await supabase.rpc('grant_recipe_purchase', {
+    p_recipe_id: recipeId,
+    p_price_cents: priceCents,
+  });
+  if (error) return { result: 'error', error: error.message };
+  const d = data as any;
+  return d?.ok ? { result: 'success' } : { result: 'error', error: d?.error };
+}
+
+// Subscribe to one creator — unlocks everything they publish.
+export async function purchaseCreatorSubscription(
+  creatorId: string,
+  priceCents: number,
+  productId: string,
+): Promise<{ result: PurchaseResult; error?: string }> {
+  const result = await purchaseByProductId(productId);
+  if (result !== 'success') return { result };
+
+  const { data, error } = await supabase.rpc('grant_creator_entitlement', {
+    p_creator_id: creatorId,
+    p_price_cents: priceCents,
+  });
+  if (error) return { result: 'error', error: error.message };
+  const d = data as any;
+  return d?.ok ? { result: 'success' } : { result: 'error', error: d?.error };
+}
+
+// Testing only. Clears the platform entitlement and the legacy is_premium flag
+// so the paywall can be exercised again from a signed-in account.
+//
+// It does NOT cancel a real subscription — Apple and Google own that, and this
+// app has no way to do it. If a live subscription exists, `syncEntitlements()`
+// or the RevenueCat webhook will simply grant it back.
+export async function revokePlatformEntitlement(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.rpc('revoke_platform_entitlement');
     if (error) return { ok: false, error: error.message };
     const d = data as any;
     return { ok: !!d?.ok, error: d?.error };

@@ -6,10 +6,19 @@
 // NOTE: this only fires in a dev/production build. In Expo Go the app runs under
 // Expo's `exp://` scheme and these intents never reach us — test with
 // `npx expo run:android` / `run:ios` or an EAS dev build.
+import { getShareExtensionKey } from 'expo-share-intent';
 import { extractInstagramUrl, extractTikTokUrl } from '../lib/shareHandler';
 
 export function redirectSystemPath({ path }: { path: string; initial: boolean }): string {
   try {
+    // Share sheet: the native extension reopens us with our own scheme and a
+    // key, not a readable URL — the payload lives in the native module. Send it
+    // to /shareintent, which reads it via the ShareIntentProvider. Without this
+    // branch the link falls through to the "Unmatched Route" screen.
+    if (path.includes(`dataUrl=${getShareExtensionKey()}`)) {
+      return '/shareintent';
+    }
+
     // `path` can be a full URL (https://www.instagram.com/reel/…) for App Links,
     // or just the path portion (/reel/…) depending on how the OS delivered it.
     let candidate = path;

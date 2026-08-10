@@ -1,5 +1,5 @@
 // Personal recipe book - users can save their own recipes
-import { supabase } from './supabase';
+import { supabase, getCurrentUser } from './supabase';
 import { Recipe, Ingredient, DietaryTag } from '../data/recipes';
 
 export type MyRecipe = {
@@ -87,7 +87,7 @@ export function myRecipeToRecipe(myRecipe: MyRecipe): Recipe {
 
 // Fetch all user's personal recipes
 export async function fetchMyRecipes(): Promise<MyRecipe[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -113,8 +113,21 @@ export async function fetchMyRecipeById(id: string): Promise<MyRecipe | null> {
 }
 
 // Save a new personal recipe
+// How many recipes the user already keeps. Used for the free import allowance
+// — counting rows rather than tracking a separate counter means it survives a
+// reinstall and a second device, and there's no extra table to keep in sync.
+export async function countMyRecipes(): Promise<number> {
+  const user = await getCurrentUser();
+  if (!user) return 0;
+  const { count } = await supabase
+    .from('my_recipes')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+  return count ?? 0;
+}
+
 export async function saveMyRecipe(input: MyRecipeInput): Promise<SaveResult> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: 'not-authenticated' };
 
   const { data, error } = await supabase
@@ -144,7 +157,7 @@ export async function saveMyRecipe(input: MyRecipeInput): Promise<SaveResult> {
 
 // Update an existing personal recipe
 export async function updateMyRecipe(id: string, input: Partial<MyRecipeInput>): Promise<SaveResult> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: 'not-authenticated' };
 
   const updates: any = { updated_at: new Date().toISOString() };
@@ -173,7 +186,7 @@ export async function updateMyRecipe(id: string, input: Partial<MyRecipeInput>):
 
 // Delete a personal recipe
 export async function deleteMyRecipe(id: string): Promise<{ success: boolean; error?: string }> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { success: false, error: 'not-authenticated' };
 
   const { error } = await supabase

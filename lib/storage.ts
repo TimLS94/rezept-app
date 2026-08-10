@@ -1,7 +1,7 @@
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
-import { supabase } from './supabase';
+import { supabase, getCurrentUser } from './supabase';
 
 const BUCKET = 'images';
 
@@ -31,7 +31,7 @@ export async function pickAndUploadImage(
     return null;
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) {
     Alert.alert('Please log in', 'You need to be logged in to upload images.');
     return null;
@@ -57,7 +57,7 @@ export async function uploadBase64Image(
   base64: string,
   folder: 'recipes' | 'avatars'
 ): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
   const path = `${folder}/${user.id}/${Date.now()}.jpg`;
   const { error } = await supabase.storage

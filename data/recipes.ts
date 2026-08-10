@@ -57,6 +57,10 @@ export type Recipe = {
   stepsCount?: number;
   // Server says this recipe is locked for the current user (premium, no access).
   locked?: boolean;
+  // Phase 2 pricing, only sent with a locked teaser. Null = not on offer, so
+  // that unlock route is hidden rather than shown at a made-up price.
+  unlockPriceCents?: number | null;
+  creatorSubPriceCents?: number | null;
 };
 
 export const RECIPES: Recipe[] = [

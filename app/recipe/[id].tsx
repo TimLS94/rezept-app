@@ -13,7 +13,7 @@ import {
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe, totalTime, isQuick, isBudget } from '../../data/recipes';
-import { supabase } from '../../lib/supabase';
+import { supabase, getCurrentUser } from '../../lib/supabase';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { fetchDbRecipeById, setRecipePaid } from '../../lib/recipes';
 import { FEATURES } from '../../lib/features';
@@ -21,6 +21,8 @@ import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { useFavorites } from '../../lib/favorites';
 import ImageViewer from '../../components/ImageViewer';
 import Paywall from '../../components/Paywall';
+import { purchaseRecipe, purchaseCreatorSubscription } from '../../lib/purchases';
+import { usd, findRecipeTier, findCreatorSubTier } from '../../lib/pricing';
 
 type FamilyMember = {
   id: string;
@@ -49,7 +51,7 @@ export default function RecipeDetailScreen() {
   const localRecipe = getRecipeById(id || '');
 
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { isPremium, role, isGuest, user, refresh } = useAuth();
+  const { role, isGuest, user, refresh } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | undefined>(localRecipe);
   const [servings, setServings] = useState(localRecipe?.servings || 4);
@@ -63,10 +65,13 @@ export default function RecipeDetailScreen() {
   // Check if current user is the recipe owner (can edit)
   const [isOwner, setIsOwner] = useState(false);
 
-  // Paywall: premium-only recipes are locked for non-subscribers. Trust the
-  // server's lock flag (get_recipe_full already stripped the content); fall back
-  // to the client check for local/seed recipes that don't carry the flag.
-  const locked = recipe?.locked ?? (!!recipe?.isPaid && !isPremium && !canUploadRecipes(role));
+  // Paywall: paid recipes are locked unless you bought them from the creator.
+  // Trust the server's lock flag (get_recipe_full already stripped the content);
+  // fall back to the client check for local/seed recipes that don't carry it.
+  // App Premium is intentionally not part of this — it doesn't unlock creator
+  // content, so treating it as an unlock here would show steps the server would
+  // refuse to send.
+  const locked = recipe?.locked ?? (!!recipe?.isPaid && !canUploadRecipes(role));
   
   // Guest mode: can see preview but not full recipe details
   const guestLocked = isGuest;
@@ -85,6 +90,65 @@ export default function RecipeDetailScreen() {
       }
     });
   }, [id, localRecipe]);
+
+  // Which purchase is in flight, so all three buttons disable together and the
+  // pressed one can show its own progress label.
+  const [buying, setBuying] = useState<'recipe' | 'creator' | null>(null);
+
+  // Shared tail for both creator-priced purchases: report, then re-fetch so the
+  // server hands back the unlocked recipe.
+  const finishPurchase = async (
+    outcome: { result: string; error?: string },
+    cancelledOk: string,
+  ) => {
+    if (outcome.result === 'success') {
+      await reloadAfterPurchase();
+      Alert.alert('Unlocked 🎉', cancelledOk);
+    } else if (outcome.result === 'unavailable') {
+      Alert.alert(
+        'Not available yet',
+        "In-app purchases aren't active in this build. They work once the price tiers are registered as products in RevenueCat.",
+      );
+    } else if (outcome.result === 'error') {
+      Alert.alert('Purchase failed', outcome.error ?? 'Please try again later.');
+    }
+    // 'cancelled' is the user's own choice — no alert.
+  };
+
+  const buyThisRecipe = async () => {
+    if (!recipe?.unlockPriceCents || !id) return;
+    const tier = findRecipeTier(recipe.unlockPriceCents);
+    if (!tier) {
+      // A price that isn't a known tier has no store product behind it, so
+      // there is nothing we could charge — better to say so than to fail late.
+      Alert.alert('Unavailable', 'This price is not currently purchasable.');
+      return;
+    }
+    setBuying('recipe');
+    try {
+      const outcome = await purchaseRecipe(id, tier.cents, tier.productId);
+      await finishPurchase(outcome, 'This recipe is yours to keep.');
+    } finally {
+      setBuying(null);
+    }
+  };
+
+  const buyCreatorSub = async () => {
+    const creatorId = recipe?.influencer.id;
+    if (!recipe?.creatorSubPriceCents || !creatorId) return;
+    const tier = findCreatorSubTier(recipe.creatorSubPriceCents);
+    if (!tier) {
+      Alert.alert('Unavailable', 'This price is not currently purchasable.');
+      return;
+    }
+    setBuying('creator');
+    try {
+      const outcome = await purchaseCreatorSubscription(creatorId, tier.cents, tier.productId);
+      await finishPurchase(outcome, `You now have access to all of ${recipe.influencer.name}'s recipes.`);
+    } finally {
+      setBuying(null);
+    }
+  };
 
   // After a successful purchase, re-check access and re-fetch the recipe so the
   // now-unlocked full content (server-gated) replaces the teaser.
@@ -147,7 +211,7 @@ export default function RecipeDetailScreen() {
   };
 
   const loadFamilyMembers = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return;
 
     const { data } = await supabase
@@ -428,12 +492,43 @@ export default function RecipeDetailScreen() {
               <Text style={styles.lockedText}>
                 Unlock the full ingredient list and all step-by-step instructions.
               </Text>
-              <TouchableOpacity
-                style={styles.lockedButton}
-                onPress={() => setShowPaywall(true)}
-              >
-                <Text style={styles.lockedButtonText}>Unlock Premium</Text>
-              </TouchableOpacity>
+
+              {/* Cheapest, most specific option first: this one recipe. Each
+                  route is only offered if the creator actually priced it. */}
+              {recipe.unlockPriceCents != null && (
+                <TouchableOpacity
+                  style={styles.lockedButton}
+                  onPress={buyThisRecipe}
+                  disabled={buying !== null}
+                >
+                  <Text style={styles.lockedButtonText}>
+                    {buying === 'recipe' ? 'Purchasing…' : `Buy this recipe · ${usd(recipe.unlockPriceCents)}`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {recipe.creatorSubPriceCents != null && recipe.influencer.id && (
+                <TouchableOpacity
+                  style={styles.lockedButtonAlt}
+                  onPress={buyCreatorSub}
+                  disabled={buying !== null}
+                >
+                  <Text style={styles.lockedButtonAltText}>
+                    {buying === 'creator'
+                      ? 'Subscribing…'
+                      : `All of ${recipe.influencer.name}'s recipes · ${usd(recipe.creatorSubPriceCents)}/mo`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* No "unlock with Premium" option here on purpose: app Premium
+                  buys app features, not creator content. Offering it would take
+                  money for something that wouldn't unlock this page. */}
+              <Text style={styles.lockedNote}>
+                This is {recipe.influencer.name}'s recipe — your payment goes to them,
+                not to the app. App Premium covers features like Fridge Scan and
+                doesn't include creator recipes.
+              </Text>
             </View>
           </View>
         ) : (
@@ -694,8 +789,15 @@ const styles = StyleSheet.create({
   lockedIcon: { fontSize: 48, marginBottom: 12 },
   lockedTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
   lockedText: { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
-  lockedButton: { backgroundColor: '#F57C00', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12 },
+  lockedButton: { backgroundColor: '#F57C00', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, alignSelf: 'stretch', alignItems: 'center' },
   lockedButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  lockedButtonAlt: {
+    backgroundColor: '#FFF9F2', borderWidth: 1, borderColor: '#EFE7DC',
+    paddingHorizontal: 20, paddingVertical: 13, borderRadius: 12,
+    alignSelf: 'stretch', alignItems: 'center', marginTop: 10,
+  },
+  lockedButtonAltText: { color: '#0D2B63', fontSize: 14.5, fontWeight: '600', textAlign: 'center' },
+  lockedNote: { fontSize: 11.5, color: '#999', lineHeight: 17, textAlign: 'center', marginTop: 14 },
   guestContinueLink: { marginTop: 16, paddingVertical: 8 },
   guestContinueLinkText: { fontSize: 14, color: '#888', fontWeight: '500' },
   creatorControls: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 10, backgroundColor: '#FFF5F0', borderBottomWidth: 1, borderBottomColor: '#FFE0B2' },
