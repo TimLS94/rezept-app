@@ -15,7 +15,7 @@ import {
 import { router } from 'expo-router';
 import { supabase, getCurrentUser } from '../lib/supabase';
 import { pickAndUploadImage } from '../lib/storage';
-import { VERSION_STRING } from '../lib/version';
+import { runtimeLabel } from '../lib/version';
 import { useAuth, canUploadRecipes } from '../lib/auth';
 import { restorePurchases, grantPlatformEntitlement, revokePlatformEntitlement } from '../lib/purchases';
 import Paywall from '../components/Paywall';
@@ -420,7 +420,7 @@ export default function SettingsScreen() {
 
         {/* Version */}
         <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>SpoonDrop {VERSION_STRING}</Text>
+          <Text style={styles.versionText}>SpoonDrop {runtimeLabel()}</Text>
         </View>
 
         <View style={{ height: 40 }} />
