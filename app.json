@@ -12,7 +12,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.spoondrop.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:spoondrop.app"
@@ -23,7 +23,8 @@
           "instagram-stories",
           "instacart",
           "walmart"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
