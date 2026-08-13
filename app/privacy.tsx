@@ -17,7 +17,7 @@ export default function PrivacyPolicyScreen() {
 
         <Text style={styles.sectionTitle}>1. Introduction</Text>
         <Text style={styles.paragraph}>
-          FeedFamily ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.
+          SpoonDrop ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.
         </Text>
 
         <Text style={styles.sectionTitle}>2. Information We Collect</Text>
@@ -100,7 +100,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.sectionTitle}>10. Contact Us</Text>
         <Text style={styles.paragraph}>
           If you have questions about this Privacy Policy, please contact us at:{'\n\n'}
-          Email: privacy@feedfamily.app{'\n'}
+          Email: privacy@spoondrop.app{'\n'}
           Address: [Your Business Address]
         </Text>
 
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
   content: { flex: 1, padding: 20 },
   lastUpdated: { fontSize: 13, color: '#888', marginBottom: 24 },

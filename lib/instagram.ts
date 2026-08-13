@@ -48,7 +48,7 @@ export async function fetchInstagramContent(url: string): Promise<InstagramResul
     const response = await fetch(oembedUrl, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; FeedFamily/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; SpoonDrop/1.0)',
       },
     });
     

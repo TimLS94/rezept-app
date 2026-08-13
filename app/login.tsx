@@ -109,7 +109,7 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const redirectUrl = AuthSession.makeRedirectUri({ native: 'feedfamily://' });
+      const redirectUrl = AuthSession.makeRedirectUri({ native: 'spoondrop://' });
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -193,7 +193,7 @@ export default function LoginScreen() {
           />
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
-            <Text style={styles.logo}>FeedFamily</Text>
+            <Text style={styles.logo}>SpoonDrop</Text>
             <Text style={styles.tagline}>What's the best way to feed{'\n'}your family tonight?</Text>
           </View>
         </View>
@@ -427,11 +427,11 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: '#F57C00',
+    color: '#F2701E',
     fontWeight: '600',
   },
   primaryButton: {
-    backgroundColor: '#F57C00',
+    backgroundColor: '#F2701E',
     borderRadius: 14,
     padding: 18,
     alignItems: 'center',
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   switchAuthLink: {
-    color: '#F57C00',
+    color: '#F2701E',
     fontWeight: '600',
   },
   guestLink: {

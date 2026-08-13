@@ -21,7 +21,7 @@ applyGlobalFont();
 // (redirectSystemPath), which runs before route matching. Doing it here too
 // would double-navigate and race Expo Router's own linking.
 //
-// The share sheet ("Share to FeedFamily" from Instagram etc.) is a separate
+// The share sheet ("Share to SpoonDrop" from Instagram etc.) is a separate
 // path: the native extension reopens the app, +native-intent routes to
 // /shareintent, and that screen reads the payload out of this provider.
 

@@ -1,4 +1,4 @@
-# FeedFamily Launch Checklist
+# SpoonDrop Launch Checklist
 
 ## Version 1.0.0 — Initial Release
 
@@ -137,7 +137,7 @@ Status verified against the live project on 2026-08-06.
 ## 📝 App Store Metadata
 
 ### App Name
-FeedFamily
+SpoonDrop
 
 ### Subtitle (iOS, 30 chars)
 Family Meal Planning Made Easy
@@ -147,7 +147,7 @@ Discover recipes, plan meals, and shop smarter for your family.
 
 ### Full Description
 ```
-FeedFamily makes family meal planning effortless. Discover delicious recipes from top creators, plan your weekly meals, and generate smart shopping lists automatically.
+SpoonDrop makes family meal planning effortless. Discover delicious recipes from top creators, plan your weekly meals, and generate smart shopping lists automatically.
 
 FEATURES:
 • Swipe to discover recipes tailored to your dietary preferences
@@ -158,7 +158,7 @@ FEATURES:
 • Follow your favorite recipe creators
 • Save favorites and build your recipe collection
 
-Whether you're cooking for picky eaters, managing dietary restrictions, or just looking for dinner inspiration, FeedFamily has you covered.
+Whether you're cooking for picky eaters, managing dietary restrictions, or just looking for dinner inspiration, SpoonDrop has you covered.
 
 Download now and transform the way your family eats!
 ```

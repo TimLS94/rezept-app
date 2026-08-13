@@ -108,7 +108,7 @@ export function feeBreakdown(priceCents: number) {
     storeFee,
     storeFeeLabel: `App Store / Play (${pct(STORE_FEE_BPS)})`,
     platformFee,
-    platformFeeLabel: `FeedFamily (${pct(PLATFORM_FEE_BPS)})`,
+    platformFeeLabel: `SpoonDrop (${pct(PLATFORM_FEE_BPS)})`,
     takeHome: afterStore - platformFee,
   };
 }

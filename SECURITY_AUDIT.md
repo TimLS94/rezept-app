@@ -1,4 +1,4 @@
-# FeedFamily Security & Compliance Audit
+# SpoonDrop Security & Compliance Audit
 
 **Date:** 2026-07-27  
 **Version:** 1.0.0  

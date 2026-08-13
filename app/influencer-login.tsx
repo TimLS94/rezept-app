@@ -131,7 +131,7 @@ export default function InfluencerLoginScreen() {
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
             <Text style={styles.badge}>👨‍🍳 CREATOR</Text>
-            <Text style={styles.logo}>FeedFamily</Text>
+            <Text style={styles.logo}>SpoonDrop</Text>
             <Text style={styles.tagline}>Share your recipes{'\n'}with thousands of families</Text>
           </View>
         </View>

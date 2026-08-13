@@ -340,7 +340,7 @@ export default function ShoppingScreen() {
     setSendingToInstacart(true);
     const result = await buildInstacartLink(
       unchecked.map(i => ({ name: i.name, amount: i.amount, unit: i.unit })),
-      'FeedFamily shopping list',
+      'SpoonDrop shopping list',
     );
     setSendingToInstacart(false);
 
@@ -377,7 +377,7 @@ export default function ShoppingScreen() {
     const listText = generateListText();
     try {
       await Share.share({
-        message: `🛒 Shopping List\n\n${listText}\n\nShared from FeedFamily`,
+        message: `🛒 Shopping List\n\n${listText}\n\nShared from SpoonDrop`,
       });
     } catch (error) {
       console.error('Share error:', error);
@@ -624,13 +624,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF9F2' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
   exportButton: { width: 70 },
-  exportText: { fontSize: 14, color: '#F57C00', fontWeight: '600' },
+  exportText: { fontSize: 14, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   clearText: { fontSize: 14, color: '#888' },
   progressCard: { backgroundColor: '#FFF', marginHorizontal: 20, borderRadius: 16, padding: 16, marginBottom: 12 },
   progressInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   progressText: { fontSize: 16, color: '#1A1A1A' },
-  progressNumber: { fontSize: 24, fontWeight: '700', color: '#F57C00' },
+  progressNumber: { fontSize: 24, fontWeight: '700', color: '#F2701E' },
   progressSubtext: { fontSize: 14, color: '#888' },
   progressBarContainer: { height: 8, backgroundColor: '#F0F0F0', borderRadius: 4 },
   progressBar: { height: '100%', backgroundColor: '#3C8D40', borderRadius: 4 },
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
   viewToggleTextActive: { color: '#1A1A1A', fontWeight: '600' },
   addItemContainer: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 16 },
   addItemInput: { flex: 1, backgroundColor: '#FFF', borderRadius: 12, padding: 14, fontSize: 16, marginRight: 10 },
-  addItemButton: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center' },
+  addItemButton: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#F2701E', justifyContent: 'center', alignItems: 'center' },
   addItemButtonText: { fontSize: 24, color: '#FFF', fontWeight: '600' },
   emptyState: { alignItems: 'center', padding: 60 },
   emptyIcon: { fontSize: 64, marginBottom: 16 },
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   categoryName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
   categoryCount: { fontSize: 14, fontWeight: '600', color: '#888', backgroundColor: '#FFF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   recipeSection: { marginHorizontal: 20, marginBottom: 16 },
-  mealHeaderCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, padding: 10, borderLeftWidth: 4, borderLeftColor: '#F57C00' },
+  mealHeaderCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, padding: 10, borderLeftWidth: 4, borderLeftColor: '#F2701E' },
   mealHeaderImage: { width: 52, height: 52, borderRadius: 10, marginRight: 12 },
   mealHeaderInfo: { flex: 1 },
   mealHeaderTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginTop: 1 },
@@ -664,9 +664,9 @@ const styles = StyleSheet.create({
   groupAction: { paddingVertical: 2 },
   groupActionText: { fontSize: 12.5, color: '#0D2B63', fontWeight: '600' },
   chevron: { fontSize: 14, color: '#B8AFA2', marginLeft: 10, width: 14, textAlign: 'center' },
-  recipeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: '#F57C00', marginBottom: 8 },
+  recipeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: '#F2701E', marginBottom: 8 },
   recipeHeaderRight: { flexDirection: 'row', alignItems: 'center' },
-  recipeName: { fontSize: 16, fontWeight: '700', color: '#F57C00' },
+  recipeName: { fontSize: 16, fontWeight: '700', color: '#F2701E' },
   recipeCount: { fontSize: 13, color: '#888' },
   groupDelete: { fontSize: 16, marginLeft: 10 },
   itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 14, borderRadius: 10 },
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
   itemInfo: { flex: 1 },
   itemName: { fontSize: 16, color: '#1A1A1A' },
   itemNameChecked: { color: '#999', textDecorationLine: 'line-through' },
-  itemRecipe: { fontSize: 12, color: '#F57C00', marginTop: 2 },
+  itemRecipe: { fontSize: 12, color: '#F2701E', marginTop: 2 },
   toggleChecked: { alignItems: 'center', padding: 16 },
   toggleCheckedText: { fontSize: 14, color: '#888' },
   clearAllButton: { alignItems: 'center', padding: 16, marginHorizontal: 20, marginTop: 8 },

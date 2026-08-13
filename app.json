@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "FeedFamily",
-    "slug": "feedfamily",
+    "name": "SpoonDrop",
+    "slug": "spoondrop",
     "version": "1.0.0",
     "runtimeVersion": "1.0.0",
     "orientation": "portrait",
@@ -9,11 +9,11 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.feedfamily.app",
+      "bundleIdentifier": "com.spoondrop.app",
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "associatedDomains": [
-        "applinks:feedfamily.app"
+        "applinks:spoondrop.app"
       ],
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
@@ -25,10 +25,10 @@
       }
     },
     "android": {
-      "package": "com.feedfamily.app",
+      "package": "com.spoondrop.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#FF6B35",
+        "backgroundColor": "#141414",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
@@ -63,8 +63,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow FeedFamily to access your photos to upload recipe and profile images.",
-          "cameraPermission": "Allow FeedFamily to use your camera to scan your fridge for recipe ideas."
+          "photosPermission": "Allow SpoonDrop to access your photos to upload recipe and profile images.",
+          "cameraPermission": "Allow SpoonDrop to use your camera to scan your fridge for recipe ideas."
         }
       ],
       "expo-secure-store",
@@ -83,7 +83,7 @@
         }
       ]
     ],
-    "scheme": "feedfamily",
+    "scheme": "spoondrop",
     "newArchEnabled": true
   }
 }

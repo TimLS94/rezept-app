@@ -1,5 +1,5 @@
 -- ============================================================================
--- FeedFamily — RESET & REBUILD  (run once in the Supabase SQL Editor)
+-- SpoonDrop — RESET & REBUILD  (run once in the Supabase SQL Editor)
 --
 -- Drops ALL app tables and recreates the complete, current schema in one go.
 -- This is the single source of truth for the database — it consolidates the

@@ -223,7 +223,7 @@ export default function SettingsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator color="#F57C00" />
+        <ActivityIndicator color="#F2701E" />
       </View>
     );
   }
@@ -250,7 +250,7 @@ export default function SettingsScreen() {
           />
           <TouchableOpacity style={styles.avatarButton} onPress={chooseAvatar} disabled={uploadingAvatar}>
             {uploadingAvatar ? (
-              <ActivityIndicator color="#F57C00" />
+              <ActivityIndicator color="#F2701E" />
             ) : (
               <Text style={styles.avatarButtonText}>📷 Change photo</Text>
             )}
@@ -317,7 +317,7 @@ export default function SettingsScreen() {
           />
           <TouchableOpacity style={styles.secondaryButton} onPress={changeEmail} disabled={savingEmail}>
             {savingEmail ? (
-              <ActivityIndicator color="#F57C00" />
+              <ActivityIndicator color="#F2701E" />
             ) : (
               <Text style={styles.secondaryButtonText}>Change Email</Text>
             )}
@@ -345,7 +345,7 @@ export default function SettingsScreen() {
           />
           <TouchableOpacity style={styles.secondaryButton} onPress={changePassword} disabled={savingPassword}>
             {savingPassword ? (
-              <ActivityIndicator color="#F57C00" />
+              <ActivityIndicator color="#F2701E" />
             ) : (
               <Text style={styles.secondaryButtonText}>Change Password</Text>
             )}
@@ -420,7 +420,7 @@ export default function SettingsScreen() {
 
         {/* Version */}
         <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>FeedFamily {VERSION_STRING}</Text>
+          <Text style={styles.versionText}>SpoonDrop {VERSION_STRING}</Text>
         </View>
 
         <View style={{ height: 40 }} />
@@ -436,12 +436,12 @@ const styles = StyleSheet.create({
   center: { justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   avatarWrap: { alignItems: 'center', marginTop: 8, marginBottom: 8 },
-  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: '#F57C00', backgroundColor: '#EEE' },
-  avatarButton: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#F57C00', backgroundColor: '#FFF5F0' },
-  avatarButtonText: { color: '#F57C00', fontSize: 14, fontWeight: '700' },
+  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: '#F2701E', backgroundColor: '#EEE' },
+  avatarButton: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#F2701E', backgroundColor: '#FFF5F0' },
+  avatarButtonText: { color: '#F2701E', fontSize: 14, fontWeight: '700' },
   card: { backgroundColor: '#FFF', marginHorizontal: 20, marginTop: 16, borderRadius: 16, padding: 18 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 6, marginTop: 8 },
@@ -450,10 +450,10 @@ const styles = StyleSheet.create({
   at: { fontSize: 18, color: '#888', marginRight: 6 },
   usernameInput: { flex: 1 },
   currentValue: { fontSize: 14, color: '#888', marginBottom: 12 },
-  primaryButton: { backgroundColor: '#F57C00', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 14 },
+  primaryButton: { backgroundColor: '#F2701E', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 14 },
   primaryButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-  secondaryButton: { padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 10, borderWidth: 1, borderColor: '#F57C00' },
-  secondaryButtonText: { color: '#F57C00', fontSize: 15, fontWeight: '700' },
+  secondaryButton: { padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 10, borderWidth: 1, borderColor: '#F2701E' },
+  secondaryButtonText: { color: '#F2701E', fontSize: 15, fontWeight: '700' },
   dangerCard: { borderWidth: 1, borderColor: '#FFCDD2' },
   dangerTitle: { fontSize: 16, fontWeight: '700', color: '#E53935', marginBottom: 6 },
   dangerText: { fontSize: 13, color: '#888', marginBottom: 14 },

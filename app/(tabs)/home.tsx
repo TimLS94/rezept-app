@@ -70,7 +70,7 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.kicker}>DAD'S FOOD TODAY</Text>
+            <Text style={styles.kicker}>SPOONDROP</Text>
             <Text style={styles.headerTitle}>What's for dinner?</Text>
             <View style={styles.brush} />
           </View>

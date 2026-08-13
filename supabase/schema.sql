@@ -1,5 +1,5 @@
 -- ============================================================================
--- FeedFamily — current database schema (source of truth)
+-- SpoonDrop — current database schema (source of truth)
 --
 -- Idempotent & constructive: creates every table/policy/trigger the app needs,
 -- safe to run (and re-run) on a fresh or existing database. It does NOT drop

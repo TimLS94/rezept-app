@@ -123,7 +123,7 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
           <ScrollView contentContainerStyle={styles.sheetContent} showsVerticalScrollIndicator={false}>
 
           <View style={styles.badge}><Ionicons name="lock-open" size={26} color="#FFF" /></View>
-          <Text style={styles.title}>FeedFamily Premium</Text>
+          <Text style={styles.title}>SpoonDrop Premium</Text>
           <Text style={styles.subtitle}>The tools that make cooking with the app easier.</Text>
 
           <View style={styles.benefits}>

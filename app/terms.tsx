@@ -17,12 +17,12 @@ export default function TermsOfServiceScreen() {
 
         <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
         <Text style={styles.paragraph}>
-          By downloading, installing, or using FeedFamily ("the App"), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the App.
+          By downloading, installing, or using SpoonDrop ("the App"), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the App.
         </Text>
 
         <Text style={styles.sectionTitle}>2. Description of Service</Text>
         <Text style={styles.paragraph}>
-          FeedFamily is a recipe discovery and meal planning application that allows users to:{'\n\n'}
+          SpoonDrop is a recipe discovery and meal planning application that allows users to:{'\n\n'}
           • Browse and save recipes{'\n'}
           • Create shopping lists{'\n'}
           • Plan weekly meals{'\n'}
@@ -77,7 +77,7 @@ export default function TermsOfServiceScreen() {
 
         <Text style={styles.sectionTitle}>8. Intellectual Property</Text>
         <Text style={styles.paragraph}>
-          • The App and its original content are owned by FeedFamily{'\n'}
+          • The App and its original content are owned by SpoonDrop{'\n'}
           • Our trademarks may not be used without permission{'\n'}
           • Recipe content uploaded by creators remains their property
         </Text>
@@ -114,7 +114,7 @@ export default function TermsOfServiceScreen() {
         <Text style={styles.sectionTitle}>14. Contact</Text>
         <Text style={styles.paragraph}>
           For questions about these Terms, contact us at:{'\n\n'}
-          Email: legal@feedfamily.app{'\n'}
+          Email: legal@spoondrop.app{'\n'}
           Address: [Your Business Address]
         </Text>
 
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
   content: { flex: 1, padding: 20 },
   lastUpdated: { fontSize: 13, color: '#888', marginBottom: 24 },

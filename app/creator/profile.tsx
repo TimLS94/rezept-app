@@ -71,7 +71,7 @@ export default function EditCreatorProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#F57C00" />
+        <ActivityIndicator size="large" color="#F2701E" />
       </View>
     );
   }
@@ -322,13 +322,13 @@ const styles = StyleSheet.create({
   },
   headerBtn: { minWidth: 60 },
   headerBtnText: { fontSize: 16, color: '#888' },
-  saveText: { color: '#F57C00', fontWeight: '700', textAlign: 'right' },
+  saveText: { color: '#F2701E', fontWeight: '700', textAlign: 'right' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
   content: { flex: 1, padding: 20 },
 
   avatarSection: { alignItems: 'center', marginBottom: 20 },
-  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: '#F57C00' },
-  avatarEdit: { position: 'absolute', bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
+  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: '#F2701E' },
+  avatarEdit: { position: 'absolute', bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: '#F2701E', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
   avatarEditText: { fontSize: 13 },
   avatarHint: { fontSize: 13, color: '#888', marginTop: 8 },
 
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   priceSub: { fontSize: 12.5, color: '#6F6F6F', marginTop: 3, lineHeight: 18 },
   priceBold: { fontWeight: '700', color: '#0D2B63' },
   toggle: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: '#F1EADF' },
-  toggleOn: { backgroundColor: '#F57C00' },
+  toggleOn: { backgroundColor: '#F2701E' },
   toggleText: { fontSize: 13, fontWeight: '700', color: '#6F6F6F' },
   toggleTextOn: { color: '#FFF' },
   tierRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
@@ -370,6 +370,6 @@ const styles = StyleSheet.create({
   feeLabelStrong: { fontSize: 13, color: '#3C8D40', fontWeight: '700' },
   feeValueStrong: { fontSize: 13, color: '#3C8D40', fontWeight: '700' },
   priceFootnote: { fontSize: 11.5, color: '#6F6F6F', lineHeight: 17, marginBottom: 16 },
-  saveButton: { backgroundColor: '#F57C00', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
+  saveButton: { backgroundColor: '#F2701E', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
   saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

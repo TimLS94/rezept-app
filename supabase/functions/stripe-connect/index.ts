@@ -21,7 +21,7 @@
 //   STRIPE_SECRET_KEY   (Stripe Dashboard → Developers → API keys, "sk_...")
 // Optional:
 //   PAYOUT_RETURN_URL   where Stripe sends the creator back (defaults to the
-//                       app scheme, feedfamily://creator/earnings)
+//                       app scheme, spoondrop://creator/earnings)
 //
 // Deploy:  npx supabase functions deploy stripe-connect
 // Secret:  npx supabase secrets set STRIPE_SECRET_KEY=sk_test_xxx
@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
   const anon = Deno.env.get('SUPABASE_ANON_KEY')!;
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-  const returnUrl = Deno.env.get('PAYOUT_RETURN_URL') ?? 'feedfamily://creator/earnings';
+  const returnUrl = Deno.env.get('PAYOUT_RETURN_URL') ?? 'spoondrop://creator/earnings';
 
   const authHeader = req.headers.get('Authorization') || '';
   const asUser = createClient(supabaseUrl, anon, { global: { headers: { Authorization: authHeader } } });

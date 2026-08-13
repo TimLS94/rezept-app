@@ -392,7 +392,7 @@ Steps:
         {/* Extracting Step */}
         {step === 'extracting' && (
           <View style={styles.loadingSection}>
-            <ActivityIndicator size="large" color="#F57C00" />
+            <ActivityIndicator size="large" color="#F2701E" />
             <Text style={styles.loadingTitle}>Extracting Recipe...</Text>
             <Text style={styles.loadingText}>
               AI is analyzing the post. This may take a few seconds.
@@ -438,7 +438,7 @@ Steps:
         {/* Saving Step */}
         {step === 'saving' && (
           <View style={styles.loadingSection}>
-            <ActivityIndicator size="large" color="#F57C00" />
+            <ActivityIndicator size="large" color="#F2701E" />
             <Text style={styles.loadingTitle}>Saving...</Text>
           </View>
         )}
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   content: { flex: 1 },
   guestState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   },
   errorText: { color: '#C62828', fontSize: 14 },
   primaryButton: {
-    backgroundColor: '#F57C00',
+    backgroundColor: '#F2701E',
     borderRadius: 14,
     padding: 18,
     alignItems: 'center',
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
   uploadButton: {
     backgroundColor: '#FFF',
     borderWidth: 2,
-    borderColor: '#F57C00',
+    borderColor: '#F2701E',
     borderStyle: 'dashed',
     borderRadius: 12,
     padding: 20,
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   uploadButtonText: {
-    color: '#F57C00',
+    color: '#F2701E',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   reviewDescription: { fontSize: 15, color: '#666', lineHeight: 22, marginBottom: 16 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-around' },
   metaItem: { alignItems: 'center' },
-  metaValue: { fontSize: 18, fontWeight: '700', color: '#F57C00' },
+  metaValue: { fontSize: 18, fontWeight: '700', color: '#F2701E' },
   metaLabel: { fontSize: 12, color: '#888', marginTop: 2 },
 
   section: {
@@ -655,14 +655,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
-  ingredientAmount: { width: 80, fontSize: 14, color: '#F57C00', fontWeight: '600' },
+  ingredientAmount: { width: 80, fontSize: 14, color: '#F2701E', fontWeight: '600' },
   ingredientName: { flex: 1, fontSize: 14, color: '#333' },
   stepRow: { flexDirection: 'row', marginBottom: 12 },
   stepNumber: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F57C00',
+    backgroundColor: '#F2701E',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

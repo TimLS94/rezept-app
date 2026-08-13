@@ -1,6 +1,6 @@
 # Payments — Implementierungsplan
 
-Creator-Abo-Modell für FeedFamily. **Phase 1: app-weites Premium** (schnell launch-fähig),
+Creator-Abo-Modell für SpoonDrop. **Phase 1: app-weites Premium** (schnell launch-fähig),
 Datenmodell aber schon so gebaut, dass **Phase 2: Abo pro Creator** ohne Umbau ergänzt werden kann.
 
 Status: PLAN (noch kein Code). Zuletzt aktualisiert: 2026-08-02.

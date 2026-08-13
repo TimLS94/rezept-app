@@ -221,7 +221,7 @@ export default function CreatorProfileScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#F57C00" />
+        <ActivityIndicator size="large" color="#F2701E" />
       </View>
     );
   }
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIcon: { fontSize: 64, marginBottom: 16 },
@@ -451,14 +451,14 @@ const styles = StyleSheet.create({
   profileHeader: { alignItems: 'center', padding: 24, backgroundColor: '#FFF' },
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
   name: { fontSize: 24, fontWeight: '700', color: '#1A1A1A', marginBottom: 4 },
-  handle: { fontSize: 15, color: '#F57C00', fontWeight: '500', marginBottom: 12 },
+  handle: { fontSize: 15, color: '#F2701E', fontWeight: '500', marginBottom: 12 },
   bio: { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22, marginBottom: 20, paddingHorizontal: 20 },
   statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   statItem: { alignItems: 'center', paddingHorizontal: 24 },
   statNumber: { fontSize: 22, fontWeight: '700', color: '#1A1A1A' },
   statLabel: { fontSize: 13, color: '#888', marginTop: 2 },
   statDivider: { width: 1, height: 30, backgroundColor: '#E0E0E0' },
-  subscribeButton: { backgroundColor: '#F57C00', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 24 },
+  subscribeButton: { backgroundColor: '#F2701E', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 24 },
   subscribedButton: { backgroundColor: '#E8F5E9' },
   subscribeButtonText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
   subscribedButtonText: { color: '#3C8D40' },
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   searchClear: { fontSize: 22, color: '#BBB', paddingHorizontal: 4 },
   filterRow: { gap: 8, paddingBottom: 16 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEE' },
-  filterChipActive: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
+  filterChipActive: { backgroundColor: '#F2701E', borderColor: '#F2701E' },
   filterChipText: { fontSize: 13, color: '#666', fontWeight: '500' },
   filterChipTextActive: { color: '#FFF', fontWeight: '700' },
   emptyRecipes: { alignItems: 'center', padding: 32, backgroundColor: '#FFF', borderRadius: 16 },

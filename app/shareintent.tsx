@@ -5,7 +5,7 @@ import { useShareIntentContext } from 'expo-share-intent';
 import { extractInstagramUrl, extractTikTokUrl } from '../lib/shareHandler';
 import { COLORS, FONTS } from '../lib/theme';
 
-// Landing screen for the share sheet ("Share to FeedFamily" from Instagram,
+// Landing screen for the share sheet ("Share to SpoonDrop" from Instagram,
 // TikTok, a browser…). It never renders for long: as soon as the native
 // payload arrives we hand it to the normal import flow and replace ourselves in
 // the history, so Back doesn't return to a spinner.

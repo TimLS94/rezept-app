@@ -428,7 +428,7 @@ export default function ImportRecipeScreen() {
         {/* Extracting Step */}
         {step === 'extracting' && (
           <View style={styles.loadingSection}>
-            <ActivityIndicator size="large" color="#F57C00" />
+            <ActivityIndicator size="large" color="#F2701E" />
             <Text style={styles.loadingTitle}>Extracting Recipe...</Text>
             <Text style={styles.loadingText}>
               Analyzing the post content with AI. This may take a few seconds.
@@ -651,7 +651,7 @@ export default function ImportRecipeScreen() {
         {/* Saving Step */}
         {step === 'saving' && (
           <View style={styles.loadingSection}>
-            <ActivityIndicator size="large" color="#F57C00" />
+            <ActivityIndicator size="large" color="#F2701E" />
             <Text style={styles.loadingTitle}>Saving Recipe...</Text>
           </View>
         )}
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   content: { flex: 1 },
   blockedState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
   },
   errorText: { color: '#C62828', fontSize: 14 },
   primaryButton: {
-    backgroundColor: '#F57C00',
+    backgroundColor: '#F2701E',
     borderRadius: 14,
     padding: 18,
     alignItems: 'center',
@@ -739,8 +739,8 @@ const styles = StyleSheet.create({
   screenshotImage: { width: 100, height: 150, borderRadius: 10 },
   removeScreenshot: { position: 'absolute', top: -8, right: -8, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FF5252', justifyContent: 'center', alignItems: 'center' },
   removeScreenshotText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-  uploadButton: { backgroundColor: '#FFF', borderWidth: 2, borderColor: '#F57C00', borderStyle: 'dashed', borderRadius: 12, padding: 20, alignItems: 'center', marginBottom: 12 },
-  uploadButtonText: { color: '#F57C00', fontSize: 16, fontWeight: '600' },
+  uploadButton: { backgroundColor: '#FFF', borderWidth: 2, borderColor: '#F2701E', borderStyle: 'dashed', borderRadius: 12, padding: 20, alignItems: 'center', marginBottom: 12 },
+  uploadButtonText: { color: '#F2701E', fontSize: 16, fontWeight: '600' },
   screenshotHint: { fontSize: 13, color: '#888', lineHeight: 20, textAlign: 'center' },
 
   // Loading section
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
   reviewDescription: { fontSize: 15, color: '#666', lineHeight: 22, marginBottom: 16 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-around' },
   metaItem: { alignItems: 'center' },
-  metaValue: { fontSize: 18, fontWeight: '700', color: '#F57C00' },
+  metaValue: { fontSize: 18, fontWeight: '700', color: '#F2701E' },
   metaLabel: { fontSize: 12, color: '#888', marginTop: 2 },
 
   section: {
@@ -805,14 +805,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
-  ingredientAmount: { width: 80, fontSize: 14, color: '#F57C00', fontWeight: '600' },
+  ingredientAmount: { width: 80, fontSize: 14, color: '#F2701E', fontWeight: '600' },
   ingredientName: { flex: 1, fontSize: 14, color: '#333' },
   stepRow: { flexDirection: 'row', marginBottom: 12 },
   stepNumber: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F57C00',
+    backgroundColor: '#F2701E',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
   },
-  tagText: { fontSize: 13, color: '#F57C00', fontWeight: '500' },
+  tagText: { fontSize: 13, color: '#F2701E', fontWeight: '500' },
 
   actionRow: {
     flexDirection: 'row',
@@ -861,7 +861,7 @@ const styles = StyleSheet.create({
   editHint: { fontSize: 11, fontWeight: '500', color: '#AAA' },
   tagPickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tagPick: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F6F1EA', borderWidth: 1, borderColor: '#EEE' },
-  tagPickActive: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
+  tagPickActive: { backgroundColor: '#F2701E', borderColor: '#F2701E' },
   tagPickText: { fontSize: 13, color: '#666', fontWeight: '600' },
   tagPickTextActive: { color: '#FFF' },
   editInput: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 14, fontSize: 16, color: '#1A1A1A' },
@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
   metaEditItem: { flex: 1 },
   editInputSmall: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 12, fontSize: 15, textAlign: 'center', color: '#1A1A1A' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  addLink: { fontSize: 14, color: '#F57C00', fontWeight: '600' },
+  addLink: { fontSize: 14, color: '#F2701E', fontWeight: '600' },
   ingredientEditRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
   ingredientAmountInput: { width: 50, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14, textAlign: 'center' },
   ingredientUnitInput: { width: 60, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14 },

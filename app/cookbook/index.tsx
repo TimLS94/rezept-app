@@ -125,7 +125,7 @@ export default function CookbookScreen() {
 
       {loading ? (
         <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color="#F57C00" />
+          <ActivityIndicator size="large" color="#F2701E" />
         </View>
       ) : recipes.length === 0 ? (
         <View style={styles.emptyState}>
@@ -151,7 +151,7 @@ export default function CookbookScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F57C00" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F2701E" />
           }
         >
           <View style={styles.topRow}>
@@ -232,17 +232,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 60 },
-  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   addButton: { width: 60, alignItems: 'flex-end' },
-  addButtonText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
+  addButtonText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   loadingState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIcon: { fontSize: 64, marginBottom: 16 },
   emptyText: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   emptySubtext: { fontSize: 14, color: '#888', marginTop: 6, textAlign: 'center', lineHeight: 20 },
   primaryButton: {
-    backgroundColor: '#F57C00',
+    backgroundColor: '#F2701E',
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 14,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   count: { fontSize: 13, color: '#888' },
-  importLink: { fontSize: 13, color: '#F57C00', fontWeight: '700' },
+  importLink: { fontSize: 13, color: '#F2701E', fontWeight: '700' },
   card: {
     flexDirection: 'row',
     backgroundColor: '#FFF',
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   cardContent: { flex: 1, padding: 12, justifyContent: 'center' },
   cardTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   cardMeta: { fontSize: 12, color: '#888', marginTop: 4 },
-  cardSource: { fontSize: 11, color: '#F57C00', fontWeight: '500', marginTop: 4 },
+  cardSource: { fontSize: 11, color: '#F2701E', fontWeight: '500', marginTop: 4 },
   cardActions: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10, gap: 8 },
   cartButton: {
     width: 40,

@@ -246,7 +246,7 @@ export default function EditRecipeScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#F57C00" />
+        <ActivityIndicator size="large" color="#F2701E" />
       </View>
     );
   }
@@ -268,7 +268,7 @@ export default function EditRecipeScreen() {
         <Text style={styles.headerTitle}>Edit Recipe</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving}>
           {saving ? (
-            <ActivityIndicator size="small" color="#F57C00" />
+            <ActivityIndicator size="small" color="#F2701E" />
           ) : (
             <Text style={styles.saveText}>Save</Text>
           )}
@@ -541,9 +541,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   backButton: { width: 80 },
-  backText: { fontSize: 16, color: '#F57C00', fontWeight: '600' },
+  backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 18, color: '#0D2B63', letterSpacing: 0.3 },
-  saveText: { fontSize: 16, color: '#F57C00', fontWeight: '700' },
+  saveText: { fontSize: 16, color: '#F2701E', fontWeight: '700' },
   content: { flex: 1 },
   imageContainer: { height: 200, backgroundColor: '#F0F0F0', position: 'relative' },
   recipeImage: { width: '100%', height: '100%' },
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 6, marginTop: 8 },
   tagPickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   tagPick: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F6F1EA', borderWidth: 1, borderColor: '#EEE' },
-  tagPickActive: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
+  tagPickActive: { backgroundColor: '#F2701E', borderColor: '#F2701E' },
   tagPickText: { fontSize: 13, color: '#666', fontWeight: '600' },
   tagPickTextActive: { color: '#FFF' },
   input: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 14, fontSize: 16, color: '#1A1A1A' },
@@ -578,12 +578,12 @@ const styles = StyleSheet.create({
   tierTextOn: { color: '#FFF' },
   takeHome: { fontSize: 12.5, color: '#3C8D40', fontWeight: '600', marginTop: 11 },
   toggle: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: '#F0F0F0' },
-  toggleActive: { backgroundColor: '#F57C00' },
+  toggleActive: { backgroundColor: '#F2701E' },
   toggleText: { fontSize: 14, fontWeight: '600', color: '#888' },
   toggleTextActive: { color: '#FFF' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
-  addLink: { fontSize: 14, color: '#F57C00', fontWeight: '600' },
+  addLink: { fontSize: 14, color: '#F2701E', fontWeight: '600' },
   ingredientRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
   ingredientAmount: { width: 50, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14, textAlign: 'center' },
   ingredientUnit: { width: 60, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14 },
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   stepItem: { marginBottom: 12 },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start' },
   stepPhotoBtn: { alignSelf: 'flex-start', marginLeft: 38, marginTop: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#FFD3C2', backgroundColor: '#FFF3EC' },
-  stepPhotoText: { fontSize: 12.5, fontWeight: '600', color: '#F57C00' },
+  stepPhotoText: { fontSize: 12.5, fontWeight: '600', color: '#F2701E' },
   stepTimerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 38, marginTop: 8 },
   stepTimerLabel: { fontSize: 12.5, color: '#888' },
   stepTimerInput: { width: 54, backgroundColor: '#FFF9F2', borderRadius: 8, borderWidth: 1, borderColor: '#EEE', paddingVertical: 5, paddingHorizontal: 10, fontSize: 13, textAlign: 'center' },
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   stepImageThumb: { width: '100%', height: '100%' },
   stepImageRemove: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(13,43,99,0.8)', justifyContent: 'center', alignItems: 'center' },
   stepImageRemoveText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
-  stepNumber: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F57C00', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  stepNumber: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F2701E', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   stepNumberText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   stepInput: { flex: 1, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14, minHeight: 40 },
   deleteButton: { margin: 16, padding: 16, borderRadius: 12, backgroundColor: '#FFEBEE', alignItems: 'center' },
