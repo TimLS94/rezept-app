@@ -56,9 +56,17 @@ export default function LoginScreen() {
         });
         if (error) throw error;
       } else {
+        // Without emailRedirectTo, Supabase falls back to the project's Site
+        // URL — which is still localhost:3000, so the confirmation link in the
+        // email leads nowhere on a phone. This sends people back into the app.
+        // The same URL must be whitelisted under Authentication → URL
+        // Configuration → Redirect URLs, or Supabase ignores it.
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: AuthSession.makeRedirectUri({ native: 'spoondrop://' }),
+          },
         });
         if (error) throw error;
         Alert.alert('Success', 'Check your email for verification link!');
