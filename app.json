@@ -3,7 +3,9 @@
     "name": "SpoonDrop",
     "slug": "spoondrop",
     "version": "1.0.0",
-    "runtimeVersion": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -96,6 +98,9 @@
       "eas": {
         "projectId": "a0b6bff7-5a73-4d6e-8a86-8c8109d012d8"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a0b6bff7-5a73-4d6e-8a86-8c8109d012d8"
     }
   }
 }
