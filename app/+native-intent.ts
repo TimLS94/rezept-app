@@ -19,6 +19,16 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
       return '/shareintent';
     }
 
+    // Supabase auth callbacks (email confirmation, password reset). They come
+    // back on our own scheme carrying the result in the fragment, which arrives
+    // double-encoded — %2523 instead of #. Without this branch they fell
+    // through to the "Unmatched Route" screen, which looks like a broken app
+    // even when the confirmation itself succeeded.
+    if (/access_token=|refresh_token=|error_code=|type=(signup|recovery|magiclink)/.test(path)
+        || /%2523|%23/.test(path)) {
+      return `/auth-callback?payload=${encodeURIComponent(path)}`;
+    }
+
     // `path` can be a full URL (https://www.instagram.com/reel/…) for App Links,
     // or just the path portion (/reel/…) depending on how the OS delivered it.
     let candidate = path;
