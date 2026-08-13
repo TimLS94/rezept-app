@@ -15,9 +15,10 @@ const isExpoGo = Constants.executionEnvironment === 'storeClient';
 //
 //   RC_IOS_KEY / RC_ANDROID_KEY : Project → API keys (public app-specific keys)
 //   ENTITLEMENT_ID              : the entitlement you map the sub to (e.g. "premium")
-// Test-Store key for early testing (works on both platforms, needs a dev build).
-// Replace with the real appl_… / goog_… keys once the App Store / Play Store
-// apps are configured in RevenueCat.
+// Replace with the real appl_… / goog_… keys from the RevenueCat dashboard once
+// the App Store / Play Store apps are configured there. Until then these stay
+// inert — see apiKeyIsProduction below for why a test key must never reach
+// Purchases.configure() in a release build.
 const RC_IOS_KEY = 'test_jEJSpmuLjQmQaisPFkcFZsROsrK';
 const RC_ANDROID_KEY = 'test_jEJSpmuLjQmQaisPFkcFZsROsrK';
 // Must match the RevenueCat entitlement identifier exactly (incl. spaces/case).
@@ -43,10 +44,24 @@ function apiKey(): string {
   return Platform.OS === 'ios' ? RC_IOS_KEY : RC_ANDROID_KEY;
 }
 
+// A real, production RevenueCat key. Anything else means "don't configure".
+//
+// This guard is not cosmetic: RevenueCat's SDK detects its own test key in a
+// release build and DELIBERATELY TERMINATES THE APP ("Wrong API Key … the app
+// will close now to protect the security of test purchases"). SpoonDrop crashed
+// on every launch in TestFlight for exactly that reason. Checking only for
+// "PLACEHOLDER" wasn't enough — the test key contains no such marker.
+//
+// Skipping configure() costs nothing today: no IAP products are registered, so
+// every purchase path already reports 'unavailable' and the UI says so plainly.
+function apiKeyIsProduction(key: string): boolean {
+  return /^(appl|goog)_/.test(key);
+}
+
 // True once real keys are set AND the native SDK is available (dev build).
 export function purchasesAvailable(): boolean {
   if (isExpoGo) return false;
-  return !!loadSDK() && !apiKey().includes('PLACEHOLDER');
+  return !!loadSDK() && apiKeyIsProduction(apiKey());
 }
 
 export async function initPurchases(userId?: string): Promise<void> {
