@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../lib/theme';
 
@@ -11,16 +11,28 @@ import { COLORS, FONTS } from '../lib/theme';
  * Lottie, no reanimated: one screen does not justify another native dependency,
  * and this has to work on the very first frame, before anything else is ready.
  *
- * `onDone` fires when the animation finishes. The caller decides whether the
- * app is ready — the animation never blocks longer than it takes to play.
+ * The intro holds on the finished wordmark until `ready` turns true, so a slow
+ * cold start shows the brand rather than a loading spinner. It holds for a
+ * bounded time only — a session check that never resolves must not leave the
+ * user staring at a splash screen forever.
+ *
+ * `onDone` fires once it has faded out.
  */
-export default function SplashDrop({ onDone }: { onDone: () => void }) {
+const MAX_HOLD_MS = 2500;
+
+export default function SplashDrop({ onDone, ready = true }: { onDone: () => void; ready?: boolean }) {
   const drop = useRef(new Animated.Value(0)).current;    // fall, 0 → 1
   const splash = useRef(new Animated.Value(0)).current;  // impact
   const word = useRef(new Animated.Value(0)).current;    // wordmark
   const fade = useRef(new Animated.Value(1)).current;    // whole screen out
 
+  // The drop has landed and the wordmark is up: from here the only thing left
+  // is to get out of the way.
+  const [landed, setLanded] = useState(false);
+  const [heldLongEnough, setHeldLongEnough] = useState(false);
+
   useEffect(() => {
+    const timer = setTimeout(() => setHeldLongEnough(true), MAX_HOLD_MS);
     Animated.sequence([
       Animated.delay(120),
       // Accelerating fall — gravity, not a linear slide. `Easing.in(quad)` is
@@ -36,9 +48,15 @@ export default function SplashDrop({ onDone }: { onDone: () => void }) {
         }),
       ]),
       Animated.delay(420),
-      Animated.timing(fade, { toValue: 0, duration: 320, useNativeDriver: true }),
-    ]).start(({ finished }) => finished && onDone());
+    ]).start(({ finished }) => finished && setLanded(true));
+    return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!landed || !(ready || heldLongEnough)) return;
+    Animated.timing(fade, { toValue: 0, duration: 320, useNativeDriver: true })
+      .start(({ finished }) => finished && onDone());
+  }, [landed, ready, heldLongEnough]);
 
   return (
     <Animated.View style={[styles.fill, { opacity: fade }]} pointerEvents="none">

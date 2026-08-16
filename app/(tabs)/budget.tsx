@@ -10,26 +10,20 @@ import {
   Alert
 } from 'react-native';
 import { router } from 'expo-router';
-import { Recipe, DietaryTag, DIETARY_TAGS, filterRecipesByDietary } from '../../data/recipes';
+import { Recipe, DietaryTag, DIETARY_TAGS } from '../../data/recipes';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { FEATURES } from '../../lib/features';
 import { useMealPlan, PlannedMeal } from '../../lib/mealPlan';
 import { useFavorites } from '../../lib/favorites';
+import { buildRecipePool, filterByDietary, shuffled, withIngredients } from '../../lib/planner';
 import { WEEKDAYS, startOfWeek, addDays, weekKey, fmtDay } from '../../lib/week';
 import { Modal } from 'react-native';
 
-// Build a 7-day plan from the real recipe catalogue so every planned meal
-// carries ingredients that can flow into the shopping list.
+// A week of meals from whatever the pool offers. Fewer than seven recipes means
+// a shorter week rather than the same meal repeated — planning Monday's dinner
+// again on Wednesday is not a plan.
 const buildPlan = (pool: Recipe[]): PlannedMeal[] =>
-  pool.length === 0
-    ? []
-    : Array.from({ length: 7 }, (_, i) => ({
-        id: `m${i}-${Date.now()}`,
-        recipe: pool[i % pool.length],
-      }));
-
-const shuffled = (list: Recipe[]): Recipe[] =>
-  [...list].sort(() => Math.random() - 0.5);
+  pool.slice(0, 7).map((recipe, i) => ({ id: `m${i}-${Date.now()}`, recipe }));
 
 export default function BudgetScreen() {
   const { plansByWeek, setWeekPlan, updateWeekPlan } = useMealPlan();
@@ -53,12 +47,13 @@ export default function BudgetScreen() {
 
   const setPlan = (updater: (plan: PlannedMeal[]) => PlannedMeal[]) => updateWeekPlan(key, updater);
 
+  // Changing a filter only narrows what the next Generate may pick. It no
+  // longer silently rebuilds the week — losing a plan you'd already adjusted
+  // because you tapped "vegetarian" is not what that tap meant.
   const toggleFilter = (tag: DietaryTag) => {
-    const next = activeFilters.includes(tag)
-      ? activeFilters.filter(t => t !== tag)
-      : [...activeFilters, tag];
-    setActiveFilters(next);
-    setWeekPlan(key, buildPlan(shuffled(filterRecipesByDietary(next))));
+    setActiveFilters(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
   };
 
   const totalCost = mealPlan.reduce((sum, meal) => sum + meal.recipe.cost, 0);
@@ -70,25 +65,53 @@ export default function BudgetScreen() {
   const allDone = mealPlan.length > 0 && openMeals.length === 0;
   const totalIngredients = openMeals.reduce((sum, meal) => sum + meal.recipe.ingredients.length, 0);
 
-  const regeneratePlan = () => {
-    setGenerating(true);
-    // Simulate API call, then reshuffle this week from the catalogue.
-    setTimeout(() => {
-      setWeekPlan(key, buildPlan(shuffled(filterRecipesByDietary(activeFilters))));
-      setGenerating(false);
-    }, 1200);
+  // The pool is fetched once and reused for Generate and swaps, so neither
+  // waits on the network twice.
+  const [pool, setPool] = useState<Recipe[] | null>(null);
+
+  const loadPool = async (): Promise<Recipe[]> => {
+    if (pool) return pool;
+    const fresh = await buildRecipePool(favorites);
+    setPool(fresh);
+    return fresh;
   };
 
-  const swapMeal = (id: string) => {
-    setPlan(plan => {
-      const used = plan.map(m => m.recipe.id);
-      const options = filterRecipesByDietary(activeFilters).filter(r => !used.includes(r.id));
-      const pick = options.length
-        ? options[Math.floor(Math.random() * options.length)]
-        : null;
-      if (!pick) return plan;
-      return plan.map(m => (m.id === id ? { ...m, recipe: pick, done: false } : m));
-    });
+  // Favourites are the biggest half of the pool, so a change there has to
+  // invalidate it — otherwise a recipe you just favourited can't be planned
+  // until the app restarts.
+  useEffect(() => {
+    setPool(null);
+  }, [favorites]);
+
+  const regeneratePlan = async () => {
+    setGenerating(true);
+    try {
+      const options = filterByDietary(await loadPool(), activeFilters);
+      if (options.length === 0) {
+        Alert.alert(
+          'Nothing to plan with yet',
+          activeFilters.length
+            ? 'No recipe matches those filters. Try removing one, or favourite a few more recipes.'
+            : 'Save some favourites or browse creators first — the planner only uses real recipes, never made-up ones.'
+        );
+        return;
+      }
+      // Ingredients are fetched only for the seven that made it into the plan,
+      // not for the whole pool.
+      setWeekPlan(key, buildPlan(await withIngredients(shuffled(options).slice(0, 7))));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const swapMeal = async (id: string) => {
+    const used = mealPlan.map(m => m.recipe.id);
+    const options = filterByDietary(await loadPool(), activeFilters).filter(
+      r => !used.includes(r.id)
+    );
+    if (!options.length) return;
+    const [pick] = await withIngredients([options[Math.floor(Math.random() * options.length)]]);
+    setPlan(plan => plan.map(m => (m.id === id ? { ...m, recipe: pick, done: false } : m)));
   };
 
   const toggleDone = (id: string) => {
@@ -99,17 +122,17 @@ export default function BudgetScreen() {
     setPlan(plan => plan.filter(m => m.id !== id));
   };
 
-  const addMeal = () => {
-    setPlan(plan => {
-      const pool = filterRecipesByDietary(activeFilters);
-      const used = plan.map(m => m.recipe.id);
-      const options = pool.filter(r => !used.includes(r.id));
-      const pick = (options.length ? options : pool)[
-        Math.floor(Math.random() * (options.length || pool.length))
-      ];
-      if (!pick) return plan;
-      return [...plan, { id: `m${Date.now()}`, recipe: pick, done: false }];
-    });
+  const addMeal = async () => {
+    const all = filterByDietary(await loadPool(), activeFilters);
+    if (!all.length) {
+      Alert.alert('Nothing to add yet', 'Favourite a few recipes, or browse creators for free ones.');
+      return;
+    }
+    const used = mealPlan.map(m => m.recipe.id);
+    const unused = all.filter(r => !used.includes(r.id));
+    const from = unused.length ? unused : all;
+    const [pick] = await withIngredients([from[Math.floor(Math.random() * from.length)]]);
+    setPlan(plan => [...plan, { id: `m${Date.now()}`, recipe: pick, done: false }]);
   };
 
   // Add a specific recipe from the user's favorites, skipping duplicates.

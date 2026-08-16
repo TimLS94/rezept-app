@@ -9,7 +9,7 @@ import {
   Poppins_600SemiBold,
   Poppins_700Bold,
 } from '@expo-google-fonts/poppins';
-import { AuthProvider } from '../lib/auth';
+import { AuthProvider, useAuth } from '../lib/auth';
 import { MealPlanProvider } from '../lib/mealPlan';
 import { FavoritesProvider } from '../lib/favorites';
 import { COLORS } from '../lib/theme';
@@ -27,11 +27,21 @@ applyGlobalFont();
 // path: the native extension reopens the app, +native-intent routes to
 // /shareintent, and that screen reads the payload out of this provider.
 
+// Lives inside AuthProvider so it can hold the intro until the session check is
+// done. Without that, the animation ends on whatever the app has managed to
+// render — usually the spinner in app/index.tsx, which is exactly the "still
+// loading" impression the intro exists to avoid.
+function LaunchIntro() {
+  const { loading } = useAuth();
+  const [done, setDone] = useState(false);
+  if (done) return null;
+  return <SplashDrop ready={!loading} onDone={() => setDone(true)} />;
+}
+
 export default function RootLayout() {
   const router = useRouter();
   // The intro plays over the app rather than before it, so loading happens
   // behind it instead of after — by the time the drop lands, Home is ready.
-  const [introDone, setIntroDone] = useState(false);
   const [fontsLoaded] = useFonts({
     Anton_400Regular,
     Poppins_400Regular,
@@ -59,7 +69,7 @@ export default function RootLayout() {
         <FavoritesProvider>
           <MealPlanProvider>
             <Slot />
-            {!introDone && <SplashDrop onDone={() => setIntroDone(true)} />}
+            <LaunchIntro />
           </MealPlanProvider>
         </FavoritesProvider>
       </AuthProvider>
