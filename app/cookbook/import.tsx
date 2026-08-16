@@ -311,7 +311,7 @@ export default function ImportRecipeScreen() {
                 onPress={() => setInputMode('screenshot')}
               >
                 <Text style={[styles.modeButtonText, inputMode === 'screenshot' && styles.modeButtonTextActive]}>
-                  �️ Gallery
+                  🖼️ Gallery
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
