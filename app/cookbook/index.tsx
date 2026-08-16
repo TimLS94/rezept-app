@@ -144,9 +144,9 @@ export default function CookbookScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Cookbook</Text>
+        <Text style={styles.headerTitle}>Cookbook</Text>
         <TouchableOpacity onPress={() => router.push('/(tabs)/discover')} style={styles.addButton}>
-          <Text style={styles.addButtonText}>+ Browse</Text>
+          <Text style={styles.addButtonText}>+ Add</Text>
         </TouchableOpacity>
       </View>
 
