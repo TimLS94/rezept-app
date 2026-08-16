@@ -85,6 +85,32 @@ export function myRecipeToRecipe(myRecipe: MyRecipe): Recipe {
   };
 }
 
+/**
+ * Take a copy of someone else's recipe into the user's own cookbook.
+ *
+ * A copy, not a link: creator recipes belong to their author and can be edited
+ * or deleted by them, so "edit this favourite" has to mean "edit my version of
+ * it". The original favourite is left exactly as it was — the two are separate
+ * from the moment the copy is made, which is also why no id of the original is
+ * kept beyond the source URL.
+ */
+export async function copyRecipeToCookbook(recipe: Recipe): Promise<SaveResult> {
+  return saveMyRecipe({
+    title: recipe.title,
+    description: recipe.description,
+    image: recipe.image,
+    prepTime: recipe.prepTime,
+    cookTime: recipe.cookTime,
+    servings: recipe.servings,
+    calories: recipe.calories,
+    cost: recipe.cost,
+    difficulty: recipe.difficulty,
+    dietary: recipe.dietary,
+    ingredients: recipe.ingredients,
+    steps: recipe.steps,
+  });
+}
+
 // Fetch all user's personal recipes
 export async function fetchMyRecipes(): Promise<MyRecipe[]> {
   const user = await getCurrentUser();

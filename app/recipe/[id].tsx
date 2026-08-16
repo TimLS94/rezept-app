@@ -15,7 +15,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe, totalTime, isQuick, isBudget } from '../../data/recipes';
 import { supabase, getCurrentUser } from '../../lib/supabase';
 import { addRecipesToShoppingList } from '../../lib/shopping';
-import { fetchDbRecipeById, setRecipePaid } from '../../lib/recipes';
+import { fetchDbRecipeById, fetchPurchasedRecipes, setRecipePaid } from '../../lib/recipes';
+import { copyRecipeToCookbook } from '../../lib/myRecipes';
 import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { useFavorites } from '../../lib/favorites';
@@ -83,17 +84,45 @@ export default function RecipeDetailScreen() {
   // Uploaded recipes aren't in the local catalogue — fetch them from Supabase.
   useEffect(() => {
     if (localRecipe || !id) return;
-    fetchDbRecipeById(id).then(r => {
+    (async () => {
+      const r = await fetchDbRecipeById(id);
       if (r) {
         setRecipe(r);
         setServings(r.servings);
+        return;
       }
-    });
+      // Nothing live under that id. If the user bought it and the creator has
+      // since deleted it, the copy taken at purchase is still theirs — serve
+      // that rather than a "not found" for something they paid for.
+      const owned = await fetchPurchasedRecipes();
+      const snapshot = owned.find(p => p.id === id);
+      if (snapshot) {
+        setRecipe(snapshot);
+        setServings(snapshot.servings);
+      }
+    })();
   }, [id, localRecipe]);
 
   // Which purchase is in flight, so all three buttons disable together and the
   // pressed one can show its own progress label.
   const [buying, setBuying] = useState<'recipe' | 'creator' | null>(null);
+
+  const [copying, setCopying] = useState(false);
+
+  const copyToCookbook = async () => {
+    if (!recipe || copying) return;
+    setCopying(true);
+    const result = await copyRecipeToCookbook(recipe);
+    setCopying(false);
+    if ('error' in result) {
+      Alert.alert('Could not copy', result.error);
+      return;
+    }
+    Alert.alert('Copied to your cookbook', 'Your copy is yours to edit — the original stays as it is.', [
+      { text: 'Later', style: 'cancel' },
+      { text: 'Edit now', onPress: () => router.push(`/cookbook/${result.id}`) },
+    ]);
+  };
 
   // Shared tail for both creator-priced purchases: report, then re-fetch so the
   // server hands back the unlocked recipe.
@@ -589,15 +618,35 @@ export default function RecipeDetailScreen() {
         </>
         )}
 
+        {/* Editing someone else's recipe means editing your own copy of it —
+            the original stays theirs, and the favourite stays untouched. */}
+        {!locked && !guestLocked && !isOwner && (
+          <TouchableOpacity style={styles.copyButton} onPress={copyToCookbook} disabled={copying}>
+            <Text style={styles.copyButtonText}>
+              {copying ? 'Copying…' : '📋 Save an editable copy to my cookbook'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
       {/* Bottom Action */}
       {!locked && !guestLocked && (
         <View style={styles.bottomAction}>
-          <TouchableOpacity style={styles.addToCartButton} onPress={addToShoppingList}>
-            <Text style={styles.addToCartText}>🛒 Add to Shopping List</Text>
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            {/* Carries the portion count the user picked above into cook mode,
+                so the scaled amounts they just saw are the ones they cook with. */}
+            <TouchableOpacity
+              style={styles.cookButton}
+              onPress={() => router.push(`/cook/${id}?source=creator&servings=${servings}`)}
+            >
+              <Text style={styles.cookButtonText}>👨‍🍳 Cook</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addToCartButton} onPress={addToShoppingList}>
+              <Text style={styles.addToCartText}>🛒 Shopping List</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -744,7 +793,21 @@ const styles = StyleSheet.create({
   stepImage: { width: '100%', height: 170, borderRadius: 12, marginTop: 10 },
   bottomSpacer: { height: 100 },
   bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 32, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-  addToCartButton: { backgroundColor: '#F2701E', padding: 18, borderRadius: 14, alignItems: 'center' },
+  copyButton: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E4D9CB',
+    alignItems: 'center',
+  },
+  copyButtonText: { color: '#0D2B63', fontSize: 15, fontWeight: '600' },
+
+  actionRow: { flexDirection: 'row', gap: 10 },
+  cookButton: { flex: 1, backgroundColor: '#0D2B63', padding: 18, borderRadius: 14, alignItems: 'center' },
+  cookButtonText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
+  addToCartButton: { flex: 1.3, backgroundColor: '#F2701E', padding: 18, borderRadius: 14, alignItems: 'center' },
   addToCartText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },

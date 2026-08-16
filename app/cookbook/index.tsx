@@ -12,19 +12,31 @@ import {
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { fetchMyRecipes, deleteMyRecipe, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes';
+import { fetchPurchasedRecipes, PurchasedRecipe } from '../../lib/recipes';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { useAuth } from '../../lib/auth';
 
+// Two kinds of thing live in a cookbook, and they behave differently: what you
+// wrote (yours, editable, deletable) and what you got from a creator (theirs,
+// read-only, kept because you paid for it). One list mixing both would need an
+// exception on every action, so they get a tab each.
+type Tab = 'mine' | 'creators';
+
 export default function CookbookScreen() {
   const { user, isGuest } = useAuth();
+  const [tab, setTab] = useState<Tab>('mine');
   const [recipes, setRecipes] = useState<MyRecipe[]>([]);
+  const [owned, setOwned] = useState<PurchasedRecipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
 
+  // Both tabs load together, in one round trip's worth of time — switching tabs
+  // should never be a loading spinner.
   const loadRecipes = async () => {
-    const data = await fetchMyRecipes();
-    setRecipes(data);
+    const [mine, bought] = await Promise.all([fetchMyRecipes(), fetchPurchasedRecipes()]);
+    setRecipes(mine);
+    setOwned(bought);
     setLoading(false);
   };
 
@@ -123,10 +135,31 @@ export default function CookbookScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, tab === 'mine' && styles.tabActive]}
+          onPress={() => setTab('mine')}
+        >
+          <Text style={[styles.tabText, tab === 'mine' && styles.tabTextActive]}>
+            My recipes{recipes.length ? ` (${recipes.length})` : ''}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, tab === 'creators' && styles.tabActive]}
+          onPress={() => setTab('creators')}
+        >
+          <Text style={[styles.tabText, tab === 'creators' && styles.tabTextActive]}>
+            From creators{owned.length ? ` (${owned.length})` : ''}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color="#F2701E" />
         </View>
+      ) : tab === 'creators' ? (
+        <CreatorsTab recipes={owned} refreshing={refreshing} onRefresh={onRefresh} />
       ) : recipes.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>📚</Text>
@@ -142,9 +175,9 @@ export default function CookbookScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryButton}
-            onPress={() => router.push('/cookbook/import')}
+            onPress={() => router.push('/cookbook/new')}
           >
-            <Text style={styles.secondaryButtonText}>✏️ Add manually</Text>
+            <Text style={styles.secondaryButtonText}>✏️ Write your own</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -158,9 +191,14 @@ export default function CookbookScreen() {
             <Text style={styles.count}>
               {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
             </Text>
-            <TouchableOpacity onPress={() => router.push('/cookbook/import')}>
-              <Text style={styles.importLink}>+ Import</Text>
-            </TouchableOpacity>
+            <View style={styles.topLinks}>
+              <TouchableOpacity onPress={() => router.push('/cookbook/new')}>
+                <Text style={styles.importLink}>+ Write</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/cookbook/import')}>
+                <Text style={styles.importLink}>+ Import</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {recipes.map(recipe => {
@@ -181,8 +219,12 @@ export default function CookbookScreen() {
                   )}
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={2}>{recipe.title}</Text>
+                    {/* "0 min • 4 servings" is noise on a note nobody filled
+                        those in for — say what it actually is instead. */}
                     <Text style={styles.cardMeta}>
-                      {recipe.prepTime + recipe.cookTime} min • {recipe.servings} servings
+                      {recipe.ingredients.length === 0 && recipe.steps.length === 0
+                        ? '📝 Note'
+                        : `${recipe.prepTime + recipe.cookTime} min • ${recipe.servings} servings`}
                     </Text>
                     {recipe.sourceUrl && (
                       <Text style={styles.cardSource}>📱 Imported</Text>
@@ -191,10 +233,16 @@ export default function CookbookScreen() {
                 </TouchableOpacity>
 
                 <View style={styles.cardActions}>
+                  {/* Nothing to shop for on a note — the button would report
+                      "0 items added" and look broken. */}
                   <TouchableOpacity
-                    style={[styles.cartButton, inCart && styles.cartButtonAdded]}
+                    style={[
+                      styles.cartButton,
+                      inCart && styles.cartButtonAdded,
+                      recipe.ingredients.length === 0 && styles.cartButtonDisabled,
+                    ]}
                     onPress={() => addToCart(recipe)}
-                    disabled={inCart}
+                    disabled={inCart || recipe.ingredients.length === 0}
                   >
                     <Text style={[styles.cartButtonText, inCart && styles.cartButtonTextAdded]}>
                       {inCart ? '✓' : '🛒'}
@@ -218,8 +266,104 @@ export default function CookbookScreen() {
   );
 }
 
+/**
+ * Recipes bought from creators. Read-only — they belong to their author, so
+ * there is no edit and no delete here; removing one would mean throwing away
+ * something the user paid for.
+ */
+function CreatorsTab({
+  recipes,
+  refreshing,
+  onRefresh,
+}: {
+  recipes: PurchasedRecipe[];
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  if (recipes.length === 0) {
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyIcon}>🔓</Text>
+        <Text style={styles.emptyText}>Nothing unlocked yet</Text>
+        <Text style={styles.emptySubtext}>
+          Recipes you buy from creators land here and stay yours — even if the
+          creator takes them down later.
+        </Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/search')}>
+          <Text style={styles.primaryButtonText}>Browse creators</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F2701E" />
+      }
+    >
+      <View style={styles.topRow}>
+        <Text style={styles.count}>
+          {recipes.length} unlocked {recipes.length === 1 ? 'recipe' : 'recipes'}
+        </Text>
+      </View>
+
+      {recipes.map(recipe => (
+        <View key={recipe.id} style={styles.card}>
+          <TouchableOpacity
+            style={styles.cardMain}
+            activeOpacity={0.8}
+            onPress={() => router.push(`/recipe/${recipe.id}`)}
+          >
+            {recipe.image ? (
+              <Image source={{ uri: recipe.image }} style={styles.cardImage} />
+            ) : (
+              <View style={[styles.cardImage, styles.cardImageEmpty]}>
+                <Text style={styles.cardImageEmptyText}>🍽️</Text>
+              </View>
+            )}
+            <View style={styles.cardContent}>
+              <Text style={styles.cardTitle} numberOfLines={2}>{recipe.title}</Text>
+              <Text style={styles.cardMeta}>{recipe.influencer.handle}</Text>
+              {/* The creator pulled it. Say so plainly — the copy still works,
+                  but it will never get their updates again. */}
+              {!recipe.available && (
+                <Text style={styles.cardGone}>Removed by creator · your copy</Text>
+              )}
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={styles.cartButton}
+              onPress={() => router.push(`/cook/${recipe.id}?source=purchase&servings=${recipe.servings}`)}
+            >
+              <Text style={styles.cartButtonText}>👨‍🍳</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+
+      <View style={{ height: 40 }} />
+    </ScrollView>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF9F2' },
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  tab: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabActive: { borderBottomColor: '#F2701E' },
+  tabText: { fontSize: 14, fontWeight: '600', color: '#999' },
+  tabTextActive: { color: '#0D2B63' },
+  cardGone: { fontSize: 11, color: '#B0402A', fontWeight: '600', marginTop: 4 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -265,6 +409,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   count: { fontSize: 13, color: '#888' },
+  topLinks: { flexDirection: 'row', gap: 18 },
   importLink: { fontSize: 13, color: '#F2701E', fontWeight: '700' },
   card: {
     flexDirection: 'row',
@@ -297,6 +442,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cartButtonAdded: { backgroundColor: '#E8F5E9' },
+  cartButtonDisabled: { opacity: 0.3 },
   cartButtonText: { fontSize: 18 },
   cartButtonTextAdded: { color: '#3C8D40' },
   deleteButton: {

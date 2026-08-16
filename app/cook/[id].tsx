@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe } from '../../data/recipes';
-import { fetchDbRecipeById } from '../../lib/recipes';
+import { loadCookable, CookableSource, isNote } from '../../lib/cookable';
 import { incrementCooked, awardFor, nextAward, logCook, saveCookRating } from '../../lib/cookStats';
 import { scaleAmount, setServings as persistServings } from '../../lib/servings';
 import { getFamilyServings } from '../../lib/family';
@@ -25,8 +25,11 @@ import ImageViewer from '../../components/ImageViewer';
 type Phase = 'intro' | 'cooking';
 
 export default function CookModeScreen() {
-  const { id, servings } = useLocalSearchParams<{ id: string; servings?: string }>();
+  const { id, servings, source } = useLocalSearchParams<{ id: string; servings?: string; source?: CookableSource }>();
   const [recipe, setRecipe] = useState<Recipe | undefined>(getRecipeById(id || ''));
+  // Where the recipe came from, and whether its original still exists. Only
+  // meaningful for purchases whose creator has since deleted them.
+  const [available, setAvailable] = useState(true);
   // Chosen serving count (from the favorite / passed in), scales the ingredients.
   const [servingsSel, setServingsSel] = useState<number | null>(servings ? Number(servings) : null);
   const [familyServings, setFamilyServings] = useState<number | null>(null);
@@ -80,8 +83,11 @@ export default function CookModeScreen() {
   useEffect(() => {
     if (recipe) return;
     (async () => {
-      const r = await fetchDbRecipeById(id || '');
-      setRecipe(r);
+      // Resolves against the cookbook, creator recipes and purchase snapshots
+      // alike — cooking works the same from wherever the recipe was opened.
+      const c = await loadCookable(id || '', source);
+      setRecipe(c?.recipe);
+      setAvailable(c?.available ?? true);
       setLoading(false);
     })();
   }, [id]);
@@ -175,6 +181,24 @@ export default function CookModeScreen() {
     );
   }
 
+  // A paid recipe reached by a direct link comes back as a teaser with its steps
+  // stripped. Without this it would fall through to the note view below and look
+  // like an empty recipe rather than a locked one.
+  if (recipe.locked) {
+    return (
+      <View style={styles.container}>
+        <Header title="Cook" />
+        <View style={styles.center}>
+          <Text style={styles.noteEmoji}>🔒</Text>
+          <Text style={styles.muted}>This recipe is locked. Open it to unlock.</Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.replace(`/recipe/${id}`)}>
+            <Text style={styles.primaryBtnText}>VIEW RECIPE</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   // ── Completion / rewards ──────────────────────────────────────────────────
   if (finished) {
     const award = awardFor(cookedCount);
@@ -220,6 +244,27 @@ export default function CookModeScreen() {
         <TouchableOpacity style={styles.primaryBtn} onPress={() => router.back()}>
           <Text style={styles.primaryBtnText}>FINISH</Text>
         </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── Note ──────────────────────────────────────────────────────────────────
+  // A note has nothing to step through, so there is no step list, no progress
+  // bar and no checking things off — just the text, big enough to read from
+  // across the kitchen. It still counts as a cook when you're done, because you
+  // did cook something.
+  if (isNote(recipe)) {
+    return (
+      <View style={styles.container}>
+        <Header title="Cook" />
+        <ScrollView contentContainerStyle={styles.noteScroll}>
+          <Text style={styles.noteEmoji}>📝</Text>
+          <Text style={styles.noteTitle}>{recipe.title}</Text>
+          <Text style={styles.noteText}>{recipe.description}</Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={finishCooking}>
+            <Text style={styles.primaryBtnText}>DONE COOKING</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
     );
   }
@@ -464,6 +509,13 @@ const styles = StyleSheet.create({
   awardNext: { fontFamily: FONTS.medium, fontSize: 12.5, color: COLORS.warmGray, marginTop: 8, textAlign: 'center' },
   feedbackLabel: { fontFamily: FONTS.semibold, fontSize: 15, color: COLORS.charcoal, marginTop: 26 },
   starsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  // Note view: generous line height and a large body size, because this gets
+  // read at arm's length with messy hands.
+  noteScroll: { padding: 28, paddingBottom: 60, alignItems: 'center' },
+  noteEmoji: { fontSize: 44, marginBottom: 12 },
+  noteTitle: { fontFamily: FONTS.display, fontSize: 26, color: COLORS.ink, textAlign: 'center', marginBottom: 20 },
+  noteText: { fontSize: 19, lineHeight: 30, color: COLORS.ink, alignSelf: 'stretch' },
+
   primaryBtn: { backgroundColor: COLORS.orange, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 56, marginTop: 30 },
   primaryBtnText: { fontFamily: FONTS.bold, color: '#FFF', fontSize: 15, letterSpacing: 0.5 },
 });

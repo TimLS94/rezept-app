@@ -212,7 +212,7 @@ export default function FavoritesScreen() {
                 </TouchableOpacity>
 
                 <View style={styles.cardActions}>
-                  <TouchableOpacity style={styles.actCook} onPress={() => router.push(`/cook/${recipe.id}?servings=${servingsFor(recipe.id, recipe.servings)}`)}>
+                  <TouchableOpacity style={styles.actCook} onPress={() => router.push(`/cook/${recipe.id}?source=creator&servings=${servingsFor(recipe.id, recipe.servings)}`)}>
                     <Ionicons name="restaurant" size={17} color="#FFF" />
                   </TouchableOpacity>
                   <TouchableOpacity

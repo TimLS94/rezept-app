@@ -89,6 +89,13 @@ export default function CookbookRecipeScreen() {
     };
   }, [id]);
 
+  // `source=mine` sends cook mode straight to my_recipes instead of making it
+  // search every table for the id.
+  const startCooking = () => {
+    if (!recipe) return;
+    router.push(`/cook/${recipe.id}?source=mine&servings=${recipe.servings}`);
+  };
+
   const addToCart = async () => {
     if (!recipe) return;
     const result = await addRecipesToShoppingList([{ recipe: myRecipeToRecipe(recipe) }]);
@@ -149,7 +156,13 @@ export default function CookbookRecipeScreen() {
   }
 
   const totalTime = recipe.prepTime + recipe.cookTime;
-  const isEmpty = recipe.ingredients.length === 0 && recipe.steps.length === 0;
+  // No ingredients and no steps has two very different causes, and only one of
+  // them is a failure: an import that came back empty (there's a source URL to
+  // retry with), or a note the user wrote on purpose. Treating every empty
+  // recipe as a broken import told people their own notes were a mistake.
+  const hasStructure = recipe.ingredients.length > 0 || recipe.steps.length > 0;
+  const failedImport = !hasStructure && !!recipe.sourceUrl && !recipe.description;
+  const isNoteEntry = !hasStructure && !failedImport;
 
   return (
     <View style={styles.container}>
@@ -191,7 +204,7 @@ export default function CookbookRecipeScreen() {
           ) : null}
 
           {/* Empty recipe: caption/video extraction produced no content */}
-          {isEmpty ? (
+          {failedImport ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyCardTitle}>No recipe details yet</Text>
               <Text style={styles.emptyCardText}>
@@ -205,6 +218,26 @@ export default function CookbookRecipeScreen() {
                 <Text style={styles.primaryButtonText}>Re-import with screenshot</Text>
               </TouchableOpacity>
             </View>
+          ) : isNoteEntry ? (
+            /* A note: free text, no structure. Still openable in cook mode as a
+               readable card, and one tap away from becoming a real recipe. */
+            <>
+              <View style={styles.noteCard}>
+                <Text style={styles.noteBody}>
+                  {recipe.description || 'This note is empty. Tap Edit to write it.'}
+                </Text>
+              </View>
+              {recipe.description ? (
+                <TouchableOpacity style={styles.cookButton} onPress={startCooking}>
+                  <Text style={styles.cookButtonText}>👨‍🍳 Open while cooking</Text>
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity style={styles.ghostButton} onPress={startEditing}>
+                <Text style={styles.ghostButtonText}>
+                  Add ingredients and steps to make it cookable
+                </Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <>
               {recipe.ingredients.length > 0 && (
@@ -233,6 +266,12 @@ export default function CookbookRecipeScreen() {
                     </View>
                   ))}
                 </View>
+              )}
+
+              {recipe.steps.length > 0 && (
+                <TouchableOpacity style={styles.cookButton} onPress={startCooking}>
+                  <Text style={styles.cookButtonText}>👨‍🍳 Start cooking</Text>
+                </TouchableOpacity>
               )}
 
               <TouchableOpacity
@@ -357,6 +396,25 @@ const styles = StyleSheet.create({
   },
   stepNumberText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
   stepText: { flex: 1, fontSize: 14, color: '#333', lineHeight: 20 },
+
+  noteCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  noteBody: { fontSize: 16, color: '#333', lineHeight: 25 },
+
+  cookButton: {
+    backgroundColor: '#0D2B63',
+    borderRadius: 14,
+    padding: 18,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cookButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  ghostButton: { paddingVertical: 14, alignItems: 'center' },
+  ghostButtonText: { color: '#F2701E', fontSize: 14, fontWeight: '600' },
 
   cartButton: {
     backgroundColor: '#F2701E',

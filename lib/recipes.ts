@@ -150,6 +150,27 @@ export async function fetchDbRecipeById(id: string): Promise<Recipe | undefined>
   return mapDbRecipe({ ...row, locked: !!(row as any).is_paid });
 }
 
+// A creator recipe the signed-in user owns. `available: false` means the
+// creator has deleted the original and this is the snapshot taken at purchase —
+// still fully readable and cookable, which is the whole point of keeping it.
+export type PurchasedRecipe = Recipe & { available: boolean; purchasedAt?: string };
+
+// Everything the user has bought, for the "From creators" tab of the cookbook.
+// Returns [] rather than throwing when my_purchased_recipes() isn't there yet
+// (supabase/purchases_survive_deletion.sql not run): an empty tab is a far
+// better failure than a screen that errors out.
+export async function fetchPurchasedRecipes(): Promise<PurchasedRecipe[]> {
+  const { data, error } = await supabase.rpc('my_purchased_recipes');
+  if (error || !Array.isArray(data)) return [];
+  return data.map((row: any) => ({
+    ...mapDbRecipe(row),
+    // Owned by definition — the paywall gate must never re-lock a purchase.
+    locked: false,
+    available: row.available !== false,
+    purchasedAt: row.purchased_at,
+  }));
+}
+
 export async function fetchRecipesByCreator(creatorId: string): Promise<Recipe[]> {
   const { data, error } = await supabase
     .from('recipes')
