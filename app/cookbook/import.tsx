@@ -20,9 +20,8 @@ import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
-// Direct Instagram-URL import is a creator-only feature; regular users import
-// via screenshot (OCR) or by pasting text.
-type InputMode = 'screenshot' | 'text';
+// Import modes: screenshot from gallery, camera photo, or pasted text
+type InputMode = 'screenshot' | 'camera' | 'text';
 
 // A recipe's text can span several on-screen frames (ingredients + each step).
 // Vision de-dupes across images, so allow a comfortable number.
@@ -106,13 +105,36 @@ export default function ImportRecipeScreen() {
     setScreenshots(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Take photo with camera
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow camera access to take photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      const asset = result.assets[0];
+      if (asset.base64) {
+        setScreenshotUris(prev => [...prev, asset.uri].slice(0, MAX_SCREENSHOTS));
+        setScreenshots(prev => [...prev, asset.base64!].slice(0, MAX_SCREENSHOTS));
+      }
+    }
+  };
+
   const handleImport = async () => {
     setError('');
 
-    // Screenshot mode
-    if (inputMode === 'screenshot') {
+    // Screenshot or Camera mode (both use images)
+    if (inputMode === 'screenshot' || inputMode === 'camera') {
       if (screenshots.length === 0) {
-        Alert.alert('No screenshots', 'Please add at least one screenshot');
+        Alert.alert('No images', 'Please add at least one image');
         return;
       }
 
@@ -289,7 +311,15 @@ export default function ImportRecipeScreen() {
                 onPress={() => setInputMode('screenshot')}
               >
                 <Text style={[styles.modeButtonText, inputMode === 'screenshot' && styles.modeButtonTextActive]}>
-                  📸 Screenshot
+                  �️ Gallery
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeButton, inputMode === 'camera' && styles.modeButtonActive]}
+                onPress={() => setInputMode('camera')}
+              >
+                <Text style={[styles.modeButtonText, inputMode === 'camera' && styles.modeButtonTextActive]}>
+                  📷 Camera
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -330,12 +360,50 @@ export default function ImportRecipeScreen() {
                   disabled={screenshots.length >= MAX_SCREENSHOTS}
                 >
                   <Text style={styles.uploadButtonText}>
-                    {screenshots.length === 0 ? '📸 Add Screenshots' : '+ Add More'}
+                    {screenshots.length === 0 ? '�️ Select from Gallery' : '+ Add More'}
                   </Text>
                 </TouchableOpacity>
 
                 <Text style={styles.screenshotHint}>
-                  Take screenshots of the recipe from Instagram/TikTok and upload them here. AI will read the text and ingredients from the images.
+                  Select screenshots of the recipe from your gallery. AI will read the text and ingredients from the images.
+                </Text>
+              </View>
+            )}
+
+            {/* Camera Mode */}
+            {inputMode === 'camera' && (
+              <View style={styles.field}>
+                <Text style={styles.label}>Photos (max {MAX_SCREENSHOTS})</Text>
+                
+                {/* Photo previews */}
+                {screenshotUris.length > 0 && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.screenshotRow}>
+                    {screenshotUris.map((uri, index) => (
+                      <View key={index} style={styles.screenshotPreview}>
+                        <Image source={{ uri }} style={styles.screenshotImage} />
+                        <TouchableOpacity 
+                          style={styles.removeScreenshot}
+                          onPress={() => removeScreenshot(index)}
+                        >
+                          <Text style={styles.removeScreenshotText}>×</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+                )}
+
+                <TouchableOpacity 
+                  style={styles.uploadButton} 
+                  onPress={takePhoto}
+                  disabled={screenshots.length >= MAX_SCREENSHOTS}
+                >
+                  <Text style={styles.uploadButtonText}>
+                    {screenshots.length === 0 ? '📷 Take Photo' : '+ Take Another'}
+                  </Text>
+                </TouchableOpacity>
+
+                <Text style={styles.screenshotHint}>
+                  Take a photo of a recipe from a cookbook, magazine, or handwritten note. AI will extract the ingredients and steps.
                 </Text>
               </View>
             )}

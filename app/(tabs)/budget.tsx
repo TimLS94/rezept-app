@@ -9,15 +9,17 @@ import {
   ActivityIndicator,
   Alert
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Recipe, DietaryTag, DIETARY_TAGS } from '../../data/recipes';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { FEATURES } from '../../lib/features';
 import { useMealPlan, PlannedMeal } from '../../lib/mealPlan';
-import { useFavorites } from '../../lib/favorites';
+import { fetchMyRecipes, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes';
+import { fetchCookbookCreatorRecipes, CookbookCreatorRecipe } from '../../lib/recipes';
 import { buildRecipePool, filterByDietary, shuffled, withIngredients } from '../../lib/planner';
 import { WEEKDAYS, startOfWeek, addDays, weekKey, fmtDay } from '../../lib/week';
 import { Modal } from 'react-native';
+import { useCallback } from 'react';
 
 // A week of meals from whatever the pool offers. Fewer than seven recipes means
 // a shorter week rather than the same meal repeated — planning Monday's dinner
@@ -27,13 +29,37 @@ const buildPlan = (pool: Recipe[]): PlannedMeal[] =>
 
 export default function BudgetScreen() {
   const { plansByWeek, setWeekPlan, updateWeekPlan } = useMealPlan();
-  const { favorites } = useFavorites();
   const [weeklyBudget] = useState(150);
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [generating, setGenerating] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [showFavPicker, setShowFavPicker] = useState(false);
+  const [showCookbookPicker, setShowCookbookPicker] = useState(false);
+  const [pickerTab, setPickerTab] = useState<'mine' | 'creators'>('mine');
+  
+  // Cookbook recipes for the picker
+  const [myRecipes, setMyRecipes] = useState<MyRecipe[]>([]);
+  const [creatorRecipes, setCreatorRecipes] = useState<CookbookCreatorRecipe[]>([]);
+  const [loadingCookbook, setLoadingCookbook] = useState(false);
+
+  // Load cookbook when picker opens
+  const loadCookbook = async () => {
+    setLoadingCookbook(true);
+    const [mine, creators] = await Promise.all([
+      fetchMyRecipes(),
+      fetchCookbookCreatorRecipes(),
+    ]);
+    setMyRecipes(mine);
+    setCreatorRecipes(creators);
+    setLoadingCookbook(false);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      // Pre-load cookbook for faster picker
+      loadCookbook();
+    }, [])
+  );
 
   const key = weekKey(weekStart);
   const mealPlan = plansByWeek[key] ?? [];
@@ -69,19 +95,26 @@ export default function BudgetScreen() {
   // waits on the network twice.
   const [pool, setPool] = useState<Recipe[] | null>(null);
 
+  // Convert cookbook recipes to Recipe format for the pool
+  const getCookbookAsRecipes = (): Recipe[] => {
+    const mine = myRecipes.map(myRecipeToRecipe);
+    // CookbookCreatorRecipe extends Recipe, so it's already the right type
+    const creators: Recipe[] = creatorRecipes;
+    return [...mine, ...creators];
+  };
+
   const loadPool = async (): Promise<Recipe[]> => {
     if (pool) return pool;
-    const fresh = await buildRecipePool(favorites);
+    const cookbookRecipes = getCookbookAsRecipes();
+    const fresh = await buildRecipePool(cookbookRecipes);
     setPool(fresh);
     return fresh;
   };
 
-  // Favourites are the biggest half of the pool, so a change there has to
-  // invalidate it — otherwise a recipe you just favourited can't be planned
-  // until the app restarts.
+  // Cookbook changes invalidate the pool
   useEffect(() => {
     setPool(null);
-  }, [favorites]);
+  }, [myRecipes, creatorRecipes]);
 
   const regeneratePlan = async () => {
     setGenerating(true);
@@ -91,8 +124,8 @@ export default function BudgetScreen() {
         Alert.alert(
           'Nothing to plan with yet',
           activeFilters.length
-            ? 'No recipe matches those filters. Try removing one, or favourite a few more recipes.'
-            : 'Save some favourites or browse creators first — the planner only uses real recipes, never made-up ones.'
+            ? 'No recipe matches those filters. Try removing one, or add more recipes to your cookbook.'
+            : 'Add recipes to your cookbook first — import from photos, write your own, or save creator recipes.'
         );
         return;
       }
@@ -125,7 +158,7 @@ export default function BudgetScreen() {
   const addMeal = async () => {
     const all = filterByDietary(await loadPool(), activeFilters);
     if (!all.length) {
-      Alert.alert('Nothing to add yet', 'Favourite a few recipes, or browse creators for free ones.');
+      Alert.alert('Nothing to add yet', 'Add recipes to your cookbook first.');
       return;
     }
     const used = mealPlan.map(m => m.recipe.id);
@@ -135,8 +168,8 @@ export default function BudgetScreen() {
     setPlan(plan => [...plan, { id: `m${Date.now()}`, recipe: pick, done: false }]);
   };
 
-  // Add a specific recipe from the user's favorites, skipping duplicates.
-  const addFromFavorite = (recipe: Recipe) => {
+  // Add a specific recipe from the user's cookbook, skipping duplicates.
+  const addFromCookbook = (recipe: Recipe) => {
     setPlan(plan =>
       plan.some(m => m.recipe.id === recipe.id)
         ? plan
@@ -327,8 +360,8 @@ export default function BudgetScreen() {
             <TouchableOpacity style={[styles.addMealButton, styles.addRowItem]} onPress={addMeal}>
               <Text style={styles.addMealButtonText}>+ Add a meal</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.addFavButton, styles.addRowItem]} onPress={() => setShowFavPicker(true)}>
-              <Text style={styles.addFavButtonText}>❤️ From favorites</Text>
+            <TouchableOpacity style={[styles.addFavButton, styles.addRowItem]} onPress={() => setShowCookbookPicker(true)}>
+              <Text style={styles.addFavButtonText}>📚 From cookbook</Text>
             </TouchableOpacity>
           </View>
 
@@ -369,42 +402,98 @@ export default function BudgetScreen() {
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Favorites picker — add saved recipes straight into the week */}
-      <Modal visible={showFavPicker} animationType="slide" transparent onRequestClose={() => setShowFavPicker(false)}>
+      {/* Cookbook picker — add recipes from cookbook to the week */}
+      <Modal visible={showCookbookPicker} animationType="slide" transparent onRequestClose={() => setShowCookbookPicker(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add from favorites</Text>
-              <TouchableOpacity onPress={() => setShowFavPicker(false)}>
+              <Text style={styles.modalTitle}>Add from cookbook</Text>
+              <TouchableOpacity onPress={() => setShowCookbookPicker(false)}>
                 <Text style={styles.modalClose}>Done</Text>
               </TouchableOpacity>
             </View>
-            {favorites.length === 0 ? (
-              <Text style={styles.modalEmpty}>No favorites yet. Swipe right in Discover to save recipes here.</Text>
-            ) : (
-              <ScrollView style={{ maxHeight: 440 }}>
-                {favorites.map(r => {
-                  const inPlan = mealPlan.some(m => m.recipe.id === r.id);
-                  return (
-                    <View key={r.id} style={styles.favRow}>
-                      <Image source={{ uri: r.image }} style={styles.favImage} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.favTitle} numberOfLines={1}>{r.title}</Text>
-                        <Text style={styles.favMeta}>{r.prepTime + r.cookTime} min · {r.calories} cal</Text>
+            
+            {/* Tab toggle */}
+            <View style={styles.pickerTabs}>
+              <TouchableOpacity
+                style={[styles.pickerTab, pickerTab === 'mine' && styles.pickerTabActive]}
+                onPress={() => setPickerTab('mine')}
+              >
+                <Text style={[styles.pickerTabText, pickerTab === 'mine' && styles.pickerTabTextActive]}>
+                  My recipes ({myRecipes.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.pickerTab, pickerTab === 'creators' && styles.pickerTabActive]}
+                onPress={() => setPickerTab('creators')}
+              >
+                <Text style={[styles.pickerTabText, pickerTab === 'creators' && styles.pickerTabTextActive]}>
+                  From creators ({creatorRecipes.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {loadingCookbook ? (
+              <View style={styles.modalLoading}>
+                <ActivityIndicator color="#F2701E" />
+              </View>
+            ) : pickerTab === 'mine' ? (
+              myRecipes.length === 0 ? (
+                <Text style={styles.modalEmpty}>No recipes yet. Import or write your own in the Cookbook.</Text>
+              ) : (
+                <ScrollView style={{ maxHeight: 380 }}>
+                  {myRecipes.map(r => {
+                    const recipe = myRecipeToRecipe(r);
+                    const inPlan = mealPlan.some(m => m.recipe.id === recipe.id);
+                    return (
+                      <View key={r.id} style={styles.favRow}>
+                        <Image source={{ uri: recipe.image }} style={styles.favImage} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.favTitle} numberOfLines={1}>{recipe.title}</Text>
+                          <Text style={styles.favMeta}>{recipe.prepTime + recipe.cookTime} min · {recipe.servings} servings</Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[styles.favAdd, inPlan && styles.favAddDone]}
+                          onPress={() => addFromCookbook(recipe)}
+                          disabled={inPlan}
+                        >
+                          <Text style={[styles.favAddText, inPlan && styles.favAddDoneText]}>
+                            {inPlan ? '✓ Added' : '+ Add'}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
-                      <TouchableOpacity
-                        style={[styles.favAdd, inPlan && styles.favAddDone]}
-                        onPress={() => addFromFavorite(r)}
-                        disabled={inPlan}
-                      >
-                        <Text style={[styles.favAddText, inPlan && styles.favAddDoneText]}>
-                          {inPlan ? '✓ Added' : '+ Add'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
-              </ScrollView>
+                    );
+                  })}
+                </ScrollView>
+              )
+            ) : (
+              creatorRecipes.length === 0 ? (
+                <Text style={styles.modalEmpty}>No creator recipes saved. Browse creators to add recipes.</Text>
+              ) : (
+                <ScrollView style={{ maxHeight: 380 }}>
+                  {creatorRecipes.map(r => {
+                    const inPlan = mealPlan.some(m => m.recipe.id === r.id);
+                    return (
+                      <View key={r.id} style={styles.favRow}>
+                        <Image source={{ uri: r.image }} style={styles.favImage} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.favTitle} numberOfLines={1}>{r.title}</Text>
+                          <Text style={styles.favMeta}>{r.prepTime + r.cookTime} min · {r.calories} cal</Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[styles.favAdd, inPlan && styles.favAddDone]}
+                          onPress={() => addFromCookbook(r)}
+                          disabled={inPlan}
+                        >
+                          <Text style={[styles.favAddText, inPlan && styles.favAddDoneText]}>
+                            {inPlan ? '✓ Added' : '+ Add'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              )
             )}
           </View>
         </View>
@@ -792,5 +881,34 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 40,
+  },
+  pickerTabs: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    padding: 4,
+  },
+  pickerTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  pickerTabActive: {
+    backgroundColor: '#FFF',
+  },
+  pickerTabText: {
+    fontSize: 13,
+    color: '#888',
+    fontWeight: '500',
+  },
+  pickerTabTextActive: {
+    color: '#1A1A1A',
+    fontWeight: '600',
+  },
+  modalLoading: {
+    padding: 40,
+    alignItems: 'center',
   },
 });

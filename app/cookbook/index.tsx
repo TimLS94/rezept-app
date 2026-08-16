@@ -174,20 +174,38 @@ export default function CookbookScreen() {
           <Text style={styles.emptyIcon}>📚</Text>
           <Text style={styles.emptyText}>Your cookbook is empty</Text>
           <Text style={styles.emptySubtext}>
-            Import recipes from Instagram or add your own
+            Add recipes from photos, text, or write your own
           </Text>
-          <TouchableOpacity 
-            style={styles.primaryButton} 
-            onPress={() => router.push('/cookbook/import')}
-          >
-            <Text style={styles.primaryButtonText}>📱 Import from Instagram</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.push('/cookbook/new')}
-          >
-            <Text style={styles.secondaryButtonText}>✏️ Write your own</Text>
-          </TouchableOpacity>
+          <View style={styles.emptyActions}>
+            <TouchableOpacity 
+              style={styles.emptyActionButton} 
+              onPress={() => router.push('/cookbook/import')}
+            >
+              <Text style={styles.emptyActionIcon}>🖼️</Text>
+              <Text style={styles.emptyActionText}>Gallery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.emptyActionButton} 
+              onPress={() => router.push('/cookbook/import')}
+            >
+              <Text style={styles.emptyActionIcon}>�</Text>
+              <Text style={styles.emptyActionText}>Camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.emptyActionButton} 
+              onPress={() => router.push('/cookbook/import')}
+            >
+              <Text style={styles.emptyActionIcon}>📝</Text>
+              <Text style={styles.emptyActionText}>Text</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.emptyActionButton} 
+              onPress={() => router.push('/cookbook/new')}
+            >
+              <Text style={styles.emptyActionIcon}>✏️</Text>
+              <Text style={styles.emptyActionText}>Write</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
         <ScrollView
@@ -482,6 +500,10 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 64, marginBottom: 16 },
   emptyText: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   emptySubtext: { fontSize: 14, color: '#888', marginTop: 6, textAlign: 'center', lineHeight: 20 },
+  emptyActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginTop: 24 },
+  emptyActionButton: { width: 72, height: 72, backgroundColor: '#FFF', borderRadius: 16, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  emptyActionIcon: { fontSize: 24, marginBottom: 4 },
+  emptyActionText: { fontSize: 11, fontWeight: '600', color: '#666' },
   primaryButton: {
     backgroundColor: '#F2701E',
     paddingHorizontal: 24,
