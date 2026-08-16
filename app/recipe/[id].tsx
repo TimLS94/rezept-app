@@ -436,6 +436,17 @@ export default function RecipeDetailScreen() {
               {isFavorite(recipe.id) ? '♥' : '♡'}
             </Text>
           </TouchableOpacity>
+          {!isOwner && (
+            <TouchableOpacity
+              style={[styles.cookbookButton, savedToCookbook && styles.cookbookButtonActive]}
+              onPress={toggleCookbookSave}
+              disabled={savingToCookbook}
+            >
+              <Text style={styles.cookbookButtonText}>
+                {savedToCookbook ? '📚' : '📖'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Time breakdown */}
@@ -657,27 +668,6 @@ export default function RecipeDetailScreen() {
         </>
         )}
 
-        {/* Editing someone else's recipe means editing your own copy of it —
-            the original stays theirs, and the favourite stays untouched. */}
-        {!locked && !guestLocked && !isOwner && (
-          <>
-            <TouchableOpacity
-              style={[styles.copyButton, savedToCookbook && styles.copyButtonOn]}
-              onPress={toggleCookbookSave}
-              disabled={savingToCookbook}
-            >
-              <Text style={[styles.copyButtonText, savedToCookbook && styles.copyButtonTextOn]}>
-                {savedToCookbook ? '✓ In my cookbook' : '🔖 Keep in my cookbook'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.copyButton} onPress={copyToCookbook} disabled={copying}>
-              <Text style={styles.copyButtonText}>
-                {copying ? 'Copying…' : '📋 Save an editable copy'}
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
-
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
@@ -816,6 +806,9 @@ const styles = StyleSheet.create({
   favoriteButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF5F0' },
   favoriteIcon: { fontSize: 24, color: '#FFB39C' },
   favoriteIconActive: { color: '#F2701E' },
+  cookbookButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F5FF', marginLeft: 8 },
+  cookbookButtonActive: { backgroundColor: '#E8F5E9' },
+  cookbookButtonText: { fontSize: 20 },
   servingsCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF', margin: 16, padding: 16, borderRadius: 16 },
   servingsLeft: {},
   servingsLabel: { fontSize: 12, color: '#888', marginBottom: 8 },

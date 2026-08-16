@@ -371,11 +371,11 @@ function CreatorsTab({
         <Text style={styles.emptyIcon}>🔖</Text>
         <Text style={styles.emptyText}>No creator recipes yet</Text>
         <Text style={styles.emptySubtext}>
-          Save any free recipe to keep it here. Recipes you buy stay yours
-          forever — even if the creator takes them down later.
+          Tap 📖 on any recipe to add it to your cookbook.
+          Recipes you buy stay yours forever.
         </Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/search')}>
-          <Text style={styles.primaryButtonText}>Browse creators</Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/(tabs)/discover')}>
+          <Text style={styles.primaryButtonText}>🔥 Discover Recipes</Text>
         </TouchableOpacity>
       </View>
     );
