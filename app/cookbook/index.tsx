@@ -19,6 +19,7 @@ import {
 } from '../../lib/recipes';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { useAuth } from '../../lib/auth';
+import Paywall from '../../components/Paywall';
 
 // Two kinds of thing live in a cookbook, and they behave differently: what you
 // wrote (yours, editable, deletable) and what you got from a creator (theirs,
@@ -27,13 +28,23 @@ import { useAuth } from '../../lib/auth';
 type Tab = 'mine' | 'creators';
 
 export default function CookbookScreen() {
-  const { user, isGuest } = useAuth();
+  const { user, isGuest, isPremium, refresh } = useAuth();
   const [tab, setTab] = useState<Tab>('mine');
   const [recipes, setRecipes] = useState<MyRecipe[]>([]);
   const [owned, setOwned] = useState<CookbookCreatorRecipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // Handle import button press - check premium status
+  const handleImportPress = () => {
+    if (isPremium) {
+      router.push('/cookbook/import');
+    } else {
+      setShowPaywall(true);
+    }
+  };
 
   // Both tabs load together, in one round trip's worth of time — switching tabs
   // should never be a loading spinner.
@@ -134,8 +145,8 @@ export default function CookbookScreen() {
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Cookbook</Text>
-        <TouchableOpacity onPress={() => router.push('/cookbook/import')} style={styles.addButton}>
-          <Text style={styles.addButtonText}>+ Add</Text>
+        <TouchableOpacity onPress={() => router.push('/cookbook/new')} style={styles.addButton}>
+          <Text style={styles.addButtonText}>+ Write</Text>
         </TouchableOpacity>
       </View>
 
@@ -179,24 +190,27 @@ export default function CookbookScreen() {
           <View style={styles.emptyActions}>
             <TouchableOpacity 
               style={styles.emptyActionButton} 
-              onPress={() => router.push('/cookbook/import')}
+              onPress={handleImportPress}
             >
               <Text style={styles.emptyActionIcon}>🖼️</Text>
               <Text style={styles.emptyActionText}>Gallery</Text>
+              {!isPremium && <Text style={styles.premiumBadge}>✨</Text>}
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.emptyActionButton} 
-              onPress={() => router.push('/cookbook/import')}
+              onPress={handleImportPress}
             >
-              <Text style={styles.emptyActionIcon}>�</Text>
+              <Text style={styles.emptyActionIcon}>📷</Text>
               <Text style={styles.emptyActionText}>Camera</Text>
+              {!isPremium && <Text style={styles.premiumBadge}>✨</Text>}
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.emptyActionButton} 
-              onPress={() => router.push('/cookbook/import')}
+              onPress={handleImportPress}
             >
               <Text style={styles.emptyActionIcon}>📝</Text>
               <Text style={styles.emptyActionText}>Text</Text>
+              {!isPremium && <Text style={styles.premiumBadge}>✨</Text>}
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.emptyActionButton} 
@@ -204,6 +218,7 @@ export default function CookbookScreen() {
             >
               <Text style={styles.emptyActionIcon}>✏️</Text>
               <Text style={styles.emptyActionText}>Write</Text>
+              <Text style={styles.freeBadge}>Free</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -222,8 +237,8 @@ export default function CookbookScreen() {
               <TouchableOpacity onPress={() => router.push('/cookbook/new')}>
                 <Text style={styles.importLink}>+ Write</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/cookbook/import')}>
-                <Text style={styles.importLink}>+ Import</Text>
+              <TouchableOpacity onPress={handleImportPress}>
+                <Text style={styles.importLink}>+ Import {!isPremium && '✨'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -289,6 +304,13 @@ export default function CookbookScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
+
+      {/* Paywall for import features */}
+      <Paywall
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        onSubscribed={refresh}
+      />
     </View>
   );
 }
@@ -504,6 +526,8 @@ const styles = StyleSheet.create({
   emptyActionButton: { width: 72, height: 72, backgroundColor: '#FFF', borderRadius: 16, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
   emptyActionIcon: { fontSize: 24, marginBottom: 4 },
   emptyActionText: { fontSize: 11, fontWeight: '600', color: '#666' },
+  premiumBadge: { position: 'absolute', top: 4, right: 4, fontSize: 10 },
+  freeBadge: { position: 'absolute', top: 4, right: 4, fontSize: 8, color: '#3C8D40', fontWeight: '700' },
   primaryButton: {
     backgroundColor: '#F2701E',
     paddingHorizontal: 24,
