@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   },
   stage: { height: 200, width: 120, alignItems: 'center' },
   spoonBowl: { width: 44, height: 58, borderRadius: 22, backgroundColor: COLORS.bone },
-  spoonHandle: { width: 11, height: 54, borderRadius: 6, backgroundColor: COLORS.bone, marginTop: -4 },
+  spoonHandle: { width: 11, height: 72, borderRadius: 6, backgroundColor: COLORS.bone, marginTop: -4 },
   drop: {
     position: 'absolute', top: 92,
     width: 15, height: 15, borderRadius: 8, backgroundColor: COLORS.orange,
