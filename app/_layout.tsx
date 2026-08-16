@@ -1,6 +1,7 @@
 import { Slot, useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { ShareIntentProvider } from 'expo-share-intent';
+import { useState } from 'react';
 import { useFonts, Anton_400Regular } from '@expo-google-fonts/anton';
 import {
   Poppins_400Regular,
@@ -13,6 +14,7 @@ import { MealPlanProvider } from '../lib/mealPlan';
 import { FavoritesProvider } from '../lib/favorites';
 import { COLORS } from '../lib/theme';
 import { applyGlobalFont } from '../lib/applyGlobalFont';
+import SplashDrop from '../components/SplashDrop';
 
 // Poppins as the default font across every screen (headlines override it).
 applyGlobalFont();
@@ -27,6 +29,9 @@ applyGlobalFont();
 
 export default function RootLayout() {
   const router = useRouter();
+  // The intro plays over the app rather than before it, so loading happens
+  // behind it instead of after — by the time the drop lands, Home is ready.
+  const [introDone, setIntroDone] = useState(false);
   const [fontsLoaded] = useFonts({
     Anton_400Regular,
     Poppins_400Regular,
@@ -35,9 +40,10 @@ export default function RootLayout() {
     Poppins_700Bold,
   });
 
-  // Cream splash while the brand fonts load (avoids a white flash + FOUT).
+  // Ink, not cream, while the fonts load: it matches the intro that follows, so
+  // there is no flash between the two.
   if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: COLORS.cream }} />;
+    return <View style={{ flex: 1, backgroundColor: COLORS.ink }} />;
   }
 
   return (
@@ -53,6 +59,7 @@ export default function RootLayout() {
         <FavoritesProvider>
           <MealPlanProvider>
             <Slot />
+            {!introDone && <SplashDrop onDone={() => setIntroDone(true)} />}
           </MealPlanProvider>
         </FavoritesProvider>
       </AuthProvider>
