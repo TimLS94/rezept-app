@@ -15,7 +15,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { getRecipeById, Recipe, totalTime, isQuick, isBudget } from '../../data/recipes';
 import { supabase, getCurrentUser } from '../../lib/supabase';
 import { addRecipesToShoppingList } from '../../lib/shopping';
-import { fetchDbRecipeById, fetchPurchasedRecipes, setRecipePaid } from '../../lib/recipes';
+import {
+  fetchDbRecipeById,
+  fetchPurchasedRecipes,
+  removeRecipeFromCookbook,
+  saveRecipeToCookbook,
+  setRecipePaid,
+} from '../../lib/recipes';
 import { copyRecipeToCookbook } from '../../lib/myRecipes';
 import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
@@ -106,6 +112,39 @@ export default function RecipeDetailScreen() {
   // Which purchase is in flight, so all three buttons disable together and the
   // pressed one can show its own progress label.
   const [buying, setBuying] = useState<'recipe' | 'creator' | null>(null);
+
+  // Whether this creator recipe sits in the user's cookbook. Purchases are in
+  // there unconditionally; this tracks the free save on top of that.
+  const [savedToCookbook, setSavedToCookbook] = useState(false);
+  const [savingToCookbook, setSavingToCookbook] = useState(false);
+
+  useEffect(() => {
+    if (!id || !user) {
+      setSavedToCookbook(false);
+      return;
+    }
+    supabase
+      .from('cookbook_saves')
+      .select('recipe_id')
+      .eq('user_id', user.id)
+      .eq('recipe_id', id)
+      .maybeSingle()
+      .then(({ data }) => setSavedToCookbook(!!data));
+  }, [id, user]);
+
+  const toggleCookbookSave = async () => {
+    if (!id || savingToCookbook) return;
+    setSavingToCookbook(true);
+    const result = savedToCookbook
+      ? await removeRecipeFromCookbook(id)
+      : await saveRecipeToCookbook(id);
+    setSavingToCookbook(false);
+    if ('error' in result) {
+      Alert.alert('Could not update cookbook', result.error);
+      return;
+    }
+    setSavedToCookbook(!savedToCookbook);
+  };
 
   const [copying, setCopying] = useState(false);
 
@@ -621,11 +660,22 @@ export default function RecipeDetailScreen() {
         {/* Editing someone else's recipe means editing your own copy of it —
             the original stays theirs, and the favourite stays untouched. */}
         {!locked && !guestLocked && !isOwner && (
-          <TouchableOpacity style={styles.copyButton} onPress={copyToCookbook} disabled={copying}>
-            <Text style={styles.copyButtonText}>
-              {copying ? 'Copying…' : '📋 Save an editable copy to my cookbook'}
-            </Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={[styles.copyButton, savedToCookbook && styles.copyButtonOn]}
+              onPress={toggleCookbookSave}
+              disabled={savingToCookbook}
+            >
+              <Text style={[styles.copyButtonText, savedToCookbook && styles.copyButtonTextOn]}>
+                {savedToCookbook ? '✓ In my cookbook' : '🔖 Keep in my cookbook'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.copyButton} onPress={copyToCookbook} disabled={copying}>
+              <Text style={styles.copyButtonText}>
+                {copying ? 'Copying…' : '📋 Save an editable copy'}
+              </Text>
+            </TouchableOpacity>
+          </>
         )}
 
         <View style={styles.bottomSpacer} />
@@ -803,6 +853,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   copyButtonText: { color: '#0D2B63', fontSize: 15, fontWeight: '600' },
+  copyButtonOn: { backgroundColor: '#0D2B63', borderColor: '#0D2B63' },
+  copyButtonTextOn: { color: '#FFF' },
 
   actionRow: { flexDirection: 'row', gap: 10 },
   cookButton: { flex: 1, backgroundColor: '#0D2B63', padding: 18, borderRadius: 14, alignItems: 'center' },

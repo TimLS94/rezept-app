@@ -171,6 +171,52 @@ export async function fetchPurchasedRecipes(): Promise<PurchasedRecipe[]> {
   }));
 }
 
+// A creator recipe sitting in the user's cookbook, however it got there.
+// `purchased` separates the two claims: bought (permanent, not removable) from
+// saved for free (a pointer, removable, and gone if the creator unpublishes).
+export type CookbookCreatorRecipe = PurchasedRecipe & { purchased: boolean };
+
+// The whole "From creators" tab: purchases and free saves in one list.
+// Degrades to purchases alone when my_cookbook_creator_recipes() isn't there
+// yet (supabase/cookbook_saves.sql not run), so the tab keeps working on a
+// database that only has the older function.
+export async function fetchCookbookCreatorRecipes(): Promise<CookbookCreatorRecipe[]> {
+  const { data, error } = await supabase.rpc('my_cookbook_creator_recipes');
+  if (error || !Array.isArray(data)) {
+    return (await fetchPurchasedRecipes()).map(r => ({ ...r, purchased: true }));
+  }
+  return data.map((row: any) => ({
+    ...mapDbRecipe(row),
+    locked: false,
+    available: row.available !== false,
+    purchased: row.purchased === true,
+    purchasedAt: row.saved_at,
+  }));
+}
+
+// Keep a free creator recipe in the cookbook. The server re-checks entitlement,
+// so this can't be used to shelve a paid recipe.
+export async function saveRecipeToCookbook(recipeId: string): Promise<{ ok: true } | { error: string }> {
+  const { data, error } = await supabase.rpc('save_recipe_to_cookbook', { p_recipe_id: recipeId });
+  if (error) return { error: error.message };
+  if (!data?.ok) return { error: data?.error || 'save-failed' };
+  return { ok: true };
+}
+
+// Only ever removes a free save — purchases live in a different table and are
+// untouched by this, which is what makes "what you bought stays yours" true.
+export async function removeRecipeFromCookbook(recipeId: string): Promise<{ ok: true } | { error: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: 'not-authenticated' };
+  const { error } = await supabase
+    .from('cookbook_saves')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('recipe_id', recipeId);
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
 export async function fetchRecipesByCreator(creatorId: string): Promise<Recipe[]> {
   const { data, error } = await supabase
     .from('recipes')

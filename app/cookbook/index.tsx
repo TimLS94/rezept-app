@@ -12,7 +12,11 @@ import {
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { fetchMyRecipes, deleteMyRecipe, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes';
-import { fetchPurchasedRecipes, PurchasedRecipe } from '../../lib/recipes';
+import {
+  fetchCookbookCreatorRecipes,
+  removeRecipeFromCookbook,
+  CookbookCreatorRecipe,
+} from '../../lib/recipes';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { useAuth } from '../../lib/auth';
 
@@ -26,7 +30,7 @@ export default function CookbookScreen() {
   const { user, isGuest } = useAuth();
   const [tab, setTab] = useState<Tab>('mine');
   const [recipes, setRecipes] = useState<MyRecipe[]>([]);
-  const [owned, setOwned] = useState<PurchasedRecipe[]>([]);
+  const [owned, setOwned] = useState<CookbookCreatorRecipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
@@ -34,7 +38,7 @@ export default function CookbookScreen() {
   // Both tabs load together, in one round trip's worth of time — switching tabs
   // should never be a loading spinner.
   const loadRecipes = async () => {
-    const [mine, bought] = await Promise.all([fetchMyRecipes(), fetchPurchasedRecipes()]);
+    const [mine, bought] = await Promise.all([fetchMyRecipes(), fetchCookbookCreatorRecipes()]);
     setRecipes(mine);
     setOwned(bought);
     setLoading(false);
@@ -159,7 +163,12 @@ export default function CookbookScreen() {
           <ActivityIndicator size="large" color="#F2701E" />
         </View>
       ) : tab === 'creators' ? (
-        <CreatorsTab recipes={owned} refreshing={refreshing} onRefresh={onRefresh} />
+        <CreatorsTab
+          recipes={owned}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onRemoved={id => setOwned(prev => prev.filter(r => r.id !== id))}
+        />
       ) : recipes.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>📚</Text>
@@ -267,27 +276,63 @@ export default function CookbookScreen() {
 }
 
 /**
- * Recipes bought from creators. Read-only — they belong to their author, so
- * there is no edit and no delete here; removing one would mean throwing away
- * something the user paid for.
+ * Recipes from creators — bought and saved for free alike. They belong to their
+ * author, so nothing here is editable ("Save an editable copy" on the recipe
+ * screen makes a copy in My recipes instead). A free save can be removed; a
+ * purchase cannot, because removing it would throw away something paid for.
  */
 function CreatorsTab({
   recipes,
   refreshing,
   onRefresh,
+  onRemoved,
 }: {
-  recipes: PurchasedRecipe[];
+  recipes: CookbookCreatorRecipe[];
   refreshing: boolean;
   onRefresh: () => void;
+  onRemoved: (id: string) => void;
 }) {
+  // Filter by creator. Only worth showing once there's more than one — a chip
+  // row with a single chip is just clutter.
+  const [creator, setCreator] = useState<string | null>(null);
+
+  const creators = Array.from(
+    new Map(recipes.map(r => [r.influencer.id || r.influencer.handle, r.influencer])).values()
+  );
+  const shown = creator
+    ? recipes.filter(r => (r.influencer.id || r.influencer.handle) === creator)
+    : recipes;
+
+  const remove = (recipe: CookbookCreatorRecipe) => {
+    Alert.alert(
+      'Remove from cookbook',
+      `Remove "${recipe.title}"? You can save it again any time.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await removeRecipeFromCookbook(recipe.id);
+            if ('error' in result) {
+              Alert.alert('Error', result.error);
+              return;
+            }
+            onRemoved(recipe.id);
+          },
+        },
+      ]
+    );
+  };
+
   if (recipes.length === 0) {
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyIcon}>🔓</Text>
-        <Text style={styles.emptyText}>Nothing unlocked yet</Text>
+        <Text style={styles.emptyIcon}>🔖</Text>
+        <Text style={styles.emptyText}>No creator recipes yet</Text>
         <Text style={styles.emptySubtext}>
-          Recipes you buy from creators land here and stay yours — even if the
-          creator takes them down later.
+          Save any free recipe to keep it here. Recipes you buy stay yours
+          forever — even if the creator takes them down later.
         </Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/search')}>
           <Text style={styles.primaryButtonText}>Browse creators</Text>
@@ -303,13 +348,42 @@ function CreatorsTab({
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F2701E" />
       }
     >
+      {creators.length > 1 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+        >
+          <TouchableOpacity
+            style={[styles.chip, !creator && styles.chipActive]}
+            onPress={() => setCreator(null)}
+          >
+            <Text style={[styles.chipText, !creator && styles.chipTextActive]}>All</Text>
+          </TouchableOpacity>
+          {creators.map(c => {
+            const key = c.id || c.handle;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.chip, creator === key && styles.chipActive]}
+                onPress={() => setCreator(creator === key ? null : key)}
+              >
+                <Text style={[styles.chipText, creator === key && styles.chipTextActive]}>
+                  {c.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       <View style={styles.topRow}>
         <Text style={styles.count}>
-          {recipes.length} unlocked {recipes.length === 1 ? 'recipe' : 'recipes'}
+          {shown.length} {shown.length === 1 ? 'recipe' : 'recipes'}
         </Text>
       </View>
 
-      {recipes.map(recipe => (
+      {shown.map(recipe => (
         <View key={recipe.id} style={styles.card}>
           <TouchableOpacity
             style={styles.cardMain}
@@ -325,7 +399,10 @@ function CreatorsTab({
             )}
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle} numberOfLines={2}>{recipe.title}</Text>
-              <Text style={styles.cardMeta}>{recipe.influencer.handle}</Text>
+              <Text style={styles.cardMeta}>
+                {recipe.influencer.name}
+                {recipe.purchased ? ' · Purchased' : ''}
+              </Text>
               {/* The creator pulled it. Say so plainly — the copy still works,
                   but it will never get their updates again. */}
               {!recipe.available && (
@@ -337,10 +414,18 @@ function CreatorsTab({
           <View style={styles.cardActions}>
             <TouchableOpacity
               style={styles.cartButton}
-              onPress={() => router.push(`/cook/${recipe.id}?source=purchase&servings=${recipe.servings}`)}
+              onPress={() =>
+                router.push(`/cook/${recipe.id}?source=purchase&servings=${recipe.servings}`)
+              }
             >
               <Text style={styles.cartButtonText}>👨‍🍳</Text>
             </TouchableOpacity>
+            {/* No remove button on a purchase — see the comment above. */}
+            {!recipe.purchased && (
+              <TouchableOpacity style={styles.deleteButton} onPress={() => remove(recipe)}>
+                <Text style={styles.deleteButtonText}>🗑️</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       ))}
@@ -364,6 +449,18 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, fontWeight: '600', color: '#999' },
   tabTextActive: { color: '#0D2B63' },
   cardGone: { fontSize: 11, color: '#B0402A', fontWeight: '600', marginTop: 4 },
+  chipRow: { paddingHorizontal: 20, paddingTop: 14, gap: 8 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#EDE3D6',
+  },
+  chipActive: { backgroundColor: '#0D2B63', borderColor: '#0D2B63' },
+  chipText: { fontSize: 13, color: '#666', fontWeight: '600' },
+  chipTextActive: { color: '#FFF' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
