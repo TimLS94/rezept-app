@@ -668,6 +668,31 @@ export default function RecipeDetailScreen() {
         </>
         )}
 
+        {/* Save buttons at bottom */}
+        {!locked && !guestLocked && !isOwner && (
+          <View style={styles.saveButtonsRow}>
+            <TouchableOpacity
+              style={[styles.saveButton, isFavorite(recipe.id) && styles.saveButtonActive]}
+              onPress={() => toggleFavorite(recipe)}
+            >
+              <Text style={styles.saveButtonIcon}>{isFavorite(recipe.id) ? '❤️' : '🤍'}</Text>
+              <Text style={[styles.saveButtonText, isFavorite(recipe.id) && styles.saveButtonTextActive]}>
+                {isFavorite(recipe.id) ? 'Favorited' : 'Favorite'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveButton, savedToCookbook && styles.saveButtonActive]}
+              onPress={toggleCookbookSave}
+              disabled={savingToCookbook}
+            >
+              <Text style={styles.saveButtonIcon}>{savedToCookbook ? '📚' : '📖'}</Text>
+              <Text style={[styles.saveButtonText, savedToCookbook && styles.saveButtonTextActive]}>
+                {savedToCookbook ? 'In Cookbook' : 'Add to Cookbook'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
@@ -809,6 +834,12 @@ const styles = StyleSheet.create({
   cookbookButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F5FF', marginLeft: 8 },
   cookbookButtonActive: { backgroundColor: '#E8F5E9' },
   cookbookButtonText: { fontSize: 20 },
+  saveButtonsRow: { flexDirection: 'row', marginHorizontal: 16, marginTop: 16, gap: 12 },
+  saveButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E4D9CB', backgroundColor: '#FFF' },
+  saveButtonActive: { backgroundColor: '#FFF5F0', borderColor: '#F2701E' },
+  saveButtonIcon: { fontSize: 18, marginRight: 8 },
+  saveButtonText: { fontSize: 14, fontWeight: '600', color: '#666' },
+  saveButtonTextActive: { color: '#F2701E' },
   servingsCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF', margin: 16, padding: 16, borderRadius: 16 },
   servingsLeft: {},
   servingsLabel: { fontSize: 12, color: '#888', marginBottom: 8 },
