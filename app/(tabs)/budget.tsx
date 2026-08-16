@@ -447,7 +447,13 @@ export default function BudgetScreen() {
                     const inPlan = mealPlan.some(m => m.recipe.id === recipe.id);
                     return (
                       <View key={r.id} style={styles.favRow}>
-                        <Image source={{ uri: recipe.image }} style={styles.favImage} />
+                        {recipe.image ? (
+                          <Image source={{ uri: recipe.image }} style={styles.favImage} />
+                        ) : (
+                          <View style={[styles.favImage, styles.favImageEmpty]}>
+                            <Text style={styles.favImageEmptyText}>🍽️</Text>
+                          </View>
+                        )}
                         <View style={{ flex: 1 }}>
                           <Text style={styles.favTitle} numberOfLines={1}>{recipe.title}</Text>
                           <Text style={styles.favMeta}>{recipe.prepTime + recipe.cookTime} min · {recipe.servings} servings</Text>
@@ -475,7 +481,13 @@ export default function BudgetScreen() {
                     const inPlan = mealPlan.some(m => m.recipe.id === r.id);
                     return (
                       <View key={r.id} style={styles.favRow}>
-                        <Image source={{ uri: r.image }} style={styles.favImage} />
+                        {r.image ? (
+                          <Image source={{ uri: r.image }} style={styles.favImage} />
+                        ) : (
+                          <View style={[styles.favImage, styles.favImageEmpty]}>
+                            <Text style={styles.favImageEmptyText}>🍽️</Text>
+                          </View>
+                        )}
                         <View style={{ flex: 1 }}>
                           <Text style={styles.favTitle} numberOfLines={1}>{r.title}</Text>
                           <Text style={styles.favMeta}>{r.prepTime + r.cookTime} min · {r.calories} cal</Text>
@@ -821,6 +833,8 @@ const styles = StyleSheet.create({
   favAddDone: { backgroundColor: '#E8F5E9' },
   favAddText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
   favAddDoneText: { color: '#3C8D40' },
+  favImageEmpty: { backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
+  favImageEmptyText: { fontSize: 20 },
   addMealButtonText: {
     fontSize: 14,
     color: '#F2701E',
