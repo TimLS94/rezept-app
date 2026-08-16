@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import { Ingredient } from '../data/recipes';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { Ingredient, DIETARY_TAGS, DietaryTag } from '../data/recipes';
 
 // A single editable shape shared by the import review step and the "edit saved
 // recipe" screen. Superset of ExtractedRecipe + the source link.
@@ -75,6 +75,50 @@ export default function RecipeEditor({ value, onChange }: Props) {
           <NumField label="Cook (min)" value={value.cookTime} onChange={(n) => set({ cookTime: n })} />
           <NumField label="Servings" value={value.servings} onChange={(n) => set({ servings: n })} />
           <NumField label="Calories" value={value.calories} onChange={(n) => set({ calories: n })} />
+        </View>
+      </View>
+
+      {/* Difficulty */}
+      <View style={styles.card}>
+        <Text style={styles.label}>Difficulty</Text>
+        <View style={styles.difficultyRow}>
+          {(['Easy', 'Medium', 'Hard'] as const).map((d) => (
+            <TouchableOpacity
+              key={d}
+              style={[styles.difficultyBtn, value.difficulty === d && styles.difficultyBtnActive]}
+              onPress={() => set({ difficulty: d })}
+            >
+              <Text style={[styles.difficultyTxt, value.difficulty === d && styles.difficultyTxtActive]}>
+                {d === 'Easy' ? '😊' : d === 'Medium' ? '🤔' : '😤'} {d}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Dietary Tags */}
+      <View style={styles.card}>
+        <Text style={styles.label}>Tags</Text>
+        <View style={styles.tagsRow}>
+          {DIETARY_TAGS.map((tag) => {
+            const isSelected = value.dietary.includes(tag.id);
+            return (
+              <TouchableOpacity
+                key={tag.id}
+                style={[styles.tagBtn, isSelected && styles.tagBtnActive]}
+                onPress={() => {
+                  const newDietary = isSelected
+                    ? value.dietary.filter((d) => d !== tag.id)
+                    : [...value.dietary, tag.id];
+                  set({ dietary: newDietary });
+                }}
+              >
+                <Text style={[styles.tagTxt, isSelected && styles.tagTxtActive]}>
+                  {tag.icon} {tag.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
@@ -198,6 +242,18 @@ const styles = StyleSheet.create({
   numField: { flex: 1, alignItems: 'center' },
   numInput: { width: '100%', textAlign: 'center' },
   numLabel: { fontSize: 11, color: '#888', marginTop: 4, textAlign: 'center' },
+
+  difficultyRow: { flexDirection: 'row', gap: 8 },
+  difficultyBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#F5F5F5', alignItems: 'center' },
+  difficultyBtnActive: { backgroundColor: '#F2701E' },
+  difficultyTxt: { fontSize: 14, fontWeight: '600', color: '#666' },
+  difficultyTxtActive: { color: '#FFF' },
+
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tagBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, backgroundColor: '#F5F5F5', borderWidth: 1, borderColor: '#E0E0E0' },
+  tagBtnActive: { backgroundColor: '#E8F5E9', borderColor: '#3C8D40' },
+  tagTxt: { fontSize: 13, fontWeight: '600', color: '#666' },
+  tagTxtActive: { color: '#3C8D40' },
 
   ingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   amount: { width: 52, textAlign: 'center' },
