@@ -428,7 +428,7 @@ function CreatorsTab({
           <TouchableOpacity
             style={styles.cardMain}
             activeOpacity={0.8}
-            onPress={() => router.push(`/recipe/${recipe.id}`)}
+            onPress={() => router.push(`/cookbook/creator/${recipe.id}`)}
           >
             {recipe.image ? (
               <Image source={{ uri: recipe.image }} style={styles.cardImage} />

@@ -217,6 +217,56 @@ export async function removeRecipeFromCookbook(recipeId: string): Promise<{ ok: 
   return { ok: true };
 }
 
+// ── Cookbook Edits ─────────────────────────────────────────────────────────
+// Save local edits to a creator recipe in the cookbook
+export type CookbookEdits = {
+  title?: string;
+  description?: string;
+  prepTime?: number;
+  cookTime?: number;
+  servings?: number;
+  calories?: number;
+  difficulty?: Recipe['difficulty'];
+  dietary?: DietaryTag[];
+  ingredients?: Ingredient[];
+  steps?: string[];
+};
+
+export async function saveCookbookEdits(
+  recipeId: string,
+  edits: CookbookEdits
+): Promise<{ ok: true } | { error: string }> {
+  const { data, error } = await supabase.rpc('save_cookbook_edits', {
+    p_recipe_id: recipeId,
+    p_edits: edits,
+  });
+  if (error) return { error: error.message };
+  if (!data?.ok) return { error: data?.error || 'save-failed' };
+  return { ok: true };
+}
+
+export async function getCookbookEdits(recipeId: string): Promise<CookbookEdits> {
+  const { data } = await supabase.rpc('get_cookbook_edits', { p_recipe_id: recipeId });
+  return (data as CookbookEdits) || {};
+}
+
+// Apply edits to a recipe, returning a merged version
+export function applyEdits(recipe: Recipe, edits: CookbookEdits): Recipe {
+  return {
+    ...recipe,
+    title: edits.title ?? recipe.title,
+    description: edits.description ?? recipe.description,
+    prepTime: edits.prepTime ?? recipe.prepTime,
+    cookTime: edits.cookTime ?? recipe.cookTime,
+    servings: edits.servings ?? recipe.servings,
+    calories: edits.calories ?? recipe.calories,
+    difficulty: edits.difficulty ?? recipe.difficulty,
+    dietary: edits.dietary ?? recipe.dietary,
+    ingredients: edits.ingredients ?? recipe.ingredients,
+    steps: edits.steps ?? recipe.steps,
+  };
+}
+
 export async function fetchRecipesByCreator(creatorId: string): Promise<Recipe[]> {
   const { data, error } = await supabase
     .from('recipes')
