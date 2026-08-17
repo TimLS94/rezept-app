@@ -147,12 +147,18 @@ export async function purchasePremium(): Promise<PurchaseResult> {
  * amount was, at best, a guess it had no authority to make.
  */
 export async function grantPlatformEntitlement(_product?: string): Promise<{ ok: boolean; error?: string }> {
-  // Ask for the dev path only when a real receipt is impossible — Expo Go, or
-  // a test key. Once a production key is in place the normal verification runs
-  // even in a dev build, so the path that matters gets exercised before
-  // release. The server refuses `dev` anyway unless ALLOW_DEV_UNLOCK is set,
-  // and __DEV__ is false in every release build: two independent guards.
-  return verifyPurchase({ kind: 'platform', dev: __DEV__ && !purchasesAvailable() });
+  // Ask for the dev path whenever a real receipt is impossible — Expo Go, or a
+  // RevenueCat test key. That deliberately includes TestFlight: with a test key
+  // the store cannot charge anything, so without this there is no way to switch
+  // Premium on and every premium feature is untestable on a device.
+  //
+  // This drops one of the two guards. __DEV__ no longer stands between a
+  // release build and a free unlock; ALLOW_DEV_UNLOCK on the server is the only
+  // thing left, and it is off by default. That is a testing-phase trade, and
+  // `supabase secrets unset ALLOW_DEV_UNLOCK` is on the pre-launch list for
+  // exactly this reason. The moment a production appl_ key is configured,
+  // purchasesAvailable() turns true and this stops asking on its own.
+  return verifyPurchase({ kind: 'platform', dev: !purchasesAvailable() });
 }
 
 
