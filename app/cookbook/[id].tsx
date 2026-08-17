@@ -22,6 +22,10 @@ export default function CookbookRecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [recipe, setRecipe] = useState<MyRecipe | null>(null);
   const [loading, setLoading] = useState(true);
+  // A brief confirmation, not a latch. This button used to disable itself on
+  // the first press for the rest of the screen's life, so a second helping —
+  // or a retry after clearing the list — was impossible, and the screen looked
+  // like the feature had stopped working.
   const [addedToCart, setAddedToCart] = useState(false);
   const [draft, setDraft] = useState<EditableRecipe | null>(null); // non-null while editing
   const [saving, setSaving] = useState(false);
@@ -107,8 +111,12 @@ export default function CookbookRecipeScreen() {
       Alert.alert('Error', result.error);
       return;
     }
+    Alert.alert('Added to Cart! 🛒', describeAdd(result.added, result.merged, recipe.title, result), [
+      { text: 'OK', style: 'cancel' },
+      { text: 'View list', onPress: () => router.push('/shopping') },
+    ]);
     setAddedToCart(true);
-    Alert.alert('Added to Cart! 🛒', describeAdd(result.added, result.merged, undefined, result));
+    setTimeout(() => setAddedToCart(false), 2500);
   };
 
   if (loading) {
@@ -281,7 +289,6 @@ export default function CookbookRecipeScreen() {
               <TouchableOpacity
                 style={[styles.cartButton, addedToCart && styles.cartButtonAdded]}
                 onPress={addToCart}
-                disabled={addedToCart}
               >
                 <Text style={styles.cartButtonText}>
                   {addedToCart ? '✓ Added to shopping list' : '🛒 Add to shopping list'}
