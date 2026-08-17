@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
-import { PREMIUM_MONTHLY_CENTS } from './pricing';
 
 // Expo Go has no native RevenueCat module — the SDK falls back to a "browser
 // mode" whose network calls fail. Skip RevenueCat entirely there; it only runs
@@ -140,25 +139,20 @@ export async function purchasePremium(): Promise<PurchaseResult> {
   }
 }
 
-// Write the platform entitlement via the SQL RPC (works with only payments.sql
-// applied — no edge function needed). Call after RevenueCat confirms a purchase.
-export async function grantPlatformEntitlement(product?: string): Promise<{ ok: boolean; error?: string }> {
-  // Pass the subscription price so the revenue pool reflects the purchase.
-  let priceCents: number | null = null;
-  try {
-    const pkg = await getPremiumPackage();
-    const p = pkg?.product?.price;
-    if (typeof p === 'number' && p > 0) priceCents = Math.round(p * 100);
-  } catch {}
-  // Fallback for debug/no-offering paths. Reads the list price rather than a
-  // literal, so it can't drift from what the paywall advertises.
-  if (priceCents == null) priceCents = PREMIUM_MONTHLY_CENTS;
-
-  try {
-    return verifyPurchase({ kind: 'platform' });
-  } catch (e: any) {
-    return { ok: false, error: e?.message || 'exception' };
-  }
+/**
+ * Open the Premium gate after a purchase.
+ *
+ * The price is no longer passed: the server reads it from RevenueCat, which is
+ * the only party that actually knows what was charged. A client-supplied
+ * amount was, at best, a guess it had no authority to make.
+ */
+export async function grantPlatformEntitlement(_product?: string): Promise<{ ok: boolean; error?: string }> {
+  // Ask for the dev path only when a real receipt is impossible — Expo Go, or
+  // a test key. Once a production key is in place the normal verification runs
+  // even in a dev build, so the path that matters gets exercised before
+  // release. The server refuses `dev` anyway unless ALLOW_DEV_UNLOCK is set,
+  // and __DEV__ is false in every release build: two independent guards.
+  return verifyPurchase({ kind: 'platform', dev: __DEV__ && !purchasesAvailable() });
 }
 
 

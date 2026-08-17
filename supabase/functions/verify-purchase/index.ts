@@ -53,12 +53,46 @@ Deno.serve(async (req: Request) => {
   const { data: { user } } = await asUser.auth.getUser();
   if (!user) return json({ ok: false, error: 'unauthorized' }, 401);
 
+  let body: Record<string, any>;
+  try { body = await req.json(); } catch { return json({ ok: false, error: 'bad_json' }, 400); }
+
+  const admin0 = createClient(url, service);
+
+  // ── Development unlock ──────────────────────────────────────────────────
+  // Testing needs a way to turn Premium on without a store receipt: with a
+  // RevenueCat test key there is never a receipt to verify, so every paid
+  // feature would be untestable.
+  //
+  // The switch is a function secret, not a flag in the app. That is the whole
+  // point — the old dev path was a client call to a function that granted
+  // Premium to anyone who asked, and the only thing between it and production
+  // was a __DEV__ check compiled into the binary. Here the server decides, it
+  // is off unless ALLOW_DEV_UNLOCK is explicitly "true", and turning it off is
+  // a config change rather than a release.
+  if (body.dev === true) {
+    if (Deno.env.get('ALLOW_DEV_UNLOCK') !== 'true') {
+      return json({ ok: false, error: 'dev_unlock_disabled' }, 403);
+    }
+    const row = {
+      user_id: user.id,
+      scope: 'platform',
+      creator_id: null,
+      product_id: 'dev_unlock',
+      rc_app_user_id: user.id,
+      status: 'active',
+      current_period_end: new Date(Date.now() + 32 * 864e5).toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const { data: existing } = await admin0.from('entitlements')
+      .select('id').eq('user_id', user.id).eq('scope', 'platform').is('creator_id', null).maybeSingle();
+    if (existing) await admin0.from('entitlements').update(row).eq('id', existing.id);
+    else await admin0.from('entitlements').insert(row);
+    return json({ ok: true, dev: true });
+  }
+
   // No key means we cannot verify anything. Refusing is the only safe answer:
   // falling back to "grant it anyway" is precisely the hole this closes.
   if (!rcSecret) return json({ ok: false, error: 'not_configured' }, 503);
-
-  let body: Record<string, any>;
-  try { body = await req.json(); } catch { return json({ ok: false, error: 'bad_json' }, 400); }
 
   const subscriber = await fetchSubscriber(user.id, rcSecret);
   if (!subscriber) return json({ ok: false, error: 'revenuecat_unavailable' }, 502);
