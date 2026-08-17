@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Recipe, DietaryTag, DIETARY_TAGS } from '../../data/recipes';
-import { addRecipesToShoppingList } from '../../lib/shopping';
+import { addRecipesToShoppingList, describeAdd } from '../../lib/shopping';
 import { FEATURES } from '../../lib/features';
 import { useMealPlan, PlannedMeal } from '../../lib/mealPlan';
 import { fetchMyRecipes, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes';
@@ -180,11 +180,11 @@ export default function BudgetScreen() {
   const addFromCookbook = (recipe: Recipe) => {
     setPlan(plan => {
       const day = pendingDay ?? firstFreeDay(plan);
-      // Cooking the same thing twice in a week is a real plan; cooking it
-      // twice on the same day is not.
-      return plan.some((m, i) => m.recipe.id === recipe.id && (m.day ?? i % 7) === day)
-        ? plan
-        : [
+      // No duplicate check at all. Twice on the same day is a real plan —
+      // cooking a double batch, or lunch and dinner — and the shopping list
+      // merges by ingredient, so two helpings of the same recipe correctly
+      // become twice the flour rather than two lines of it.
+      return [
             ...plan,
             {
               id: `m${Date.now()}-${recipe.id}`,
@@ -225,7 +225,7 @@ export default function BudgetScreen() {
 
     Alert.alert(
       'Added to Shopping List! 🛒',
-      `${openMeals.length} meals • ${result.added} new items` +
+      `${openMeals.length} meals • ${describeAdd(result.added, result.merged)}` +
         (result.merged ? ` (${result.merged} merged)` : ''),
       [
         { text: 'Keep Planning', style: 'cancel' },
@@ -365,7 +365,10 @@ export default function BudgetScreen() {
                 ]);
                 return;
               }
-              Alert.alert('Added 🛒', `${result.added} items from ${meal.recipe.title}`);
+              Alert.alert(
+                'Added 🛒',
+                describeAdd(result.added, result.merged, meal.recipe.title),
+              );
             }}
             onAddToDay={day => { setPendingDay(day); setShowCookbookPicker(true); }}
             onDragStateChange={setDragging}

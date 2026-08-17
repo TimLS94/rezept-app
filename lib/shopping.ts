@@ -77,3 +77,20 @@ export async function addRecipesToShoppingList(
 
   return { added, merged };
 }
+
+/**
+ * What actually happened, in words the user can act on.
+ *
+ * "12 items added" is wrong whenever the ingredients merged into lines that
+ * were already on the list: nothing was added, the amounts grew. Adding the
+ * same recipe twice is allowed and useful — you might be cooking a double
+ * batch — but it looks like a no-op unless the message says the quantities
+ * went up.
+ */
+export function describeAdd(added: number, merged: number, title?: string): string {
+  const from = title ? ` from ${title}` : '';
+  if (added && merged) return `${added} new${from}, ${merged} topped up`;
+  if (added) return `${added} item${added === 1 ? '' : 's'}${from}`;
+  if (merged) return `Already on your list${from} — amounts increased`;
+  return `Nothing to add${from}`;
+}

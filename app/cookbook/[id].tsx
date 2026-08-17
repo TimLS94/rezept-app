@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { fetchMyRecipeById, updateMyRecipe, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes';
-import { addRecipesToShoppingList } from '../../lib/shopping';
+import { addRecipesToShoppingList, describeAdd } from '../../lib/shopping';
 import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
 import { HEADER_TOP } from '../../lib/layout';
@@ -108,7 +108,7 @@ export default function CookbookRecipeScreen() {
       return;
     }
     setAddedToCart(true);
-    Alert.alert('Added to Cart! 🛒', `${result.added} items added`);
+    Alert.alert('Added to Cart! 🛒', describeAdd(result.added, result.merged));
   };
 
   if (loading) {
