@@ -12,7 +12,7 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Recipe, DietaryTag, Ingredient, totalTime } from '../../../data/recipes';
 import { fetchDbRecipeById, saveCookbookEdits, getCookbookEdits, applyEdits, CookbookEdits } from '../../../lib/recipes';
-import { addRecipesToShoppingList } from '../../../lib/shopping';
+import { addRecipesToShoppingList, describeAdd } from '../../../lib/shopping';
 import RecipeEditor, { EditableRecipe } from '../../../components/RecipeEditor';
 import { HEADER_TOP } from '../../../lib/layout';
 
@@ -129,9 +129,38 @@ export default function CookbookCreatorRecipeScreen() {
 
   const addToCart = async () => {
     if (!displayRecipe) return;
-    await addRecipesToShoppingList([{ recipe: displayRecipe }]);
+
+    // A locked recipe arrives with three teaser ingredients, so shopping from
+    // it would produce a partial list that looks complete.
+    if (displayRecipe.locked) {
+      Alert.alert('Premium recipe', 'Join the membership to get the full ingredient list.');
+      return;
+    }
+    if (displayRecipe.ingredients.length === 0) {
+      Alert.alert('Nothing to shop for', 'This recipe has no ingredients listed.');
+      return;
+    }
+
+    // The result used to be thrown away entirely: this showed "✓ Added" no
+    // matter what happened, so a rejected write looked like a success and the
+    // list stayed empty. That is what "adding from the cookbook does nothing"
+    // was.
+    const result = await addRecipesToShoppingList([{ recipe: displayRecipe }]);
+    if ('error' in result) {
+      if (result.error === 'not-authenticated') {
+        Alert.alert('Sign in required', 'Sign in to save your shopping list.');
+        return;
+      }
+      Alert.alert('Could not add to the list', result.error);
+      return;
+    }
+
+    Alert.alert('Added 🛒', describeAdd(result.added, result.merged, displayRecipe.title, result), [
+      { text: 'OK', style: 'cancel' },
+      { text: 'View list', onPress: () => router.push('/shopping') },
+    ]);
     setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2000);
+    setTimeout(() => setAddedToCart(false), 2500);
   };
 
   if (loading) {
