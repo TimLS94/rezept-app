@@ -65,7 +65,7 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
     if (!g.ok) {
       Alert.alert(
         'Almost there',
-        `Purchase succeeded, but unlocking failed: ${g.error ?? 'unknown'}.\n\nMake sure payments.sql (incl. grant_platform_entitlement) has been run in Supabase.`
+        `Purchase succeeded, but unlocking failed: ${g.error ?? 'unknown'}.\n\nYour payment went through — the store has it. Restore Purchases in Settings once you're online again.`
       );
       return;
     }
@@ -86,17 +86,20 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
   // button dead-ends there — this writes the entitlement directly, exactly like
   // the debug row in Settings.
   //
-  // __DEV__ is false in any release build, so this cannot reach users. That
-  // guard is the only thing standing between this button and free Premium for
-  // everyone: grant_platform_entitlement verifies no receipt (see
-  // supabase/harden_profiles.sql), so it must never render in production.
+  // __DEV__ is false in any release build, so this cannot reach users.
+  //
+  // It is no longer the only guard: unlocking now goes through
+  // verify-purchase, which asks RevenueCat what the account actually bought
+  // and refuses when there is no receipt. In Expo Go there is no receipt, so
+  // this button will correctly fail there too once the function is deployed —
+  // use the Settings debug row against a real dev build instead.
   const devUnlock = async () => {
     setBusy(true);
     const g = await grantPlatformEntitlement('premium_monthly');
     if (g.ok) await refresh();
     setBusy(false);
     if (!g.ok) {
-      Alert.alert('Failed', `${g.error ?? 'unknown'}\n\nHas payments.sql been run in Supabase?`);
+      Alert.alert('Failed', `${g.error ?? 'unknown'}\n\nverify-purchase needs to be deployed with REVENUECAT_SECRET_KEY set.`);
       return;
     }
     onSubscribed?.();
