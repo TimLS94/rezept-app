@@ -23,7 +23,9 @@ export default function TabsLayout() {
         tabBarActiveTintColor: COLORS.orange,
         tabBarInactiveTintColor: COLORS.warmGray,
         tabBarStyle: { backgroundColor: COLORS.card, borderTopColor: COLORS.border, paddingTop: 6 },
-        tabBarLabelStyle: { fontFamily: FONTS.semibold, fontSize: 11 },
+        // Six tabs share the width now, and at 11pt "Cookbook" rendered as
+        // "Cookbo…". Everything fits at 10.
+        tabBarLabelStyle: { fontFamily: FONTS.semibold, fontSize: 10 },
       }}
     >
       {/* Consumer tabs — hidden for creators, who only create & market.

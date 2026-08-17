@@ -264,12 +264,21 @@ export default function CookbookScreen() {
                   )}
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={2}>{recipe.title}</Text>
-                    {/* "0 min • 4 servings" is noise on a note nobody filled
-                        those in for — say what it actually is instead. */}
+                    {/* Say what the recipe actually is. A note gets called a
+                        note, and "0 min" — which is just a field nobody
+                        filled in — is left out rather than printed as a fact. */}
                     <Text style={styles.cardMeta}>
-                      {recipe.ingredients.length === 0 && recipe.steps.length === 0
-                        ? '📝 Note'
-                        : `${recipe.prepTime + recipe.cookTime} min • ${recipe.servings} servings`}
+                      {[
+                        recipe.ingredients.length === 0 && recipe.steps.length === 0
+                          ? '📝 Note'
+                          : null,
+                        recipe.prepTime + recipe.cookTime > 0
+                          ? `${recipe.prepTime + recipe.cookTime} min`
+                          : null,
+                        recipe.steps.length > 0 ? `${recipe.steps.length} steps` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || 'Tap to add details'}
                     </Text>
                     {recipe.sourceUrl && (
                       <Text style={styles.cardSource}>📱 Imported</Text>
@@ -550,7 +559,6 @@ const styles = StyleSheet.create({
   topLinks: { flexDirection: 'row', gap: 18 },
   importLink: { fontSize: 13, color: '#F2701E', fontWeight: '700' },
   card: {
-    flexDirection: 'row',
     backgroundColor: '#FFF',
     borderRadius: 16,
     marginHorizontal: 20,
@@ -562,11 +570,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  cardMain: { flex: 1, flexDirection: 'row' },
-  cardImage: { width: 96, height: 96 },
+  cardMain: { flexDirection: 'row', alignItems: 'center' },
+  cardImage: { width: 84, height: 84, borderRadius: 12, margin: 10 },
   cardImageEmpty: { backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
   cardImageEmptyText: { fontSize: 32 },
-  cardContent: { flex: 1, padding: 12, justifyContent: 'center' },
+  cardContent: { flex: 1, paddingRight: 12, paddingVertical: 10, justifyContent: 'center' },
   cardTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   cardMeta: { fontSize: 12, color: '#888', marginTop: 4 },
   cardSource: { fontSize: 11, color: '#F2701E', fontWeight: '500', marginTop: 4 },

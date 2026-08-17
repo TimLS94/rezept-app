@@ -6,7 +6,7 @@
 // depending on which screen you found it on. This is that row, once, so both
 // screens genuinely behave the same.
 import { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Recipe } from '../data/recipes';
@@ -62,15 +62,20 @@ export default function RecipeActions({
   };
 
   return (
-    <View style={styles.actions}>
-      {/* Always offered, even with no steps: cook mode shows a note as a big
-          readable card, which is exactly what you want it for while cooking. */}
+    <View style={styles.bar}>
+      {/* Cook is the one you came for, so it is the only one that says its
+          name. Always offered, even with no steps: cook mode shows a note as a
+          big readable card, which is exactly what it's wanted for. */}
       <TouchableOpacity
-        style={styles.actCook}
+        style={styles.cook}
         onPress={() => router.push(`/cook/${recipe.id}?source=${source}&servings=${servings}`)}
+        activeOpacity={0.85}
       >
-        <Ionicons name="restaurant" size={17} color="#FFF" />
+        <Ionicons name="restaurant" size={16} color="#FFF" />
+        <Text style={styles.cookText}>Cook</Text>
       </TouchableOpacity>
+
+      <View style={styles.spacer} />
 
       <TouchableOpacity style={[styles.act, inPlan && styles.actDone]} onPress={toggleWeek}>
         <Ionicons
@@ -102,20 +107,34 @@ export default function RecipeActions({
 }
 
 const styles = StyleSheet.create({
-  actions: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10, gap: 8 },
-  act: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F4F1EC',
-    justifyContent: 'center',
+  // A footer strip, not a column. Four stacked 36pt circles forced every card
+  // to be at least ~170pt tall, which left a field of empty white under a
+  // two-line title and pushed the cook button out over the card's corner.
+  bar: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F2EDE5',
   },
-  actCook: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  spacer: { flex: 1 },
+  cook: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: COLORS.orange,
+  },
+  cookText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+  act: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F4F1EC',
     justifyContent: 'center',
     alignItems: 'center',
   },
