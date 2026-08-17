@@ -25,6 +25,13 @@ begin
       and column_name = 'instructions'
       and data_type = 'ARRAY'
   ) then
+    -- The old default is `'{}'::text[]`, and Postgres tries to convert it
+    -- along with the column. text[] → jsonb has no automatic cast, so the
+    -- whole statement fails on the default alone. Drop it first, convert, then
+    -- set the jsonb default.
+    alter table public.my_recipes
+      alter column instructions drop default;
+
     -- to_jsonb on a text[] yields a jsonb array of strings, which is exactly
     -- the legacy shape the app already reads. No content changes, no data loss.
     alter table public.my_recipes
