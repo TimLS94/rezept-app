@@ -19,8 +19,23 @@ const isExpoGo = Constants.executionEnvironment === 'storeClient';
 // the App Store / Play Store apps are configured there. Until then these stay
 // inert — see apiKeyIsProduction below for why a test key must never reach
 // Purchases.configure() in a release build.
-const RC_IOS_KEY = 'test_jEJSpmuLjQmQaisPFkcFZsROsrK';
-const RC_ANDROID_KEY = 'test_jEJSpmuLjQmQaisPFkcFZsROsrK';
+// These are the PUBLIC SDK keys (appl_… / goog_…). EXPO_PUBLIC_ is right for
+// them: they identify the app to RevenueCat and are meant to ship in it. They
+// are NOT the secret REST key — that one lives only in Supabase secrets as
+// REVENUECAT_SECRET_KEY and must never appear here.
+//
+// Read from the environment so switching test → production is a config change
+// rather than a code change; the literal stays as the fallback so a checkout
+// without a .env still runs (inert, see apiKeyIsProduction).
+const RC_FALLBACK_KEY = 'test_jEJSpmuLjQmQaisPFkcFZsROsrK';
+const RC_IOS_KEY =
+  process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ||
+  process.env.EXPO_PUBLIC_REVENUECAT_KEY ||
+  RC_FALLBACK_KEY;
+const RC_ANDROID_KEY =
+  process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ||
+  process.env.EXPO_PUBLIC_REVENUECAT_KEY ||
+  RC_FALLBACK_KEY;
 // Must match the RevenueCat entitlement identifier exactly (incl. spaces/case).
 export const ENTITLEMENT_ID = 'Cook_App Pro';
 
