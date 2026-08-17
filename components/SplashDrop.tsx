@@ -61,15 +61,18 @@ export default function SplashDrop({ onDone, ready = true }: { onDone: () => voi
   return (
     <Animated.View style={[styles.fill, { opacity: fade }]} pointerEvents="none">
       <View style={styles.stage}>
-        <View style={styles.spoonBowl} />
+        {/* Handle above, bowl below. The drop has to leave from the bowl —
+            that is the part that holds anything — so the spoon hangs rather
+            than standing on its handle. */}
         <View style={styles.spoonHandle} />
+        <View style={styles.spoonBowl} />
 
         <Animated.View
           style={[
             styles.drop,
             {
               transform: [
-                { translateY: drop.interpolate({ inputRange: [0, 1], outputRange: [0, 120] }) },
+                { translateY: drop.interpolate({ inputRange: [0, 1], outputRange: [0, 74] }) },
                 // Stretches as it accelerates, the way a falling droplet does.
                 { scaleY: drop.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1.5, 1.1] }) },
               ],
@@ -113,10 +116,10 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   stage: { height: 200, width: 120, alignItems: 'center' },
-  spoonBowl: { width: 44, height: 58, borderRadius: 22, backgroundColor: COLORS.bone },
-  spoonHandle: { width: 11, height: 72, borderRadius: 6, backgroundColor: COLORS.bone, marginTop: -4 },
+  spoonBowl: { width: 44, height: 50, borderRadius: 22, backgroundColor: COLORS.bone },
+  spoonHandle: { width: 11, height: 64, borderRadius: 6, backgroundColor: COLORS.bone, marginBottom: -4 },
   drop: {
-    position: 'absolute', top: 92,
+    position: 'absolute', top: 100,
     width: 15, height: 15, borderRadius: 8, backgroundColor: COLORS.orange,
   },
   splash: {
