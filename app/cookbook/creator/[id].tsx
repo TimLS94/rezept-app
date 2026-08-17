@@ -271,16 +271,35 @@ export default function CookbookCreatorRecipeScreen() {
             </View>
           ))}
 
-          {/* Steps */}
+          {/* Steps. A saved recipe is re-checked against the paywall on every
+              read, so one the creator has since made paid arrives here without
+              its steps — say so rather than showing an empty list. */}
           <Text style={styles.sectionTitle}>Instructions</Text>
-          {displayRecipe.steps.map((step, i) => (
-            <View key={i} style={styles.stepRow}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>{i + 1}</Text>
-              </View>
-              <Text style={styles.stepText}>{step}</Text>
+          {displayRecipe.locked ? (
+            <View style={styles.lockedNote}>
+              <Text style={styles.lockedNoteIcon}>🔒</Text>
+              <Text style={styles.lockedNoteTitle}>This one is premium now</Text>
+              <Text style={styles.lockedNoteText}>
+                {displayRecipe.influencer.name} has made this a paid recipe since you saved it.
+                Join their membership to cook it.
+              </Text>
+              <TouchableOpacity
+                style={styles.lockedNoteBtn}
+                onPress={() => router.push(`/recipe/${displayRecipe.id}`)}
+              >
+                <Text style={styles.lockedNoteBtnText}>See the options</Text>
+              </TouchableOpacity>
             </View>
-          ))}
+          ) : (
+            displayRecipe.steps.map((step, i) => (
+              <View key={i} style={styles.stepRow}>
+                <View style={styles.stepNumber}>
+                  <Text style={styles.stepNumberText}>{i + 1}</Text>
+                </View>
+                <Text style={styles.stepText}>{step}</Text>
+              </View>
+            ))
+          )}
 
           <View style={{ height: 100 }} />
         </View>
@@ -362,6 +381,24 @@ const styles = StyleSheet.create({
   ingredientRow: { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   ingredientAmount: { width: 100, fontSize: 14, fontWeight: '600', color: '#F2701E' },
   ingredientName: { flex: 1, fontSize: 15, color: '#1A1A1A' },
+  lockedNote: {
+    backgroundColor: '#FFF3E9',
+    borderRadius: 14,
+    padding: 20,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  lockedNoteIcon: { fontSize: 34, marginBottom: 8 },
+  lockedNoteTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
+  lockedNoteText: { fontSize: 13, color: '#8A4B1E', textAlign: 'center', lineHeight: 19, marginTop: 6 },
+  lockedNoteBtn: {
+    backgroundColor: '#F2701E',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 14,
+  },
+  lockedNoteBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   stepRow: { flexDirection: 'row', marginBottom: 16 },
   stepNumber: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F2701E', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   stepNumberText: { color: '#FFF', fontWeight: '700', fontSize: 13 },

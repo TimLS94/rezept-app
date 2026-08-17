@@ -187,7 +187,12 @@ export async function fetchCookbookCreatorRecipes(): Promise<CookbookCreatorReci
   }
   return data.map((row: any) => ({
     ...mapDbRecipe(row),
-    locked: false,
+    // Take the server's word for it. This used to be a hard `false` — written
+    // for purchases, where it is true that the gate must never re-lock
+    // something already paid for. Applied to every row it also unlocked free
+    // saves, so a recipe its creator had since made paid came back readable no
+    // matter what the server said about it.
+    locked: row.locked === true,
     available: row.available !== false,
     purchased: row.purchased === true,
     purchasedAt: row.saved_at,

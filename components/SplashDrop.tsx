@@ -63,16 +63,21 @@ export default function SplashDrop({ onDone, ready = true }: { onDone: () => voi
       <View style={styles.stage}>
         {/* Handle above, bowl below. The drop has to leave from the bowl —
             that is the part that holds anything — so the spoon hangs rather
-            than standing on its handle. */}
-        <View style={styles.spoonHandle} />
-        <View style={styles.spoonBowl} />
+            than standing on its handle.
+            Tilted 45°, which reads as a spoon being held. The tilt is on the
+            spoon alone: gravity does not care how you hold it, so the drop
+            below still falls straight down. */}
+        <View style={styles.spoon}>
+          <View style={styles.spoonHandle} />
+          <View style={styles.spoonBowl} />
+        </View>
 
         <Animated.View
           style={[
             styles.drop,
             {
               transform: [
-                { translateY: drop.interpolate({ inputRange: [0, 1], outputRange: [0, 74] }) },
+                { translateY: drop.interpolate({ inputRange: [0, 1], outputRange: [0, 50] }) },
                 // Stretches as it accelerates, the way a falling droplet does.
                 { scaleY: drop.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1.5, 1.1] }) },
               ],
@@ -115,11 +120,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 100,
   },
-  stage: { height: 200, width: 120, alignItems: 'center' },
+  stage: { height: 200, width: 160, alignItems: 'center', justifyContent: 'flex-start' },
+  spoon: { alignItems: 'center', transform: [{ translateX: 50 }, { rotate: '45deg' }] },
   spoonBowl: { width: 44, height: 50, borderRadius: 22, backgroundColor: COLORS.bone },
-  spoonHandle: { width: 11, height: 64, borderRadius: 6, backgroundColor: COLORS.bone, marginBottom: -4 },
+  spoonHandle: { width: 11, height: 96, borderRadius: 6, backgroundColor: COLORS.bone, marginBottom: -4 },
   drop: {
-    position: 'absolute', top: 100,
+    position: 'absolute', top: 121,
     width: 15, height: 15, borderRadius: 8, backgroundColor: COLORS.orange,
   },
   splash: {
