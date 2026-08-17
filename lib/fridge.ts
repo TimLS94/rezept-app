@@ -83,12 +83,18 @@ export type RecipeMatch = {
   coverage: number;       // 0–1, share of the ingredient list already covered
 };
 
-// Things nobody photographs their fridge for and everybody has anyway. Counting
-// these as "missing" would drag every recipe down and bury the useful signal —
-// a pasta dish shouldn't rank badly because the AI didn't spot the salt.
-const STAPLES = new Set([
-  'salt', 'pepper', 'water', 'oil', 'sugar', 'flour',
-]);
+// Things nobody photographs their fridge for and nobody shops for either.
+//
+// These are IGNORED — counted as neither owned nor missing. Counting them as
+// owned was the bug behind a plate of oysters recommending protein pancakes at
+// "25% in your fridge": flour was on this list, so it was credited without ever
+// being seen, and one of four ingredients came back covered out of thin air.
+// A staple is not evidence that you can cook something.
+//
+// The list is also much shorter now. Oil, sugar and flour are real ingredients
+// you can genuinely be out of; only salt, pepper and water are safe to assume,
+// and being wrong about those costs nothing.
+const STAPLES = new Set(['salt', 'pepper', 'water']);
 
 // Words that describe an ingredient without identifying it. Dropping them lets
 // "2 boneless skinless chicken breasts" meet a detected "chicken breast", and —
@@ -144,11 +150,13 @@ function namesMatch(a: string[], b: string[]): boolean {
   return a.every(t => b.includes(t));
 }
 
-function isCovered(ingredient: Ingredient, detected: string[][]): boolean {
+type Verdict = 'have' | 'missing' | 'ignore';
+
+function classify(ingredient: Ingredient, detected: string[][]): Verdict {
   const tokens = tokenize(ingredient.name);
-  if (!tokens.length) return true;                       // nothing identifying left
-  if (tokens.every(t => STAPLES.has(t))) return true;    // salt, pepper, water…
-  return detected.some(d => namesMatch(tokens, d));
+  if (!tokens.length) return 'ignore';                     // nothing identifying left
+  if (tokens.every(t => STAPLES.has(t))) return 'ignore';  // salt, pepper, water
+  return detected.some(d => namesMatch(tokens, d)) ? 'have' : 'missing';
 }
 
 // Rank recipes by how little you'd have to buy. Primary sort is the raw number
@@ -163,15 +171,18 @@ export function matchRecipes(recipes: Recipe[], detectedItems: string[]): Recipe
       const have: Ingredient[] = [];
       const missing: Ingredient[] = [];
       for (const ing of recipe.ingredients) {
-        (isCovered(ing, detected) ? have : missing).push(ing);
+        const verdict = classify(ing, detected);
+        if (verdict === 'have') have.push(ing);
+        else if (verdict === 'missing') missing.push(ing);
+        // 'ignore' counts for neither side, so the percentage describes the
+        // ingredients you would actually have to think about.
       }
-      return {
-        recipe,
-        have,
-        missing,
-        coverage: have.length / recipe.ingredients.length,
-      };
+      const counted = have.length + missing.length;
+      return { recipe, have, missing, coverage: counted ? have.length / counted : 0 };
     })
+    // Nothing from your fridge in it is not a suggestion, it is the catalogue
+    // in an arbitrary order. A plate of oysters should not surface pancakes.
+    .filter(m => m.have.length > 0)
     .sort((a, b) => a.missing.length - b.missing.length || b.coverage - a.coverage);
 }
 
