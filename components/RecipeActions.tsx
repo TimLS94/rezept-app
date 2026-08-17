@@ -12,7 +12,7 @@ import { router } from 'expo-router';
 import { Recipe } from '../data/recipes';
 import { CookableSource } from '../lib/cookable';
 import { useMealPlan, thisWeekKey } from '../lib/mealPlan';
-import { addRecipesToShoppingList } from '../lib/shopping';
+import { addRecipesToShoppingList, describeAdd } from '../lib/shopping';
 import { COLORS } from '../lib/theme';
 
 type Props = {
@@ -34,7 +34,13 @@ export default function RecipeActions({
   removeIcon = 'trash-outline',
 }: Props) {
   const { addRecipeToWeek, plansByWeek, updateWeekPlan } = useMealPlan();
-  const [inCart, setInCart] = useState(false);
+  // A short confirmation, not a permanent state. It used to latch: once
+  // pressed, the button showed a tick and stayed disabled forever — including
+  // after the items were deleted from the list again, which left no way to add
+  // them back. The shopping list is the source of truth for what is on it;
+  // this button only reports that the tap did something.
+  const [justAdded, setJustAdded] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const weekKeyStr = thisWeekKey();
   const inPlan = (plansByWeek[weekKeyStr] ?? []).some(m => m.recipe.id === recipe.id);
@@ -45,20 +51,36 @@ export default function RecipeActions({
   };
 
   const addToCart = async () => {
+    if (busy) return;
     // A note has no ingredients, so there is nothing to put on a list.
     if (recipe.ingredients.length === 0) {
       Alert.alert('Nothing to shop for', 'This one has no ingredients yet. Add some by editing it.');
       return;
     }
+    setBusy(true);
     const result = await addRecipesToShoppingList([{ recipe, servings }]);
+    setBusy(false);
+
     if ('error' in result) {
-      Alert.alert('Sign in required', 'Sign in to save your shopping list.', [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Sign in', onPress: () => router.push('/login') },
-      ]);
+      if (result.error === 'not-authenticated') {
+        Alert.alert('Sign in required', 'Sign in to save your shopping list.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Sign in', onPress: () => router.push('/login') },
+        ]);
+        return;
+      }
+      // Anything else is a real fault and used to be reported as a sign-in
+      // problem, which sent people to a login screen they were already past.
+      Alert.alert('Could not add to the list', result.error);
       return;
     }
-    setInCart(true);
+
+    Alert.alert('Added 🛒', describeAdd(result.added, result.merged, recipe.title, result), [
+      { text: 'OK', style: 'cancel' },
+      { text: 'View list', onPress: () => router.push('/shopping') },
+    ]);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 2500);
   };
 
   return (
@@ -85,15 +107,11 @@ export default function RecipeActions({
         />
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.act, inCart && styles.actDone]}
-        onPress={addToCart}
-        disabled={inCart}
-      >
+      <TouchableOpacity style={[styles.act, justAdded && styles.actDone]} onPress={addToCart}>
         <Ionicons
-          name={inCart ? 'checkmark' : 'cart-outline'}
+          name={justAdded ? 'checkmark' : 'cart-outline'}
           size={17}
-          color={inCart ? COLORS.green : COLORS.navy}
+          color={justAdded ? COLORS.green : COLORS.navy}
         />
       </TouchableOpacity>
 

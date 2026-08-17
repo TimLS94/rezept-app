@@ -241,7 +241,7 @@ export default function ImportRecipeScreen() {
           <Text style={styles.guestIcon}>📱</Text>
           <Text style={styles.guestTitle}>Sign in to import</Text>
           <Text style={styles.guestText}>
-            Create an account to save recipes from Instagram to your personal cookbook.
+            Create an account to keep your recipes in a cookbook.
           </Text>
           <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/login')}>
             <Text style={styles.primaryButtonText}>Sign In</Text>
@@ -268,7 +268,7 @@ export default function ImportRecipeScreen() {
           <Text style={styles.guestIcon}>✨</Text>
           <Text style={styles.guestTitle}>You've used your {FREE_IMPORT_LIMIT} free imports</Text>
           <Text style={styles.guestText}>
-            Premium turns any Instagram or TikTok link, screenshot or pasted text into a
+            Premium turns a screenshot, a photo or pasted text into a
             proper recipe — as often as you like.
           </Text>
           <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPaywall(true)}>
@@ -300,9 +300,9 @@ export default function ImportRecipeScreen() {
           <View style={styles.inputSection}>
             <View style={styles.heroBox}>
               <Text style={styles.heroIcon}>✨</Text>
-              <Text style={styles.heroTitle}>AI Recipe Import</Text>
+              <Text style={styles.heroTitle}>Import a recipe</Text>
               <Text style={styles.heroText}>
-                Paste recipe text from Instagram, TikTok, or anywhere else and AI will structure it for you.
+                Photograph it, pick a screenshot, or paste the text — it gets turned into a recipe you can cook from.
               </Text>
             </View>
 
@@ -362,12 +362,12 @@ export default function ImportRecipeScreen() {
                   disabled={screenshots.length >= MAX_SCREENSHOTS}
                 >
                   <Text style={styles.uploadButtonText}>
-                    {screenshots.length === 0 ? '�️ Select from Gallery' : '+ Add More'}
+                    {screenshots.length === 0 ? '🖼️ Select from Gallery' : '+ Add More'}
                   </Text>
                 </TouchableOpacity>
 
                 <Text style={styles.screenshotHint}>
-                  Select screenshots of the recipe from your gallery. AI will read the text and ingredients from the images.
+                  Pick screenshots of the recipe. The ingredients and steps are read straight off the images.
                 </Text>
               </View>
             )}
@@ -454,7 +454,7 @@ Steps:
 
             <View style={styles.supportedBox}>
               <Text style={styles.supportedTitle}>💡 Tip:</Text>
-              <Text style={styles.supportedText}>Copy the recipe caption from Instagram/TikTok and paste it here. AI will extract ingredients and steps automatically!</Text>
+              <Text style={styles.supportedText}>Screenshots work best when the ingredients and steps are both visible. Long recipes: take two shots and add them together.</Text>
             </View>
           </View>
         )}

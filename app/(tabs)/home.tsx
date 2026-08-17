@@ -146,7 +146,9 @@ export default function HomeScreen() {
 
         {/* Popular list */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>POPULAR THIS WEEK</Text>
+          <Text style={styles.sectionTitle}>
+            {activeCategory === 'all' ? 'ALL RECIPES' : `${activeCategory.toUpperCase()} RECIPES`}
+          </Text>
           {filteredRecipes.map(recipe => (
             <TouchableOpacity key={recipe.id} style={styles.recipeCard} onPress={() => router.push(`/recipe/${recipe.id}`)} activeOpacity={0.85}>
               <Image source={{ uri: recipe.image }} style={styles.recipeImage} contentFit="cover" />
@@ -155,8 +157,10 @@ export default function HomeScreen() {
                 <Text style={styles.recipeMeta}>{recipe.prepTime + recipe.cookTime} min • {recipe.calories} cal</Text>
                 <View style={styles.recipeInfluencer}>
                   <Image source={{ uri: recipe.influencer.avatar }} style={styles.recipeInfluencerAvatar} />
-                  <Text style={styles.recipeInfluencerName}>{recipe.influencer.handle}</Text>
-                  {recipe.kidApproved && <Text style={styles.kidTag}>· 👶 Kid approved</Text>}
+                  <Text style={styles.recipeInfluencerName} numberOfLines={1}>
+                    {recipe.influencer.handle}
+                  </Text>
+                  {recipe.kidApproved && <Text style={styles.kidTag}>👶 Kid approved</Text>}
                 </View>
               </View>
             </TouchableOpacity>
@@ -223,8 +227,8 @@ const styles = StyleSheet.create({
   recipeContent: { flex: 1, padding: 14, justifyContent: 'center' },
   recipeTitle: { fontFamily: FONTS.semibold, fontSize: 16, color: COLORS.navy, marginBottom: 6 },
   recipeMeta: { fontFamily: FONTS.body, fontSize: 12.5, color: COLORS.warmGray },
-  recipeInfluencer: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  recipeInfluencer: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 6 },
   recipeInfluencerAvatar: { width: 20, height: 20, borderRadius: 10, marginRight: 6 },
-  recipeInfluencerName: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.orange },
-  kidTag: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.green, marginLeft: 4 },
+  recipeInfluencerName: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.orange, flexShrink: 1 },
+  kidTag: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.green, flexShrink: 0 },
 });
