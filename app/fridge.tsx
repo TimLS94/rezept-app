@@ -98,7 +98,10 @@ export default function FridgeScreen() {
 
     const base = {
       mediaTypes: ['images'] as ImagePicker.MediaType[],
-      quality: 0.6,   // plenty for recognising food; keeps the upload small
+      // Recognising food needs far less detail than a photo carries, and the
+      // whole batch has to fit in one request now that it goes through our
+      // own function rather than straight to Google.
+      quality: 0.35,
       base64: true,
     };
 
@@ -186,7 +189,13 @@ export default function FridgeScreen() {
           'no-images': 'Add at least one photo first.',
           // Not the user's fault and not fixable by retaking the photo — say so.
           'response-truncated': 'Your fridge had more in it than the scan could list in one go. Please try again.',
-        }[detected.error] ?? 'The scan failed. Please try again.';
+          'photos-too-large': 'Those photos are too big to send in one go. Try again with fewer of them.',
+          'quota-exceeded': "You've used today's scans. They reset tomorrow.",
+        }[detected.error] ??
+          // Anything else is a real fault, and the reason is worth showing:
+          // "please try again" on a broken session or a rejected upload just
+          // sends people round the same loop.
+          `The scan failed (${detected.error}). Please try again.`;
         Alert.alert('No results', message);
         return;
       }

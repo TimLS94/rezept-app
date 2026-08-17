@@ -210,9 +210,18 @@ function parseItems(text: string): string[] {
 }
 
 // Identify the ingredients visible across 1–3 fridge photos.
+// Roughly what an edge function will accept once JSON-encoded, with room to
+// spare. Base64 is already a third larger than the file it encodes.
+const MAX_PAYLOAD_BYTES = 4_000_000;
+
 export async function detectFridgeItems(imagesBase64: string[]): Promise<FridgeScanResult> {
   if (!imagesBase64.length) {
     return { success: false, error: 'no-images' };
+  }
+
+  const size = imagesBase64.reduce((n, b) => n + b.length, 0);
+  if (size > MAX_PAYLOAD_BYTES) {
+    return { success: false, error: 'photos-too-large' };
   }
 
   // All photos go into a single request so the model can de-duplicate across
@@ -223,7 +232,11 @@ export async function detectFridgeItems(imagesBase64: string[]): Promise<FridgeS
 
   if (!res.ok) {
     if (isQuotaError(res.error)) return { success: false, error: 'quota-exceeded' };
-    return { success: false, error: 'gemini-failed' };
+    // Pass the real reason through. Collapsing every failure into
+    // "gemini-failed" meant a payload that was too large, an expired session
+    // and an actual model error all produced the same "please try again" —
+    // which is useless advice for two of the three.
+    return { success: false, error: res.error || 'gemini-failed' };
   }
 
   const items = parseItems(res.data.text ?? '');
