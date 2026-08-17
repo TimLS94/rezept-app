@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Recipe, Ingredient } from '../data/recipes';
 import { supabase } from './supabase';
+import { callGateway, isQuotaError, type GeminiReply } from './aiGateway';
 
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 
 export const FRIDGE_SCAN_LIMIT = 3; // per rolling 7 days, enforced in the DB
 
@@ -175,19 +175,6 @@ export function matchRecipes(recipes: Recipe[], detectedItems: string[]): Recipe
     .sort((a, b) => a.missing.length - b.missing.length || b.coverage - a.coverage);
 }
 
-const FRIDGE_PROMPT = `You are looking at photos of the inside of someone's fridge, freezer or pantry.
-
-List every distinct food ingredient you can identify with reasonable confidence.
-
-Rules:
-- Use short, generic English names ("milk", not "semi-skimmed organic milk 1L").
-- Singular form ("egg", "carrot", "tomato").
-- One entry per ingredient, no duplicates across the photos.
-- Only actual food. Skip containers, brands, packaging text and anything you cannot identify.
-- If you can see nothing edible, return an empty array.
-
-Return ONLY a JSON array of strings, no markdown fences and no extra text.
-Example: ["egg", "milk", "cheddar", "spinach", "chicken breast"]`;
 
 function dedupe(values: string[]): string[] {
   const seen = new Set<string>();
@@ -224,62 +211,30 @@ function parseItems(text: string): string[] {
 
 // Identify the ingredients visible across 1–3 fridge photos.
 export async function detectFridgeItems(imagesBase64: string[]): Promise<FridgeScanResult> {
-  if (!GEMINI_API_KEY) {
-    return { success: false, error: 'no-key' };
-  }
   if (!imagesBase64.length) {
     return { success: false, error: 'no-images' };
   }
 
-  try {
-    // All photos go into a single request so the model can de-duplicate across
-    // them — the same milk carton shot twice should not become two ingredients.
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: FRIDGE_PROMPT },
-              ...imagesBase64.map(data => ({
-                inline_data: { mime_type: 'image/jpeg', data },
-              })),
-            ],
-          }],
-          // maxOutputTokens has to cover the model's reasoning as well as its
-          // answer on 2.5 models. At 1000 a well-stocked fridge burned ~960 on
-          // thinking alone and the JSON came back truncated mid-word, which
-          // looked exactly like "nothing recognised". Generous is cheap here:
-          // unused budget costs nothing, and a scan is ~0.3 cents either way.
-          generationConfig: { temperature: 0.1, maxOutputTokens: 8000 },
-        }),
-      }
-    );
+  // All photos go into a single request so the model can de-duplicate across
+  // them — the same milk carton shot twice should not become two ingredients.
+  // The prompt and the token budget live in the gateway now; the phone holds
+  // no Gemini key.
+  const res = await callGateway<GeminiReply>('fridge-items', { images: imagesBase64 });
 
-    if (!response.ok) {
-      console.warn('Gemini fridge scan error:', await response.text());
-      return { success: false, error: 'gemini-failed' };
-    }
-
-    const data = await response.json();
-    const candidate = data.candidates?.[0];
-    const text = candidate?.content?.parts?.[0]?.text ?? '';
-    const items = parseItems(text);
-
-    if (!items.length) {
-      // Distinguish "the model saw no food" from "the model ran out of room",
-      // otherwise a truncated answer sends the user off to retake a photo that
-      // was never the problem.
-      return {
-        success: false,
-        error: candidate?.finishReason === 'MAX_TOKENS' ? 'response-truncated' : 'nothing-found',
-      };
-    }
-    return { success: true, items };
-  } catch (error) {
-    console.warn('Gemini fridge scan error:', error);
+  if (!res.ok) {
+    if (isQuotaError(res.error)) return { success: false, error: 'quota-exceeded' };
     return { success: false, error: 'gemini-failed' };
   }
+
+  const items = parseItems(res.data.text ?? '');
+  if (!items.length) {
+    // Distinguish "the model saw no food" from "the model ran out of room",
+    // otherwise a truncated answer sends the user off to retake a photo that
+    // was never the problem.
+    return {
+      success: false,
+      error: res.data.finishReason === 'MAX_TOKENS' ? 'response-truncated' : 'nothing-found',
+    };
+  }
+  return { success: true, items };
 }

@@ -1,8 +1,8 @@
+import { callGateway, isQuotaError, QUOTA_MESSAGE } from './aiGateway';
 // Instagram content extraction service
 // Uses RapidAPI Instagram Scraper for reliable extraction
 // Fallback to oEmbed API (often blocked)
 
-const RAPIDAPI_KEY = process.env.EXPO_PUBLIC_RAPIDAPI_KEY || '';
 const RAPIDAPI_HOST = 'instagram-scraper-stable-api.p.rapidapi.com';
 
 export type InstagramContent = {
@@ -115,90 +115,71 @@ export async function fetchInstagramContent(url: string): Promise<InstagramResul
 
 // RapidAPI Instagram Scraper Stable API - reliable extraction
 export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramResult> {
-  if (!RAPIDAPI_KEY) {
-    return { success: false, error: 'no-rapidapi-key' };
-  }
-
   const shortcode = extractShortcode(url);
   if (!shortcode) {
     return { success: false, error: 'Could not extract post ID from URL' };
   }
 
-  try {
-    // Use Instagram Scraper Stable API - get_media_data_v2 endpoint
-    const response = await fetch(
-      `https://${RAPIDAPI_HOST}/get_media_data_v2.php?media_code=${shortcode}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-RapidAPI-Key': RAPIDAPI_KEY,
-          'X-RapidAPI-Host': RAPIDAPI_HOST,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return { success: false, error: 'Rate limit reached. Please try again later.' };
-      }
-      if (response.status === 401 || response.status === 403) {
-        return { success: false, error: 'API key invalid or expired.' };
-      }
-      return { success: false, error: `API error: ${response.status}` };
+  // The RapidAPI key lives in the gateway now. It is a paid subscription with a
+  // shared quota, and it used to sit in the app bundle where anyone could spend
+  // it.
+  const res = await callGateway<{ data: any }>('instagram-post', { shortcode });
+  if (!res.ok) {
+    if (isQuotaError(res.error)) return { success: false, error: QUOTA_MESSAGE };
+    if (res.error === 'rapidapi-429') {
+      return { success: false, error: 'Rate limit reached. Please try again later.' };
     }
-
-    const data = await response.json();
-    
-    // Check for API error response
-    if (data.error || data.status === 'error') {
-      return { success: false, error: data.message || 'API returned an error' };
-    }
-    
-    // Extract data from Instagram Scraper Stable API response
-    const mediaData = data.data || data;
-    const caption = mediaData.caption?.text || mediaData.caption || mediaData.title || '';
-    const username = mediaData.user?.username || mediaData.owner?.username || '';
-    const thumbnailUrl = mediaData.display_url || 
-                         mediaData.thumbnail_url || 
-                         mediaData.image_versions2?.candidates?.[0]?.url || '';
-    
-    // Get video URL if it's a reel/video
-    let videoUrl: string | undefined;
-    let mediaType: 'image' | 'video' | 'carousel' = 'image';
-    
-    if (mediaData.is_video || mediaData.video_url || mediaData.video_versions) {
-      mediaType = 'video';
-      videoUrl = mediaData.video_url || mediaData.video_versions?.[0]?.url;
-    } else if (mediaData.carousel_media || mediaData.edge_sidecar_to_children) {
-      mediaType = 'carousel';
-    }
-
-    if (!caption && !thumbnailUrl) {
-      return { success: false, error: 'Could not extract content from post.' };
-    }
-
-    console.log('✓ RapidAPI extracted:', { 
-      caption: caption.substring(0, 50), 
-      username, 
-      mediaType,
-      hasVideoUrl: !!videoUrl,
-    });
-
-    return {
-      success: true,
-      content: {
-        caption,
-        mediaType,
-        thumbnailUrl,
-        videoUrl,
-        username,
-      },
-    };
-  } catch (error: any) {
-    console.error('RapidAPI Instagram error:', error);
-    return { success: false, error: 'Network error fetching Instagram data.' };
+    return { success: false, error: `API error: ${res.error}` };
   }
+
+  const data = res.data.data;
+
+  
+  // Check for API error response
+  if (data.error || data.status === 'error') {
+    return { success: false, error: data.message || 'API returned an error' };
+  }
+  
+  // Extract data from Instagram Scraper Stable API response
+  const mediaData = data.data || data;
+  const caption = mediaData.caption?.text || mediaData.caption || mediaData.title || '';
+  const username = mediaData.user?.username || mediaData.owner?.username || '';
+  const thumbnailUrl = mediaData.display_url || 
+                       mediaData.thumbnail_url || 
+                       mediaData.image_versions2?.candidates?.[0]?.url || '';
+  
+  // Get video URL if it's a reel/video
+  let videoUrl: string | undefined;
+  let mediaType: 'image' | 'video' | 'carousel' = 'image';
+  
+  if (mediaData.is_video || mediaData.video_url || mediaData.video_versions) {
+    mediaType = 'video';
+    videoUrl = mediaData.video_url || mediaData.video_versions?.[0]?.url;
+  } else if (mediaData.carousel_media || mediaData.edge_sidecar_to_children) {
+    mediaType = 'carousel';
+  }
+
+  if (!caption && !thumbnailUrl) {
+    return { success: false, error: 'Could not extract content from post.' };
+  }
+
+  console.log('✓ RapidAPI extracted:', { 
+    caption: caption.substring(0, 50), 
+    username, 
+    mediaType,
+    hasVideoUrl: !!videoUrl,
+  });
+
+  return {
+    success: true,
+    content: {
+      caption,
+      mediaType,
+      thumbnailUrl,
+      videoUrl,
+      username,
+    },
+  };
 }
 
 // Main fetch function - tries RapidAPI first, falls back to oEmbed
@@ -207,16 +188,16 @@ export async function fetchInstagramWithFallback(url: string): Promise<Instagram
     return { success: false, error: 'Invalid Instagram URL. Use a post, reel, or IGTV link.' };
   }
 
-  // Try RapidAPI first (more reliable)
-  if (RAPIDAPI_KEY) {
-    console.log('Trying RapidAPI...');
-    const rapidResult = await fetchInstagramViaRapidAPI(url);
-    if (rapidResult.success) {
-      console.log('✓ RapidAPI succeeded');
-      return rapidResult;
-    }
-    console.warn('RapidAPI failed:', rapidResult.error);
+  // Try RapidAPI first (more reliable). The client can no longer check whether
+  // a key is configured — it doesn't have one — so it simply asks and falls
+  // through to oEmbed if the gateway says no key, no quota, or no result.
+  console.log('Trying RapidAPI...');
+  const rapidResult = await fetchInstagramViaRapidAPI(url);
+  if (rapidResult.success) {
+    console.log('✓ RapidAPI succeeded');
+    return rapidResult;
   }
+  console.warn('RapidAPI failed:', rapidResult.error);
 
   // Fallback to oEmbed
   console.log('Trying oEmbed fallback...');

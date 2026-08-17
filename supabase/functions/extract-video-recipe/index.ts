@@ -1,8 +1,18 @@
 // Supabase Edge Function: Extract recipe from Instagram video
 // Downloads video, sends to Gemini for analysis (FREE!)
 
+// SECURITY: this function had no access check of any kind. The anon key is
+// enough to reach an edge function, and that key ships inside the app bundle,
+// so anyone who unzipped the IPA could call this — and every call spends a
+// paid RapidAPI request plus a Gemini video analysis, billed to us.
+//
+// It is also superseded: the app now goes through supabase/functions/ai-gateway,
+// which checks the user and spends a quota. Nothing in the app calls this any
+// more. It is guarded rather than deleted because the deployed copy stays
+// reachable until it is explicitly removed — see the deploy notes.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { encode as encodeBase64 } from 'https://deno.land/std@0.168.0/encoding/base64.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || '';
 const RAPIDAPI_KEY = Deno.env.get('RAPIDAPI_KEY') || '';
@@ -42,9 +52,36 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Who is calling. The anon key is not an identity — it is public.
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const anon = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const authHeader = req.headers.get('Authorization') || '';
+  const asUser = createClient(supabaseUrl, anon, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user } } = await asUser.auth.getUser();
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Spend a unit before doing the paid work, so a retry loop cannot run up a
+  // bill. Counted per user per day, server-side.
+  const admin = createClient(supabaseUrl, service);
+  const { data: quota } = await admin.rpc('consume_ai_quota', { p_op: 'transcribe-video' });
+  if (!quota?.ok) {
+    return new Response(JSON.stringify({ error: quota?.error ?? 'quota_exceeded' }), {
+      status: 429,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const { instagramUrl } = await req.json();
-    
+
     if (!instagramUrl) {
       return new Response(
         JSON.stringify({ error: 'Missing instagramUrl' }),
