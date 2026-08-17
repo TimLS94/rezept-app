@@ -276,6 +276,19 @@ export default function CookbookScreen() {
                 </TouchableOpacity>
 
                 <View style={styles.cardActions}>
+                  {/* Cooking your own recipe used to mean opening it first and
+                      finding the button in there. The creator tab had a cook
+                      button on the card; this one didn't. */}
+                  {recipe.steps.length > 0 && (
+                    <TouchableOpacity
+                      style={styles.cookButton}
+                      onPress={() =>
+                        router.push(`/cook/${recipe.id}?source=mine&servings=${recipe.servings}`)
+                      }
+                    >
+                      <Text style={styles.cartButtonText}>👨‍🍳</Text>
+                    </TouchableOpacity>
+                  )}
                   {/* Nothing to shop for on a note — the button would report
                       "0 items added" and look broken. */}
                   <TouchableOpacity
@@ -587,6 +600,14 @@ const styles = StyleSheet.create({
   },
   cartButtonAdded: { backgroundColor: '#E8F5E9' },
   cartButtonDisabled: { opacity: 0.3 },
+  cookButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFE9DC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   cartButtonText: { fontSize: 18 },
   cartButtonTextAdded: { color: '#3C8D40' },
   deleteButton: {

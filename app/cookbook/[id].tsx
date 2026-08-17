@@ -39,6 +39,7 @@ export default function CookbookRecipeScreen() {
       dietary: recipe.dietary,
       ingredients: recipe.ingredients,
       steps: recipe.steps,
+      stepTimers: recipe.stepTimers,
       sourceUrl: recipe.sourceUrl ?? '',
     });
   };
@@ -61,6 +62,7 @@ export default function CookbookRecipeScreen() {
       dietary: cleanDietary,
       ingredients: draft.ingredients as Ingredient[],
       steps: draft.steps,
+      stepTimers: draft.stepTimers,
       sourceUrl,
     });
     setSaving(false);

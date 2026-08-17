@@ -14,8 +14,15 @@ export type EditableRecipe = {
   dietary: string[];
   ingredients: Ingredient[];
   steps: string[];
+  /** Seconds per step, index-aligned with `steps`. Null = no timer. */
+  stepTimers?: (number | null)[];
   sourceUrl?: string;
 };
+
+/** Seconds → the minutes string shown in the field. Empty when there's no timer. */
+function timerMinutes(seconds: number | null | undefined): string {
+  return seconds ? String(Math.round(seconds / 60)) : '';
+}
 
 type Props = {
   value: EditableRecipe;
@@ -42,8 +49,24 @@ export default function RecipeEditor({ value, onChange }: Props) {
 
   const updateStep = (i: number, text: string) =>
     set({ steps: value.steps.map((s, idx) => (idx === i ? text : s)) });
-  const addStep = () => set({ steps: [...value.steps, ''] });
-  const removeStep = (i: number) => set({ steps: value.steps.filter((_, idx) => idx !== i) });
+  // Timers are index-aligned with steps, so every operation on one has to do
+  // the same to the other — otherwise deleting step 2 shifts every later
+  // timer onto the wrong step.
+  const timers = () => value.steps.map((_, i) => value.stepTimers?.[i] ?? null);
+
+  const addStep = () => set({ steps: [...value.steps, ''], stepTimers: [...timers(), null] });
+  const removeStep = (i: number) =>
+    set({
+      steps: value.steps.filter((_, idx) => idx !== i),
+      stepTimers: timers().filter((_, idx) => idx !== i),
+    });
+
+  const updateTimer = (i: number, minutes: string) => {
+    const n = parseInt(minutes.replace(/[^0-9]/g, ''), 10);
+    const next = timers();
+    next[i] = isNaN(n) || n <= 0 ? null : n * 60; // stored in seconds
+    set({ stepTimers: next });
+  };
 
   return (
     <View>
@@ -179,21 +202,37 @@ export default function RecipeEditor({ value, onChange }: Props) {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Steps ({value.steps.length})</Text>
         {value.steps.map((step, i) => (
-          <View key={i} style={styles.stepRow}>
-            <View style={styles.stepNum}>
-              <Text style={styles.stepNumTxt}>{i + 1}</Text>
+          <View key={i} style={styles.stepBlock}>
+            <View style={styles.stepRow}>
+              <View style={styles.stepNum}>
+                <Text style={styles.stepNumTxt}>{i + 1}</Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.stepInput]}
+                value={step}
+                onChangeText={(t) => updateStep(i, t)}
+                placeholder="Describe this step"
+                placeholderTextColor="#BBB"
+                multiline
+              />
+              <TouchableOpacity onPress={() => removeStep(i)} style={styles.removeBtn}>
+                <Text style={styles.removeTxt}>✕</Text>
+              </TouchableOpacity>
             </View>
-            <TextInput
-              style={[styles.input, styles.stepInput]}
-              value={step}
-              onChangeText={(t) => updateStep(i, t)}
-              placeholder="Describe this step"
-              placeholderTextColor="#BBB"
-              multiline
-            />
-            <TouchableOpacity onPress={() => removeStep(i)} style={styles.removeBtn}>
-              <Text style={styles.removeTxt}>✕</Text>
-            </TouchableOpacity>
+            {/* Entered in minutes, stored in seconds — the same unit cook mode
+                counts down in, and the same shape a creator's step uses. */}
+            <View style={styles.timerRow}>
+              <Text style={styles.timerLabel}>⏱ Timer</Text>
+              <TextInput
+                style={styles.timerInput}
+                value={timerMinutes(value.stepTimers?.[i])}
+                onChangeText={(t) => updateTimer(i, t)}
+                placeholder="–"
+                placeholderTextColor="#CCC"
+                keyboardType="number-pad"
+              />
+              <Text style={styles.timerUnit}>min</Text>
+            </View>
           </View>
         ))}
         <TouchableOpacity onPress={addStep} style={styles.addBtn}>
@@ -260,7 +299,22 @@ const styles = StyleSheet.create({
   unit: { width: 60 },
   ingName: { flex: 1 },
 
+  stepBlock: { marginBottom: 14 },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 },
+  timerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 36 },
+  timerLabel: { fontSize: 13, color: '#888' },
+  timerInput: {
+    width: 56,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#EDE3D6',
+    borderRadius: 8,
+    fontSize: 14,
+    color: '#1A1A1A',
+    textAlign: 'center',
+  },
+  timerUnit: { fontSize: 13, color: '#888' },
   stepNum: {
     width: 26,
     height: 26,

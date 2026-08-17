@@ -50,6 +50,14 @@ export default function NewRecipeScreen() {
     }
     // Everything else is optional on purpose. A title plus a line of text is a
     // perfectly good note, and refusing to save it would defeat the point.
+    //
+    // Blank steps are dropped, and each step's timer has to be dropped with it
+    // — filtering the two lists separately would slide every later timer onto
+    // the wrong step.
+    const kept = draft.steps
+      .map((text, i) => ({ text, timer: draft.stepTimers?.[i] ?? null }))
+      .filter(s => s.text.trim());
+
     setSaving(true);
     const result = await saveMyRecipe({
       title: draft.title.trim(),
@@ -63,7 +71,8 @@ export default function NewRecipeScreen() {
       difficulty: draft.difficulty,
       dietary: draft.dietary.filter(d => DIETARY_TAGS.includes(d)) as DietaryTag[],
       ingredients: draft.ingredients as Ingredient[],
-      steps: draft.steps.filter(s => s.trim()),
+      steps: kept.map(s => s.text.trim()),
+      stepTimers: kept.map(s => s.timer),
     });
     setSaving(false);
 

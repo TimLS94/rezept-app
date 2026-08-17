@@ -16,6 +16,10 @@ export type MyRecipe = {
   dietary: DietaryTag[];
   ingredients: Ingredient[];
   steps: string[];
+  // Index-aligned with `steps`. Null means "no timer on this step". Stored
+  // inside the step object in the database, the same way creator recipes do it.
+  stepTimers?: (number | null)[];
+  stepImages?: (string | null)[];
   sourceUrl?: string;
   createdAt: string;
 };
@@ -33,10 +37,36 @@ export type MyRecipeInput = {
   dietary: DietaryTag[];
   ingredients: Ingredient[];
   steps: string[];
+  stepTimers?: (number | null)[];
+  stepImages?: (string | null)[];
   sourceUrl?: string;
 };
 
 type SaveResult = { id: string } | { error: string };
+
+// A step is stored either as a bare string (everything written before steps
+// could carry a timer) or as {text, image, timer}. Both shapes stay readable
+// forever — there is no migration that rewrites user content.
+function stepText(s: any): string {
+  return typeof s === 'string' ? s : (s?.text ?? '');
+}
+
+// Steps go to the database as objects only when there is something to put in
+// them. A recipe with no timers and no photos stays an array of plain strings,
+// which keeps the rows small and readable.
+function packSteps(
+  steps: string[],
+  timers?: (number | null)[],
+  images?: (string | null)[],
+): any[] {
+  const rich = (timers?.some(t => t != null) ?? false) || (images?.some(i => i != null) ?? false);
+  if (!rich) return steps;
+  return steps.map((text, i) => ({
+    text,
+    timer: timers?.[i] ?? null,
+    image: images?.[i] ?? null,
+  }));
+}
 
 // Map DB row to MyRecipe
 function mapDbRow(row: any): MyRecipe {
@@ -53,7 +83,13 @@ function mapDbRow(row: any): MyRecipe {
     difficulty: row.difficulty || 'Easy',
     dietary: (row.tags || []) as DietaryTag[],
     ingredients: Array.isArray(row.ingredients) ? row.ingredients : [],
-    steps: Array.isArray(row.instructions) ? row.instructions : [],
+    steps: (Array.isArray(row.instructions) ? row.instructions : []).map(stepText),
+    stepTimers: (Array.isArray(row.instructions) ? row.instructions : []).map((s: any) =>
+      typeof s === 'string' ? null : (s?.timer ?? null)
+    ),
+    stepImages: (Array.isArray(row.instructions) ? row.instructions : []).map((s: any) =>
+      typeof s === 'string' ? null : (s?.image ?? null)
+    ),
     sourceUrl: row.source_url,
     createdAt: row.created_at,
   };
@@ -82,6 +118,8 @@ export function myRecipeToRecipe(myRecipe: MyRecipe): Recipe {
     },
     ingredients: myRecipe.ingredients,
     steps: myRecipe.steps,
+    stepTimers: myRecipe.stepTimers,
+    stepImages: myRecipe.stepImages,
   };
 }
 
@@ -108,6 +146,8 @@ export async function copyRecipeToCookbook(recipe: Recipe): Promise<SaveResult> 
     dietary: recipe.dietary,
     ingredients: recipe.ingredients,
     steps: recipe.steps,
+    stepTimers: recipe.stepTimers,
+    stepImages: recipe.stepImages,
   });
 }
 
@@ -171,7 +211,7 @@ export async function saveMyRecipe(input: MyRecipeInput): Promise<SaveResult> {
       difficulty: input.difficulty,
       tags: input.dietary,
       ingredients: input.ingredients,
-      instructions: input.steps,
+      instructions: packSteps(input.steps, input.stepTimers, input.stepImages),
       source_url: input.sourceUrl,
     })
     .select()
@@ -198,7 +238,8 @@ export async function updateMyRecipe(id: string, input: Partial<MyRecipeInput>):
   if (input.difficulty !== undefined) updates.difficulty = input.difficulty;
   if (input.dietary !== undefined) updates.tags = input.dietary;
   if (input.ingredients !== undefined) updates.ingredients = input.ingredients;
-  if (input.steps !== undefined) updates.instructions = input.steps;
+  if (input.steps !== undefined)
+    updates.instructions = packSteps(input.steps, input.stepTimers, input.stepImages);
 
   const { error } = await supabase
     .from('my_recipes')
