@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Platform,
   ActionSheetIOS,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { supabase, getCurrentUser } from '../../lib/supabase';
 import { buildInstacartLink, openUrl } from '../../lib/instacart';
 import { FEATURES } from '../../lib/features';
@@ -97,9 +97,18 @@ export default function ShoppingScreen() {
     });
   };
 
-  useEffect(() => {
-    loadItems();
-  }, []);
+  // Reload every time the tab comes forward, not once on mount.
+  //
+  // Tab screens stay mounted, so a plain mount effect ran exactly once per app
+  // launch. Adding a recipe from the planner or the cookbook wrote the rows
+  // correctly and this screen kept showing the list it had loaded at startup —
+  // the additions only appeared after force-quitting the app, which reads as
+  // "it says added and nothing is there".
+  useFocusEffect(
+    useCallback(() => {
+      loadItems();
+    }, [])
+  );
 
   const loadItems = async () => {
     const user = await getCurrentUser();
