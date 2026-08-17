@@ -22,7 +22,7 @@ import {
   saveRecipeToCookbook,
   setRecipePaid,
 } from '../../lib/recipes';
-import { copyRecipeToCookbook } from '../../lib/myRecipes';
+import { copyRecipeToCookbook, fetchMyRecipeById } from '../../lib/myRecipes';
 import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { useFavorites } from '../../lib/favorites';
@@ -88,24 +88,43 @@ export default function RecipeDetailScreen() {
     loadFamilyMembers();
   }, []);
 
+  // True while we are still looking. Without it "not found" and "not loaded
+  // yet" are the same state, and the screen can only ever show a spinner.
+  const [resolving, setResolving] = useState(!localRecipe && !!id);
+
   // Uploaded recipes aren't in the local catalogue — fetch them from Supabase.
   useEffect(() => {
     if (localRecipe || !id) return;
+    setResolving(true);
     (async () => {
-      const r = await fetchDbRecipeById(id);
-      if (r) {
-        setRecipe(r);
-        setServings(r.servings);
-        return;
-      }
-      // Nothing live under that id. If the user bought it and the creator has
-      // since deleted it, the copy taken at purchase is still theirs — serve
-      // that rather than a "not found" for something they paid for.
-      const owned = await fetchPurchasedRecipes();
-      const snapshot = owned.find(p => p.id === id);
-      if (snapshot) {
-        setRecipe(snapshot);
-        setServings(snapshot.servings);
+      try {
+        const r = await fetchDbRecipeById(id);
+        if (r) {
+          setRecipe(r);
+          setServings(r.servings);
+          return;
+        }
+        // Nothing live under that id. If the user bought it and the creator has
+        // since deleted it, the copy taken at purchase is still theirs — serve
+        // that rather than a "not found" for something they paid for.
+        const owned = await fetchPurchasedRecipes();
+        const snapshot = owned.find(p => p.id === id);
+        if (snapshot) {
+          setRecipe(snapshot);
+          setServings(snapshot.servings);
+          return;
+        }
+        // Still nothing. One id space this screen has never covered is the
+        // user's own cookbook, and links to it do arrive here — from the meal
+        // planner, for one. Send them where the recipe actually lives instead
+        // of showing "not found" for something they wrote themselves.
+        const mine = await fetchMyRecipeById(id);
+        if (mine) {
+          router.replace(`/cookbook/${id}`);
+          return;
+        }
+      } finally {
+        setResolving(false);
       }
     })();
   }, [id, localRecipe]);
@@ -363,6 +382,27 @@ export default function RecipeDetailScreen() {
   };
 
   if (!recipe) {
+    // Spinning forever was the old behaviour whenever an id resolved to
+    // nothing here — a recipe from the cookbook, for instance, which lives in
+    // my_recipes and was never findable on this screen. A screen that cannot
+    // load something has to say so.
+    if (!resolving) {
+      return (
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 32 }]}>
+          <Text style={{ fontSize: 44, marginBottom: 12 }}>🤔</Text>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#1A1A1A' }}>Recipe not found</Text>
+          <Text style={{ fontSize: 14, color: '#888', textAlign: 'center', marginTop: 6 }}>
+            It may have been deleted, or the link is out of date.
+          </Text>
+          <TouchableOpacity
+            style={{ backgroundColor: '#F2701E', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 14, marginTop: 20 }}
+            onPress={() => goBackOr('/home')}
+          >
+            <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>Go back</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator color="#F2701E" />

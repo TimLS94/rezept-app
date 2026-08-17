@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -10,6 +11,8 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { DIETARY_TAGS, DietaryTag } from '../../data/recipes';
 import { router, useFocusEffect } from 'expo-router';
 import { fetchMyRecipes, deleteMyRecipe, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes';
 import {
@@ -43,6 +46,8 @@ export default function CookbookScreen() {
 
   // Portion counts are remembered per recipe and shared with favourites and
   // cook mode — the same recipe should not ask "how many?" twice.
+  const [query, setQuery] = useState('');
+  const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [servingsMap, setServingsMap] = useState<Record<string, number>>({});
   const [familyServings, setFamilyServings] = useState<number | null>(null);
 
@@ -50,6 +55,21 @@ export default function CookbookScreen() {
     getAllServings().then(setServingsMap).catch(() => {});
     getFamilyServings().then(setFamilyServings).catch(() => {});
   }, []);
+
+  // Search covers the title and the description, because a note's whole
+  // content is its description — searching only titles would make notes
+  // findable by name alone, which is the one thing you may not remember.
+  const matches = (r: { title: string; description: string; dietary: DietaryTag[] }) => {
+    const q = query.trim().toLowerCase();
+    const hitsQuery =
+      q === '' || r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q);
+    return hitsQuery && activeFilters.every(tag => r.dietary.includes(tag));
+  };
+
+  const shownRecipes = recipes.filter(matches);
+
+  const toggleFilter = (tag: DietaryTag) =>
+    setActiveFilters(prev => (prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]));
 
   const servingsFor = (id: string, base: number) => servingsMap[id] ?? base;
   const setServingsExact = (id: string, val: number) => {
@@ -170,6 +190,39 @@ export default function CookbookScreen() {
         </TouchableOpacity>
       </View>
 
+      {!loading && tab === 'mine' && recipes.length > 0 && (
+        <View style={styles.findBar}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={16} color="#9A9A9A" />
+            <TextInput
+              style={styles.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search your recipes and notes"
+              placeholderTextColor="#AAA"
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+            />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            {DIETARY_TAGS.map(tag => {
+              const active = activeFilters.includes(tag.id);
+              return (
+                <TouchableOpacity
+                  key={tag.id}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => toggleFilter(tag.id)}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {tag.icon} {tag.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       {loading ? (
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color="#F2701E" />
@@ -184,6 +237,20 @@ export default function CookbookScreen() {
           familyServings={familyServings}
           onRemoved={id => setOwned(prev => prev.filter(r => r.id !== id))}
         />
+      ) : shownRecipes.length === 0 && recipes.length > 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyText}>Nothing matches</Text>
+          <Text style={styles.emptySubtext}>
+            No recipe here matches that search or those filters.
+          </Text>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => { setQuery(''); setActiveFilters([]); }}
+          >
+            <Text style={styles.secondaryButtonText}>Clear search and filters</Text>
+          </TouchableOpacity>
+        </View>
       ) : recipes.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>📚</Text>
@@ -235,7 +302,9 @@ export default function CookbookScreen() {
         >
           <View style={styles.topRow}>
             <Text style={styles.count}>
-              {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
+              {shownRecipes.length === recipes.length
+                ? `${recipes.length} ${recipes.length === 1 ? 'recipe' : 'recipes'}`
+                : `${shownRecipes.length} of ${recipes.length}`}
             </Text>
             <View style={styles.topLinks}>
               <TouchableOpacity onPress={() => router.push('/cookbook/new')}>
@@ -247,7 +316,7 @@ export default function CookbookScreen() {
             </View>
           </View>
 
-          {recipes.map(recipe => {
+          {shownRecipes.map(recipe => {
             return (
               <View key={recipe.id} style={styles.card}>
                 <TouchableOpacity
@@ -557,6 +626,20 @@ const styles = StyleSheet.create({
   },
   count: { fontSize: 13, color: '#888' },
   topLinks: { flexDirection: 'row', gap: 18 },
+  findBar: { paddingTop: 12, backgroundColor: '#FFF9F2' },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    paddingHorizontal: 12,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#EFE7DC',
+  },
+  searchInput: { flex: 1, fontSize: 15, color: '#1A1A1A', paddingVertical: 0 },
   importLink: { fontSize: 13, color: '#F2701E', fontWeight: '700' },
   card: {
     backgroundColor: '#FFF',

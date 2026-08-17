@@ -43,6 +43,8 @@ export type Recipe = {
     handle: string;
     avatar: string;
   };
+  /** Which table this came from. Absent means a creator recipe or seed data. */
+  source?: 'mine';
   ingredients: Ingredient[];
   steps: string[];
   // Optional per-step photo (index-aligned with `steps`). Undefined/null = none.

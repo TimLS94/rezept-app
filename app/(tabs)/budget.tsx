@@ -285,6 +285,16 @@ export default function BudgetScreen() {
           })}
         </ScrollView>
 
+        {/* Filters narrow the next Generate rather than rebuilding the week
+            on the spot — tapping "vegetarian" should not discard a plan you
+            already adjusted. Without saying so, the chips looked broken:
+            they highlighted and nothing else happened. */}
+        {activeFilters.length > 0 && (
+          <Text style={styles.filterHint}>
+            {activeFilters.length} filter{activeFilters.length > 1 ? 's' : ''} set — generate to apply
+          </Text>
+        )}
+
         {/* Generate Button */}
         <TouchableOpacity
           style={styles.generateButton}
@@ -294,7 +304,9 @@ export default function BudgetScreen() {
           {generating ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.generateButtonText}>🎲 Generate New Plan</Text>
+            <Text style={styles.generateButtonText}>
+              {activeFilters.length > 0 ? '🎲 Generate with filters' : '🎲 Generate New Plan'}
+            </Text>
           )}
         </TouchableOpacity>
 
@@ -318,7 +330,16 @@ export default function BudgetScreen() {
               <TouchableOpacity
                 style={styles.mealMain}
                 activeOpacity={0.8}
-                onPress={() => router.push(`/recipe/${meal.recipe.id}`)}
+                onPress={() =>
+                  // Own recipes live on the cookbook screen; /recipe/[id] only
+                  // knows about creator recipes and cannot resolve a
+                  // my_recipes id at all.
+                  router.push(
+                    meal.recipe.source === 'mine'
+                      ? `/cookbook/${meal.recipe.id}`
+                      : `/recipe/${meal.recipe.id}`
+                  )
+                }
               >
                 <Image source={{ uri: meal.recipe.image }} style={styles.mealImage} />
                 <View style={styles.mealContent}>
@@ -616,6 +637,13 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: '#FFF',
+    fontWeight: '600',
+  },
+  filterHint: {
+    fontSize: 12,
+    color: '#8A4B1E',
+    paddingHorizontal: 20,
+    paddingBottom: 8,
     fontWeight: '600',
   },
   generateButton: {

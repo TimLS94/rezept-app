@@ -116,6 +116,7 @@ export function myRecipeToRecipe(myRecipe: MyRecipe): Recipe {
       handle: '@me',
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
     },
+    source: 'mine',
     ingredients: myRecipe.ingredients,
     steps: myRecipe.steps,
     stepTimers: myRecipe.stepTimers,
