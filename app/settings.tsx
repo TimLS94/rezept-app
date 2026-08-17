@@ -19,6 +19,7 @@ import { runtimeLabel } from '../lib/version';
 import { useAuth, canUploadRecipes } from '../lib/auth';
 import { restorePurchases, grantPlatformEntitlement, revokePlatformEntitlement } from '../lib/purchases';
 import Paywall from '../components/Paywall';
+import { HEADER_TOP } from '../lib/layout';
 
 const DEFAULT_AVATAR =
   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
@@ -434,7 +435,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF9F2' },
   center: { justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP, paddingBottom: 16 },
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },

@@ -19,6 +19,7 @@ import { supabase, getCurrentUser } from '../../lib/supabase';
 import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { Recipe } from '../../data/recipes';
+import { HEADER_TOP } from '../../lib/layout';
 
 type FamilyMember = {
   id: string;
@@ -720,7 +721,7 @@ const styles = StyleSheet.create({
   guestText: { fontSize: 15, color: '#888', textAlign: 'center', marginTop: 10, lineHeight: 22 },
   guestButton: { backgroundColor: '#F2701E', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14, marginTop: 24 },
   guestButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP, paddingBottom: 20 },
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },

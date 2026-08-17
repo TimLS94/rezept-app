@@ -20,6 +20,7 @@ import {
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { useAuth } from '../../lib/auth';
 import Paywall from '../../components/Paywall';
+import { HEADER_TOP } from '../../lib/layout';
 
 // Two kinds of thing live in a cookbook, and they behave differently: what you
 // wrote (yours, editable, deletable) and what you got from a creator (theirs,
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 12,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,

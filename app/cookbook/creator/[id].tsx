@@ -14,6 +14,7 @@ import { Recipe, DietaryTag, Ingredient, totalTime } from '../../../data/recipes
 import { fetchDbRecipeById, saveCookbookEdits, getCookbookEdits, applyEdits, CookbookEdits } from '../../../lib/recipes';
 import { addRecipesToShoppingList } from '../../../lib/shopping';
 import RecipeEditor, { EditableRecipe } from '../../../components/RecipeEditor';
+import { HEADER_TOP } from '../../../lib/layout';
 
 /**
  * View and edit a creator recipe that's in the user's cookbook.
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 12,
     backgroundColor: '#FFF',
   },

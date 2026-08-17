@@ -20,6 +20,7 @@ import { buildRecipePool, filterByDietary, shuffled, withIngredients } from '../
 import { WEEKDAYS, startOfWeek, addDays, weekKey, fmtDay } from '../../lib/week';
 import { Modal } from 'react-native';
 import { useCallback } from 'react';
+import { HEADER_TOP } from '../../lib/layout';
 
 // A week of meals from whatever the pool offers. Fewer than seven recipes means
 // a shorter week rather than the same meal repeated — planning Monday's dinner
@@ -524,7 +525,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 20,
   },
   backButton: {

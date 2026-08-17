@@ -21,6 +21,8 @@ import { router } from 'expo-router';
 import { saveMyRecipe } from '../../lib/myRecipes';
 import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
+import { HEADER_TOP } from '../../lib/layout';
+import { goBackOr } from '../../lib/nav';
 
 const EMPTY: EditableRecipe = {
   title: '',
@@ -82,7 +84,7 @@ export default function NewRecipeScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} disabled={saving}>
+        <TouchableOpacity onPress={() => goBackOr('/cookbook')} style={styles.headerBtn} disabled={saving}>
           <Text style={styles.backText}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Recipe</Text>
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,

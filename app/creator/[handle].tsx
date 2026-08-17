@@ -17,6 +17,7 @@ import { useAuth } from '../../lib/auth';
 import { purchaseCreatorSubscription } from '../../lib/purchases';
 import { usd, findCreatorSubTier } from '../../lib/pricing';
 import { Alert } from 'react-native';
+import { HEADER_TOP } from '../../lib/layout';
 
 type CreatorProfile = {
   id: string;
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,

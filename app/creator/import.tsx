@@ -19,6 +19,7 @@ import { createRecipe } from '../../lib/recipes';
 import { uploadBase64Image, pickAndUploadImage } from '../../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { DietaryTag, Ingredient, DIETARY_TAGS } from '../../data/recipes';
+import { HEADER_TOP } from '../../lib/layout';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
 type InputMode = 'url' | 'screenshot' | 'video' | 'text';
@@ -667,7 +668,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,

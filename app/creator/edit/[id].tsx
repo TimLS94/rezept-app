@@ -15,6 +15,7 @@ import { supabase, updateByIdTolerant } from '../../../lib/supabase';
 import { pickAndUploadImage } from '../../../lib/storage';
 import { DIETARY_TAGS } from '../../../data/recipes';
 import { RECIPE_PRICE_TIERS, creatorTakeHomeCents, usd } from '../../../lib/pricing';
+import { HEADER_TOP } from '../../../lib/layout';
 
 type Ingredient = {
   name: string;
@@ -534,7 +535,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,

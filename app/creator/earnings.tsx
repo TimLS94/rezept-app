@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { COLORS, FONTS, RADIUS } from '../../lib/theme';
 import { getPayoutStatus, startPayoutOnboarding, type PayoutStatus } from '../../lib/payouts';
 import { STORE_FEE_BPS, PREMIUM_MONTHLY_CENTS, feeBreakdown } from '../../lib/pricing';
+import { HEADER_TOP } from '../../lib/layout';
 
 type Estimate = {
   period_start: string;
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 12, paddingTop: 60, paddingBottom: 14,
+    paddingHorizontal: 12, paddingTop: HEADER_TOP, paddingBottom: 14,
     backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },

@@ -18,6 +18,7 @@ import { useMealPlan, thisWeekKey } from '../lib/mealPlan';
 import { addRecipesToShoppingList } from '../lib/shopping';
 import { getAllServings, setServings as setServingsStore } from '../lib/servings';
 import { getFamilyServings } from '../lib/family';
+import { HEADER_TOP } from '../lib/layout';
 
 export default function FavoritesScreen() {
   const { favorites, removeFavorite, collections, setCollection } = useFavorites();
@@ -295,7 +296,7 @@ export default function FavoritesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF9F2' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 12 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP, paddingBottom: 12 },
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },

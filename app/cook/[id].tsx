@@ -21,6 +21,8 @@ import { scaleAmount, setServings as persistServings } from '../../lib/servings'
 import { getFamilyServings } from '../../lib/family';
 import { COLORS, FONTS } from '../../lib/theme';
 import ImageViewer from '../../components/ImageViewer';
+import { HEADER_TOP } from '../../lib/layout';
+import { goBackOr } from '../../lib/nav';
 
 type Phase = 'intro' | 'cooking';
 
@@ -241,7 +243,7 @@ export default function CookModeScreen() {
           </View>
         </Animated.View>
 
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.primaryBtn} onPress={() => goBackOr('/home')}>
           <Text style={styles.primaryBtnText}>FINISH</Text>
         </TouchableOpacity>
       </View>
@@ -275,7 +277,7 @@ export default function CookModeScreen() {
       <View style={styles.container}>
         <Image source={{ uri: recipe.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
         <View style={styles.introOverlay} />
-        <TouchableOpacity style={styles.introClose} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.introClose} onPress={() => goBackOr('/home')}>
           <Ionicons name="close" size={26} color="#FFF" />
         </TouchableOpacity>
         <Animated.View style={[styles.introContent, { opacity: introFade, transform: [{ translateY: introLift }] }]}>
@@ -420,7 +422,7 @@ export default function CookModeScreen() {
 function Header({ title }: { title: string }) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+      <TouchableOpacity onPress={() => goBackOr('/home')} style={styles.headerBtn}>
         <Ionicons name="close" size={24} color={COLORS.navy} />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>{title}</Text>
@@ -435,7 +437,7 @@ const styles = StyleSheet.create({
   muted: { fontSize: 16, color: COLORS.warmGray },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 60, paddingBottom: 14,
+    paddingHorizontal: 16, paddingTop: HEADER_TOP, paddingBottom: 14,
     backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   headerBtn: { width: 40 },

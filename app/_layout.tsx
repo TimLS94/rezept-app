@@ -1,5 +1,6 @@
-import { Slot, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ShareIntentProvider } from 'expo-share-intent';
 import { useState } from 'react';
 import { useFonts, Anton_400Regular } from '@expo-google-fonts/anton';
@@ -65,14 +66,23 @@ export default function RootLayout() {
         onResetShareIntent: () => router.replace('/'),
       }}
     >
-      <AuthProvider>
-        <FavoritesProvider>
-          <MealPlanProvider>
-            <Slot />
-            <LaunchIntro />
-          </MealPlanProvider>
-        </FavoritesProvider>
-      </AuthProvider>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <FavoritesProvider>
+            <MealPlanProvider>
+              {/* A Stack, not a Slot. Slot renders the current route and
+                  nothing else: no push/pop animation, and — the part people
+                  actually notice — no iOS edge-swipe back. Every screen drew
+                  its own "← Back" button because that button was genuinely the
+                  only way out. headerShown stays false so those existing
+                  headers keep working; this adds the gesture and the
+                  transitions underneath them. */}
+              <Stack screenOptions={{ headerShown: false }} />
+              <LaunchIntro />
+            </MealPlanProvider>
+          </FavoritesProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
     </ShareIntentProvider>
   );
 }

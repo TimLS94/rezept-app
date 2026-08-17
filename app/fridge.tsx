@@ -16,6 +16,7 @@ import { addRecipesToShoppingList } from '../lib/shopping';
 import { fetchCookableRecipes } from '../lib/recipes';
 import Paywall from '../components/Paywall';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
+import { HEADER_TOP } from '../lib/layout';
 
 const MAX_PHOTOS = 3;
 
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.cream },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 12, paddingTop: 60, paddingBottom: 14,
+    paddingHorizontal: 12, paddingTop: HEADER_TOP, paddingBottom: 14,
     backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },

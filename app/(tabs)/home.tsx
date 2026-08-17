@@ -8,6 +8,7 @@ import { supabase, getCurrentUser } from '../../lib/supabase';
 import { useAuth, canImportToCookbook } from '../../lib/auth';
 import { fetchRecipeOfTheWeek } from '../../lib/recipes';
 import { COLORS, FONTS, RADIUS } from '../../lib/theme';
+import { HEADER_TOP } from '../../lib/layout';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -170,7 +171,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.cream },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP, paddingBottom: 16 },
   kicker: { fontFamily: FONTS.semibold, fontSize: 12, color: COLORS.orange, letterSpacing: 1.5 },
   kickerOrange: { fontFamily: FONTS.semibold, fontSize: 12, color: COLORS.orange, letterSpacing: 1.5, marginBottom: 12 },
   headerTitle: { fontFamily: FONTS.display, fontSize: 36, color: COLORS.navy, marginTop: 2 },

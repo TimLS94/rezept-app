@@ -30,6 +30,7 @@ import ImageViewer from '../../components/ImageViewer';
 import Paywall from '../../components/Paywall';
 import { purchaseRecipe, purchaseCreatorSubscription } from '../../lib/purchases';
 import { usd, findRecipeTier, findCreatorSubTier } from '../../lib/pricing';
+import { goBackOr } from '../../lib/nav';
 
 type FamilyMember = {
   id: string;
@@ -378,7 +379,7 @@ export default function RecipeDetailScreen() {
             <Image source={{ uri: recipe.image }} style={styles.heroImage} />
           </TouchableOpacity>
           <View style={styles.heroOverlay} pointerEvents="none" />
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => goBackOr('/home')}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
           {!recipe.isPaid && (
@@ -536,7 +537,7 @@ export default function RecipeDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.guestContinueLink}
-              onPress={() => router.back()}
+              onPress={() => goBackOr('/home')}
             >
               <Text style={styles.guestContinueLinkText}>Continue browsing</Text>
             </TouchableOpacity>

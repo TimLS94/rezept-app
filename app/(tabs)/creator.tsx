@@ -15,6 +15,7 @@ import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { getCreatorProfile, CreatorProfile, emptyCreatorProfile } from '../../lib/creatorProfile';
 import { fetchRecipesByCreator, setRecipePaid } from '../../lib/recipes';
 import { Recipe } from '../../data/recipes';
+import { HEADER_TOP } from '../../lib/layout';
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200';
 
@@ -213,7 +214,7 @@ export default function CreatorStudioScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF9F2' },
-  header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 12, alignItems: 'center' },
+  header: { paddingHorizontal: 20, paddingTop: HEADER_TOP, paddingBottom: 12, alignItems: 'center' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
 
   blocked: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },

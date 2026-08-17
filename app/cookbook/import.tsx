@@ -18,6 +18,8 @@ import { saveMyRecipe, countMyRecipes } from '../../lib/myRecipes';
 import Paywall from '../../components/Paywall';
 import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
+import { HEADER_TOP } from '../../lib/layout';
+import { goBackOr } from '../../lib/nav';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
 // Import modes: screenshot from gallery, camera photo, or pasted text
@@ -229,7 +231,7 @@ export default function ImportRecipeScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => goBackOr('/cookbook')} style={styles.backButton}>
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Import Recipe</Text>
@@ -256,7 +258,7 @@ export default function ImportRecipeScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => goBackOr('/cookbook')} style={styles.backButton}>
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Import Recipe</Text>
@@ -285,7 +287,7 @@ export default function ImportRecipeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => goBackOr('/cookbook')} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Import Recipe</Text>
@@ -522,7 +524,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,

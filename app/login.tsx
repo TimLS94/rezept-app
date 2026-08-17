@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { HEADER_TOP } from '../lib/layout';
 import { supabase } from '../lib/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
@@ -200,6 +201,15 @@ export default function LoginScreen() {
             style={styles.heroImage}
           />
           <View style={styles.heroOverlay} />
+          {/* A way out. Reaching this screen from Settings or a paywall used to
+              be one-way: the only exits were signing in or "continue as guest",
+              and that second one signs you out. Someone who tapped it by
+              mistake lost their session to get back. */}
+          {router.canGoBack() && (
+            <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+              <Ionicons name="close" size={24} color="#FFF" />
+            </TouchableOpacity>
+          )}
           <View style={styles.heroContent}>
             <Text style={styles.logo}>SpoonDrop</Text>
             <Text style={styles.tagline}>What's the best way to feed{'\n'}your family tonight?</Text>
@@ -371,6 +381,18 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: '100%',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: HEADER_TOP,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,

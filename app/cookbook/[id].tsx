@@ -15,6 +15,8 @@ import { fetchMyRecipeById, updateMyRecipe, myRecipeToRecipe, MyRecipe } from '.
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
+import { HEADER_TOP } from '../../lib/layout';
+import { goBackOr } from '../../lib/nav';
 
 export default function CookbookRecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -296,7 +298,7 @@ export default function CookbookRecipeScreen() {
 function Header({ title, right }: { title: string; right?: ReactNode }) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => goBackOr('/cookbook')} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
       <Text style={styles.headerTitle}>{title}</Text>
@@ -322,7 +324,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,

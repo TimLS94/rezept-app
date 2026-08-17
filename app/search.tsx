@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { RECIPES, Recipe, DietaryTag, DIETARY_TAGS, isQuick, isBudget } from '../data/recipes';
 import { fetchDbRecipes } from '../lib/recipes';
 import { supabase } from '../lib/supabase';
+import { HEADER_TOP } from '../lib/layout';
 
 // Auto-derived attribute filters (computed from time/cost) + manual dietary tags.
 const ALL_FILTERS: { id: string; label: string; icon: string }[] = [
@@ -239,7 +240,7 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF9F2' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 12 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP, paddingBottom: 12 },
   backButton: { width: 60 },
   backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },

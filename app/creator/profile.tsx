@@ -22,6 +22,7 @@ import {
 import {
   RECIPE_PRICE_TIERS, CREATOR_SUB_TIERS, creatorTakeHomeCents, feeBreakdown, usd,
 } from '../../lib/pricing';
+import { HEADER_TOP } from '../../lib/layout';
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200';
 
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 14,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
