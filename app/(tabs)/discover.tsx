@@ -22,7 +22,7 @@ import {
 import { fetchDbRecipes } from '../../lib/recipes';
 import { useFavorites } from '../../lib/favorites';
 import { getSeenIds, addSeenId, clearSeenIds } from '../../lib/seen';
-import { addRecipesToShoppingList } from '../../lib/shopping';
+import { addRecipesToShoppingList, describeAdd } from '../../lib/shopping';
 import { useAuth } from '../../lib/auth';
 import { HEADER_TOP } from '../../lib/layout';
 
@@ -115,7 +115,7 @@ export default function DiscoverScreen() {
     }
     Alert.alert(
       'Added to Shopping List! 🛒',
-      `${liked.length} meals • ${result.added} new items` +
+      `${liked.length} meals • ${describeAdd(result.added, result.merged, undefined, result)}` +
         (result.merged ? ` (${result.merged} merged)` : ''),
       [
         { text: 'Done', style: 'cancel' },

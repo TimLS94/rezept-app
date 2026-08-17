@@ -108,7 +108,7 @@ export default function CookbookRecipeScreen() {
       return;
     }
     setAddedToCart(true);
-    Alert.alert('Added to Cart! 🛒', describeAdd(result.added, result.merged));
+    Alert.alert('Added to Cart! 🛒', describeAdd(result.added, result.merged, undefined, result));
   };
 
   if (loading) {

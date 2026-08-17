@@ -11,8 +11,8 @@ export type PlannedMeal = {
 };
 
 type AddResult =
-  | { added: number; merged: number }
-  | { error: 'not-authenticated' };
+  | { added: number; merged: number; skipped: number; failure?: string }
+  | { error: string };
 
 /**
  * Adds the ingredients of one or more recipes to the signed-in user's shopping
@@ -36,46 +36,64 @@ export async function addRecipesToShoppingList(
   const working = [...(existingItems || [])];
   let added = 0;
   let merged = 0;
+  let skipped = 0;
+  let failure: string | undefined;
 
   for (const { recipe, servings, ingredients } of meals) {
-    const scale = servings ? servings / recipe.servings : 1;
+    // A recipe with servings 0 would make every amount Infinity.
+    const base = recipe.servings || 1;
+    const scale = servings ? servings / base : 1;
 
     for (const ing of ingredients ?? recipe.ingredients) {
-      const amount = ing.amount * scale;
+      // `name` is NOT NULL in the table. An imported recipe can carry a
+      // nameless ingredient, and inserting one used to fail while still being
+      // counted as added — the list stayed empty and the app said it worked.
+      const name = String(ing?.name ?? '').trim();
+      if (!name) { skipped++; continue; }
+
+      const parsed = Number(ing.amount);
+      const amount = Number.isFinite(parsed) ? parsed * scale : 0;
+      const unit = ing.unit ?? '';
       const existing = working.find(e =>
-        e.name.toLowerCase() === ing.name.toLowerCase() && e.unit === ing.unit
+        e.name.toLowerCase() === name.toLowerCase() && (e.unit ?? '') === unit
       );
 
       if (existing) {
-        existing.amount += amount;
-        await supabase
+        const next = Number(existing.amount) + amount;
+        const { error } = await supabase
           .from('shopping_items')
-          .update({ amount: existing.amount })
+          .update({ amount: next })
           .eq('id', existing.id);
+        if (error) { failure ??= error.message; continue; }
+        existing.amount = next;
         merged++;
       } else {
         const newItem = {
           user_id: user.id,
           recipe_id: recipe.id,
           recipe_name: recipe.title,
-          name: ing.name,
+          name,
           amount,
-          unit: ing.unit,
-          category: ing.category,
+          unit,
+          category: ing.category ?? 'other',
           checked: false,
         };
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('shopping_items')
           .insert(newItem)
           .select()
           .single();
-        if (data) working.push(data);
+        // Count what actually landed. `added++` used to run whether or not
+        // the insert succeeded, so a rejected row was still reported as added
+        // and the failure never reached anyone.
+        if (error || !data) { failure ??= error?.message ?? 'insert-failed'; continue; }
+        working.push(data);
         added++;
       }
     }
   }
 
-  return { added, merged };
+  return { added, merged, skipped, failure };
 }
 
 /**
@@ -87,8 +105,19 @@ export async function addRecipesToShoppingList(
  * batch — but it looks like a no-op unless the message says the quantities
  * went up.
  */
-export function describeAdd(added: number, merged: number, title?: string): string {
+export function describeAdd(
+  added: number,
+  merged: number,
+  title?: string,
+  extra?: { skipped?: number; failure?: string },
+): string {
   const from = title ? ` from ${title}` : '';
+  // A failure has to win over the counts: "3 items added" next to an empty
+  // list is how this bug stayed invisible.
+  if (extra?.failure) return `Could not save the list: ${extra.failure}`;
+  if (!added && !merged && extra?.skipped) {
+    return `Nothing usable${from} — ${extra.skipped} ingredient${extra.skipped === 1 ? ' has' : 's have'} no name. Edit the recipe to fix it.`;
+  }
   if (added && merged) return `${added} new${from}, ${merged} topped up`;
   if (added) return `${added} item${added === 1 ? '' : 's'}${from}`;
   if (merged) return `Already on your list${from} — amounts increased`;

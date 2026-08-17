@@ -225,7 +225,7 @@ export default function BudgetScreen() {
 
     Alert.alert(
       'Added to Shopping List! 🛒',
-      `${openMeals.length} meals • ${describeAdd(result.added, result.merged)}` +
+      `${openMeals.length} meals • ${describeAdd(result.added, result.merged, undefined, result)}` +
         (result.merged ? ` (${result.merged} merged)` : ''),
       [
         { text: 'Keep Planning', style: 'cancel' },
@@ -367,7 +367,7 @@ export default function BudgetScreen() {
               }
               Alert.alert(
                 'Added 🛒',
-                describeAdd(result.added, result.merged, meal.recipe.title),
+                describeAdd(result.added, result.merged, meal.recipe.title, result),
               );
             }}
             onAddToDay={day => { setPendingDay(day); setShowCookbookPicker(true); }}
