@@ -176,7 +176,7 @@ export default function BudgetScreen() {
     setPlan(plan => plan.filter(m => m.id !== id));
   };
 
-  // Add a specific recipe from the user's cookbook, skipping duplicates.
+  // Add a specific recipe from the user's cookbook. Duplicates are allowed.
   const addFromCookbook = (recipe: Recipe) => {
     setPlan(plan => {
       const day = pendingDay ?? firstFreeDay(plan);
@@ -444,7 +444,7 @@ export default function BudgetScreen() {
                 <ScrollView style={{ maxHeight: 380 }}>
                   {myRecipes.map(r => {
                     const recipe = myRecipeToRecipe(r);
-                    const inPlan = mealPlan.some(m => m.recipe.id === recipe.id);
+                    const timesInWeek = mealPlan.filter(m => m.recipe.id === recipe.id).length;
                     return (
                       <View key={r.id} style={styles.favRow}>
                         {recipe.image ? (
@@ -459,12 +459,11 @@ export default function BudgetScreen() {
                           <Text style={styles.favMeta}>{recipe.prepTime + recipe.cookTime} min · {recipe.servings} servings</Text>
                         </View>
                         <TouchableOpacity
-                          style={[styles.favAdd, inPlan && styles.favAddDone]}
+                          style={styles.favAdd}
                           onPress={() => addFromCookbook(recipe)}
-                          disabled={inPlan}
                         >
-                          <Text style={[styles.favAddText, inPlan && styles.favAddDoneText]}>
-                            {inPlan ? '✓ Added' : '+ Add'}
+                          <Text style={styles.favAddText}>
+                            {timesInWeek ? `+ Add (${timesInWeek}×)` : '+ Add'}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -478,7 +477,7 @@ export default function BudgetScreen() {
               ) : (
                 <ScrollView style={{ maxHeight: 380 }}>
                   {creatorRecipes.map(r => {
-                    const inPlan = mealPlan.some(m => m.recipe.id === r.id);
+                    const timesInWeek = mealPlan.filter(m => m.recipe.id === r.id).length;
                     return (
                       <View key={r.id} style={styles.favRow}>
                         {r.image ? (
@@ -493,12 +492,11 @@ export default function BudgetScreen() {
                           <Text style={styles.favMeta}>{r.prepTime + r.cookTime} min · {r.calories} cal</Text>
                         </View>
                         <TouchableOpacity
-                          style={[styles.favAdd, inPlan && styles.favAddDone]}
+                          style={styles.favAdd}
                           onPress={() => addFromCookbook(r)}
-                          disabled={inPlan}
                         >
-                          <Text style={[styles.favAddText, inPlan && styles.favAddDoneText]}>
-                            {inPlan ? '✓ Added' : '+ Add'}
+                          <Text style={styles.favAddText}>
+                            {timesInWeek ? `+ Add (${timesInWeek}×)` : '+ Add'}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -739,9 +737,7 @@ const styles = StyleSheet.create({
   favTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   favMeta: { fontSize: 12, color: '#888', marginTop: 2 },
   favAdd: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: '#F2701E' },
-  favAddDone: { backgroundColor: '#E8F5E9' },
   favAddText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
-  favAddDoneText: { color: '#3C8D40' },
   favImageEmpty: { backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
   favImageEmptyText: { fontSize: 20 },
   addWeekButton: {
