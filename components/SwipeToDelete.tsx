@@ -1,6 +1,6 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
-  Animated, PanResponder, StyleSheet, Text, TouchableOpacity, View, ViewStyle,
+  Animated, Easing, PanResponder, StyleSheet, Text, TouchableOpacity, View, ViewStyle,
 } from 'react-native';
 
 type Props = {
@@ -9,9 +9,18 @@ type Props = {
   /** Shown on the revealed red panel. Keep it short — the panel is 88pt wide. */
   label?: string;
   style?: ViewStyle;
+  /**
+   * Play a one-off peek: the row slides a little way open and springs back, so
+   * the gesture is demonstrated rather than described. Set it on the first row
+   * of a list only, and only until the user has swiped for real.
+   */
+  hint?: boolean;
 };
 
 const ACTION_WIDTH = 88;
+// The sliver of red left showing at rest. Enough to read as "something lives
+// under here", not enough to look like part of the row.
+const EDGE_HINT_WIDTH = 5;
 // How far you have to pull before it snaps open. Below this it springs back, so
 // a slightly crooked vertical scroll never leaves a delete button hanging out.
 const OPEN_THRESHOLD = 40;
@@ -27,9 +36,29 @@ const OPEN_THRESHOLD = 40;
  * immediately is the kind of gesture people trigger by accident while scrolling,
  * and a shopping list has no undo.
  */
-export default function SwipeToDelete({ children, onDelete, label = 'Delete', style }: Props) {
+export default function SwipeToDelete({
+  children, onDelete, label = 'Delete', style, hint = false,
+}: Props) {
   const translateX = useRef(new Animated.Value(0)).current;
   const openRef = useRef(false);
+
+  // A single slow peek and back. Slow on purpose: fast enough to miss is the
+  // same as not showing it at all.
+  useEffect(() => {
+    if (!hint) return;
+    const timer = setTimeout(() => {
+      Animated.sequence([
+        Animated.timing(translateX, {
+          toValue: -34, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+        }),
+        Animated.delay(360),
+        Animated.timing(translateX, {
+          toValue: 0, duration: 420, easing: Easing.inOut(Easing.cubic), useNativeDriver: true,
+        }),
+      ]).start();
+    }, 600); // let the list finish appearing first
+    return () => clearTimeout(timer);
+  }, [hint]);
 
   const settle = (open: boolean) => {
     openRef.current = open;
@@ -124,6 +153,27 @@ export default function SwipeToDelete({ children, onDelete, label = 'Delete', st
       <Animated.View style={{ transform: [{ translateX }] }} {...responder.panHandlers}>
         {children}
       </Animated.View>
+
+      {/* The affordance. The panel above is invisible at rest — it has to be,
+          or it flashes through every time TouchableOpacity fades the row on a
+          press — and that invisibility is exactly why nobody found the
+          gesture. This strip sits ON TOP of the row's right edge instead, so
+          it survives the row fading, and it fades out as the real panel slides
+          in behind it. Not interactive: it points at the gesture, it isn't a
+          button. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.edgeHint,
+          {
+            opacity: translateX.interpolate({
+              inputRange: [-20, 0],
+              outputRange: [0, 1],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
+      />
     </View>
   );
 }
@@ -143,4 +193,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionText: { color: '#FFF', fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  edgeHint: {
+    position: 'absolute',
+    right: 0,
+    top: 6,
+    bottom: 6,
+    width: EDGE_HINT_WIDTH,
+    backgroundColor: '#C0392B',
+    borderTopLeftRadius: 3,
+    borderBottomLeftRadius: 3,
+  },
 });

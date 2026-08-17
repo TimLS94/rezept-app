@@ -21,6 +21,7 @@ import * as Clipboard from 'expo-clipboard';
 import { getRecipeById, Recipe } from '../../data/recipes';
 import { fetchDbRecipeById } from '../../lib/recipes';
 import SwipeToDelete from '../../components/SwipeToDelete';
+import { hintSeen, markHintSeen, HINT_SWIPE_TO_DELETE } from '../../lib/hints';
 import { HEADER_TOP } from '../../lib/layout';
 
 type ShoppingItem = {
@@ -46,6 +47,18 @@ const CATEGORIES = [
 
 export default function ShoppingScreen() {
   const [items, setItems] = useState<ShoppingItem[]>([]);
+
+  // Shown on the first row only, once ever. People used the list for weeks
+  // without finding the swipe: the red edge marks that it exists, this shows
+  // what it does.
+  const [swipeHint, setSwipeHint] = useState(false);
+  useEffect(() => {
+    hintSeen(HINT_SWIPE_TO_DELETE).then(seen => {
+      if (seen) return;
+      setSwipeHint(true);
+      markHintSeen(HINT_SWIPE_TO_DELETE);
+    });
+  }, []);
   const [loading, setLoading] = useState(true);
   const [showChecked, setShowChecked] = useState(true);
   const [newItemName, setNewItemName] = useState('');
@@ -481,8 +494,13 @@ export default function ShoppingScreen() {
                 </Text>
               </View>
               
-              {category.items.map((item) => (
-                <SwipeToDelete key={item.id} onDelete={() => deleteItem(item.id)} style={styles.swipeRow}>
+              {category.items.map((item, i) => (
+                <SwipeToDelete
+                  key={item.id}
+                  onDelete={() => deleteItem(item.id)}
+                  style={styles.swipeRow}
+                  hint={swipeHint && i === 0}
+                >
                   <TouchableOpacity
                     style={[styles.itemRow, item.checked && styles.itemRowChecked]}
                     onPress={() => toggleItem(item.id)}
@@ -557,8 +575,13 @@ export default function ShoppingScreen() {
                 </TouchableOpacity>
               )}
 
-              {isExpanded && group.items.map((item) => (
-                <SwipeToDelete key={item.id} onDelete={() => deleteItem(item.id)} style={styles.swipeRow}>
+              {isExpanded && group.items.map((item, i) => (
+                <SwipeToDelete
+                  key={item.id}
+                  onDelete={() => deleteItem(item.id)}
+                  style={styles.swipeRow}
+                  hint={swipeHint && i === 0}
+                >
                   <TouchableOpacity
                     style={[styles.itemRow, item.checked && styles.itemRowChecked]}
                     onPress={() => toggleItem(item.id)}
