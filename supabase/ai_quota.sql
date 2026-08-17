@@ -50,18 +50,30 @@ $$;
 -- ── Claim one unit, or refuse ─────────────────────────────────────────────
 -- Atomic: the insert-or-increment and the check happen in one statement, so
 -- two requests racing cannot both see "one left" and both take it.
-create or replace function public.consume_ai_quota(p_op text)
+--
+-- The user is a parameter, not auth.uid(). The only caller is the gateway,
+-- using the service role, and a service-role connection has no auth context —
+-- auth.uid() is NULL there, so the first version refused every single request
+-- with "not_signed_in" no matter who was signed in. The gateway has already
+-- verified the caller's JWT before it gets here; passing the id it resolved is
+-- what makes the check meaningful.
+--
+-- Safe because execute is revoked from anon and authenticated below: nobody
+-- but the service role can name an arbitrary user.
+drop function if exists public.consume_ai_quota(text);
+
+create or replace function public.consume_ai_quota(p_user uuid, p_op text)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare lim int; used int;
 begin
-  if auth.uid() is null then
-    return jsonb_build_object('ok', false, 'error', 'not_signed_in');
+  if p_user is null then
+    return jsonb_build_object('ok', false, 'error', 'no_user');
   end if;
 
   lim := public.ai_daily_limit(p_op);
 
   insert into public.ai_usage (user_id, day, op, count)
-  values (auth.uid(), (now() at time zone 'utc')::date, p_op, 1)
+  values (p_user, (now() at time zone 'utc')::date, p_op, 1)
   on conflict (user_id, day, op) do update
     set count = public.ai_usage.count + 1
   returning count into used;
@@ -77,6 +89,6 @@ end; $$;
 -- Only the service role calls this — the gateway function, never the app. If a
 -- client could call it, it could burn its own quota, which is harmless, but it
 -- could also not be trusted to call it at all, which is the point.
-revoke all on function public.consume_ai_quota(text) from public, anon, authenticated;
+revoke all on function public.consume_ai_quota(uuid, text) from public, anon, authenticated;
 
 commit;

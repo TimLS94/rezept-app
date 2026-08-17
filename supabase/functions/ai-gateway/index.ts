@@ -297,7 +297,7 @@ Deno.serve(async (req: Request) => {
   // the upstream call then fails. Counting only successes would let a caller
   // retry a failing request forever at our expense.
   const admin = createClient(url, service);
-  const { data: quota, error: quotaErr } = await admin.rpc('consume_ai_quota', { p_op: op });
+  const { data: quota, error: quotaErr } = await admin.rpc('consume_ai_quota', { p_user: user.id, p_op: op });
   if (quotaErr) {
     console.warn('quota check failed', quotaErr.message);
     return json({ error: 'quota-unavailable' }, 503);

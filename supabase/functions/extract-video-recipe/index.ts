@@ -71,7 +71,7 @@ serve(async (req: Request) => {
   // Spend a unit before doing the paid work, so a retry loop cannot run up a
   // bill. Counted per user per day, server-side.
   const admin = createClient(supabaseUrl, service);
-  const { data: quota } = await admin.rpc('consume_ai_quota', { p_op: 'transcribe-video' });
+  const { data: quota } = await admin.rpc('consume_ai_quota', { p_user: user.id, p_op: 'transcribe-video' });
   if (!quota?.ok) {
     return new Response(JSON.stringify({ error: quota?.error ?? 'quota_exceeded' }), {
       status: 429,
