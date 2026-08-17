@@ -15,7 +15,28 @@ begin;
 -- The policy existed to power subscriber counts on creator pages. A count is
 -- not the list, so the count moves into a function and the list becomes
 -- private.
-drop policy if exists "Anyone can view subscriptions" on public.creator_subscribers;
+--
+-- Dropped by shape, not by name. The same permissive rule exists under at
+-- least two names in this repo's history — "Anyone can view subscriptions" in
+-- creator_discovery.sql and "Anyone can view subscriber counts" in
+-- reset_and_rebuild.sql — and dropping one by name left the other in place,
+-- which is exactly how the first version of this file failed to close
+-- anything. Anything that grants SELECT here and is not one of the two rules
+-- created below goes.
+do $$
+declare pol record;
+begin
+  for pol in
+    select policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'creator_subscribers'
+      and cmd in ('SELECT', 'ALL')
+      and policyname not in ('Users view own subscriptions', 'Creators view their subscribers')
+  loop
+    execute format('drop policy %I on public.creator_subscribers', pol.policyname);
+  end loop;
+end $$;
 
 drop policy if exists "Users view own subscriptions" on public.creator_subscribers;
 create policy "Users view own subscriptions" on public.creator_subscribers
