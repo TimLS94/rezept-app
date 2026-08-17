@@ -49,13 +49,14 @@ type Props = {
   onSwap: (meal: PlannedMeal) => void;
   onRemove: (meal: PlannedMeal) => void;
   onToggleDone: (meal: PlannedMeal) => void;
+  onCart: (meal: PlannedMeal) => void;
   onAddToDay: (day: number) => void;
   /** Locks the surrounding ScrollView while a card is being dragged. */
   onDragStateChange: (dragging: boolean) => void;
 };
 
 export default function WeekPlanBoard({
-  weekStart, meals, onChange, onOpen, onCook, onSwap, onRemove, onToggleDone,
+  weekStart, meals, onChange, onOpen, onCook, onSwap, onRemove, onToggleDone, onCart,
   onAddToDay, onDragStateChange,
 }: Props) {
   // Where each day section sits on screen, captured when a drag starts. The
@@ -124,13 +125,7 @@ export default function WeekPlanBoard({
               </Text>
             </View>
 
-            {entries.length === 0 ? (
-              <TouchableOpacity style={styles.emptyDay} onPress={() => onAddToDay(day)}>
-                <Ionicons name="add" size={16} color={COLORS.warmGray} />
-                <Text style={styles.emptyDayText}>Add a meal</Text>
-              </TouchableOpacity>
-            ) : (
-              entries.map(({ meal }) => (
+            {entries.map(({ meal }) => (
                 <DraggableMeal
                   key={meal.id}
                   meal={meal}
@@ -154,9 +149,16 @@ export default function WeekPlanBoard({
                     onDragStateChange(false);
                     if (target != null) moveMealToDay(meal.id, target);
                   }}
+                  onCart={() => onCart(meal)}
                 />
-              ))
-            )}
+            ))}
+
+            <TouchableOpacity style={styles.addDay} onPress={() => onAddToDay(day)}>
+              <Ionicons name="add" size={16} color={COLORS.warmGray} />
+              <Text style={styles.addDayText}>
+                {entries.length === 0 ? 'Add a meal' : 'Add another'}
+              </Text>
+            </TouchableOpacity>
           </View>
         );
       })}
@@ -165,7 +167,7 @@ export default function WeekPlanBoard({
 }
 
 function DraggableMeal({
-  meal, dragging, onOpen, onCook, onSwap, onRemove, onToggleDone,
+  meal, dragging, onOpen, onCook, onSwap, onRemove, onToggleDone, onCart,
   onDragStart, onDragMove, onDragEnd,
 }: {
   meal: PlannedMeal;
@@ -175,6 +177,7 @@ function DraggableMeal({
   onSwap: () => void;
   onRemove: () => void;
   onToggleDone: () => void;
+  onCart: () => void;
   onDragStart: () => void;
   onDragMove: (pageY: number) => void;
   onDragEnd: (pageY: number) => void;
@@ -268,6 +271,9 @@ function DraggableMeal({
           <Ionicons name="restaurant" size={15} color="#FFF" />
           <Text style={styles.cookText}>Cook</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.icon} onPress={onCart}>
+          <Ionicons name="cart-outline" size={16} color={COLORS.navy} />
+        </TouchableOpacity>
         <View style={{ flex: 1 }} />
         <TouchableOpacity style={styles.icon} onPress={onSwap}>
           <Ionicons name="refresh" size={16} color={COLORS.navy} />
@@ -302,7 +308,7 @@ const styles = StyleSheet.create({
   dayNameToday: { color: COLORS.orange },
   dayDate: { fontSize: 12, color: '#9A9A9A' },
 
-  emptyDay: {
+  addDay: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -313,7 +319,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: '#E4DACA',
   },
-  emptyDayText: { fontSize: 13, color: COLORS.warmGray, fontWeight: '600' },
+  addDayText: { fontSize: 13, color: COLORS.warmGray, fontWeight: '600' },
 
   card: {
     backgroundColor: '#FFF',

@@ -178,8 +178,11 @@ export default function BudgetScreen() {
 
   // Add a specific recipe from the user's cookbook, skipping duplicates.
   const addFromCookbook = (recipe: Recipe) => {
-    setPlan(plan =>
-      plan.some(m => m.recipe.id === recipe.id)
+    setPlan(plan => {
+      const day = pendingDay ?? firstFreeDay(plan);
+      // Cooking the same thing twice in a week is a real plan; cooking it
+      // twice on the same day is not.
+      return plan.some((m, i) => m.recipe.id === recipe.id && (m.day ?? i % 7) === day)
         ? plan
         : [
             ...plan,
@@ -187,12 +190,12 @@ export default function BudgetScreen() {
               id: `m${Date.now()}-${recipe.id}`,
               recipe,
               done: false,
-              // Opened from a specific day's "Add a meal" → land there.
-              // Opened from the button under the week → the first free day.
-              day: pendingDay ?? firstFreeDay(plan),
+              // Opened from a day's "+" → land on that day. Opened from the
+              // button under the week → the first day with nothing on it.
+              day,
             },
-          ]
-    );
+          ];
+    });
   };
 
   // The earliest day with nothing on it, so repeated adds fill the week out
@@ -331,12 +334,6 @@ export default function BudgetScreen() {
             )}
           </View>
 
-          {mealPlan.length === 0 && (
-            <Text style={styles.emptyPlanText}>
-              Your week is empty. Tap 🎲 Generate for a full plan, or add meals below.
-            </Text>
-          )}
-
           <WeekPlanBoard
             weekStart={weekStart}
             meals={mealPlan}
@@ -356,6 +353,20 @@ export default function BudgetScreen() {
             onSwap={meal => swapMeal(meal.id)}
             onRemove={meal => removeMeal(meal.id)}
             onToggleDone={meal => toggleDone(meal.id)}
+            onCart={async meal => {
+              // One dish at a time. The week button is still there for the
+              // whole shop, but planning rarely happens in one sitting — you
+              // add Thursday on Tuesday and want just that on the list.
+              const result = await addRecipesToShoppingList([{ recipe: meal.recipe }]);
+              if ('error' in result) {
+                Alert.alert('Sign in required', 'Sign in to save your shopping list.', [
+                  { text: 'Not now', style: 'cancel' },
+                  { text: 'Sign in', onPress: () => router.push('/login') },
+                ]);
+                return;
+              }
+              Alert.alert('Added 🛒', `${result.added} items from ${meal.recipe.title}`);
+            }}
             onAddToDay={day => { setPendingDay(day); setShowCookbookPicker(true); }}
             onDragStateChange={setDragging}
           />
@@ -697,12 +708,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 15,
     fontWeight: '700',
-  },
-  emptyPlanText: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    paddingVertical: 24,
   },
   mealContent: {
     flex: 1,
