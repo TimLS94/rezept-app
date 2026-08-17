@@ -34,6 +34,13 @@ type CreatorProfile = {
   subscription_price_cents?: number | null;
 };
 
+// The columns a stranger may read. `select('*')` would now fail: the profiles
+// table only grants the public subset, and the wildcard expands to columns the
+// grant withholds (supabase/harden_profile_reads.sql).
+const PUBLIC_PROFILE_COLUMNS =
+  'id, full_name, username, avatar_url, bio, instagram_url, tiktok_url, website, ' +
+  'is_creator, subscription_enabled, subscription_price_cents, default_recipe_price_cents, created_at';
+
 export default function CreatorProfileScreen() {
   const { handle } = useLocalSearchParams<{ handle: string }>();
   const { user, refresh } = useAuth();
@@ -70,12 +77,14 @@ export default function CreatorProfileScreen() {
     setLoading(true);
 
     // Try multiple ways to find the creator
-    let profile = null;
+    // `any` because the column list is built at runtime, so supabase-js cannot
+    // infer a row type from it the way it can from a literal.
+    let profile: any = null;
 
     // 1. Try by username
     const { data: byUsername } = await supabase
       .from('profiles')
-      .select('*')
+      .select(PUBLIC_PROFILE_COLUMNS)
       .eq('username', handle)
       .single();
     
@@ -87,7 +96,7 @@ export default function CreatorProfileScreen() {
     if (!profile) {
       const { data: byId } = await supabase
         .from('profiles')
-        .select('*')
+        .select(PUBLIC_PROFILE_COLUMNS)
         .eq('id', handle)
         .single();
       if (byId) profile = byId;
@@ -97,7 +106,7 @@ export default function CreatorProfileScreen() {
     if (!profile) {
       const { data: byName } = await supabase
         .from('profiles')
-        .select('*')
+        .select(PUBLIC_PROFILE_COLUMNS)
         .ilike('full_name', `%${handle}%`)
         .limit(1)
         .single();
@@ -128,19 +137,18 @@ export default function CreatorProfileScreen() {
       setRecipes(recipeData.map(mapDbRecipe));
     }
 
-    // Load subscriber count
-    const { count } = await supabase
-      .from('creator_subscribers')
-      .select('*', { count: 'exact', head: true })
-      .eq('creator_id', creatorId);
+    // The subscriber list is private; only the number is public. Reading the
+    // table for a count used to hand out the whole follow graph with it.
+    const { data: subCount } = await supabase
+      .rpc('creator_subscriber_count', { p_creator_id: creatorId });
 
-    setSubscriberCount(count || 0);
+    setSubscriberCount(subCount ?? 0);
 
     // Check if current user is subscribed
     if (user) {
       const { data: sub } = await supabase
         .from('creator_subscribers')
-        .select('*')
+        .select('subscriber_id')
         .eq('creator_id', creatorId)
         .eq('subscriber_id', user.id)
         .single();

@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import { supabase, getCurrentUser } from './supabase';
 import { FEATURES } from './features';
 import { initPurchases, logOutPurchases } from './purchases';
+import { fetchMyProfile } from './profile';
 
 export type Role = 'user' | 'creator' | 'admin';
 
@@ -47,8 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initPurchases(u.id); // inert until real RevenueCat keys + dev build
     // Both run in parallel: this is the app-start critical path, and chaining
     // them cost a second round trip for every non-premium user (the common case).
-    const [{ data }, { data: ent }] = await Promise.all([
-      supabase.from('profiles').select('role, is_premium').eq('id', u.id).single(),
+    const [data, { data: ent }] = await Promise.all([
+      // role and is_premium are no longer selectable from the table: the
+      // profiles grants only cover the publicly visible columns.
+      fetchMyProfile(),
       supabase
         .from('entitlements')
         .select('id')

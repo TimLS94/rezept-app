@@ -140,15 +140,30 @@ export async function grantPlatformEntitlement(product?: string): Promise<{ ok: 
   if (priceCents == null) priceCents = PREMIUM_MONTHLY_CENTS;
 
   try {
-    const { data, error } = await supabase.rpc('grant_platform_entitlement', {
-      p_product: product ?? null,
-      p_price_cents: priceCents,
-    });
-    if (error) return { ok: false, error: error.message };
-    const d = data as any;
-    return { ok: !!d?.ok, error: d?.error };
+    return verifyPurchase({ kind: 'platform' });
   } catch (e: any) {
     return { ok: false, error: e?.message || 'exception' };
+  }
+}
+
+
+/**
+ * Ask the server to confirm a purchase and open the gate.
+ *
+ * The app never grants anything itself any more. It reports what it just
+ * bought; verify-purchase checks that claim against RevenueCat's record of the
+ * account before writing. A client that lies gets a 402.
+ */
+async function verifyPurchase(payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('verify-purchase', { body: payload });
+    if (error) {
+      const detail = await error?.context?.json?.().catch(() => null);
+      return { ok: false, error: detail?.error ?? error.message };
+    }
+    return { ok: !!data?.ok, error: data?.error };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'verify-unreachable' };
   }
 }
 
@@ -187,13 +202,8 @@ export async function purchaseRecipe(
   const result = await purchaseByProductId(productId);
   if (result !== 'success') return { result };
 
-  const { data, error } = await supabase.rpc('grant_recipe_purchase', {
-    p_recipe_id: recipeId,
-    p_price_cents: priceCents,
-  });
-  if (error) return { result: 'error', error: error.message };
-  const d = data as any;
-  return d?.ok ? { result: 'success' } : { result: 'error', error: d?.error };
+  const v = await verifyPurchase({ kind: 'recipe', recipeId, productId });
+  return v.ok ? { result: 'success' } : { result: 'error', error: v.error };
 }
 
 // Subscribe to one creator — unlocks everything they publish.
@@ -205,13 +215,8 @@ export async function purchaseCreatorSubscription(
   const result = await purchaseByProductId(productId);
   if (result !== 'success') return { result };
 
-  const { data, error } = await supabase.rpc('grant_creator_entitlement', {
-    p_creator_id: creatorId,
-    p_price_cents: priceCents,
-  });
-  if (error) return { result: 'error', error: error.message };
-  const d = data as any;
-  return d?.ok ? { result: 'success' } : { result: 'error', error: d?.error };
+  const v = await verifyPurchase({ kind: 'creator', creatorId, productId });
+  return v.ok ? { result: 'success' } : { result: 'error', error: v.error };
 }
 
 // Testing only. Clears the platform entitlement and the legacy is_premium flag

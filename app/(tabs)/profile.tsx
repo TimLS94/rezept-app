@@ -15,6 +15,7 @@ import {
   Platform
 } from 'react-native';
 import { router } from 'expo-router';
+import { fetchMyProfile } from '../../lib/profile';
 import { supabase, getCurrentUser } from '../../lib/supabase';
 import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
@@ -112,11 +113,7 @@ export default function ProfileScreen() {
       setUserId(user.id);
 
       // Load profile data (bio, username for creators)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('weekly_budget, bio, username')
-        .eq('id', user.id)
-        .single();
+      const profile = await fetchMyProfile();
 
       if (profile) {
         if (profile.weekly_budget) setWeeklyBudget(profile.weekly_budget.toString());
