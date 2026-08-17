@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,10 @@ import {
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import { useAuth } from '../../lib/auth';
 import Paywall from '../../components/Paywall';
+import RecipeActions from '../../components/RecipeActions';
+import ServingsStepper from '../../components/ServingsStepper';
+import { getAllServings, setServings as setServingsStore } from '../../lib/servings';
+import { getFamilyServings } from '../../lib/family';
 import { HEADER_TOP } from '../../lib/layout';
 
 // Two kinds of thing live in a cookbook, and they behave differently: what you
@@ -35,8 +39,24 @@ export default function CookbookScreen() {
   const [owned, setOwned] = useState<CookbookCreatorRecipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [cartIds, setCartIds] = useState<Set<string>>(new Set());
   const [showPaywall, setShowPaywall] = useState(false);
+
+  // Portion counts are remembered per recipe and shared with favourites and
+  // cook mode — the same recipe should not ask "how many?" twice.
+  const [servingsMap, setServingsMap] = useState<Record<string, number>>({});
+  const [familyServings, setFamilyServings] = useState<number | null>(null);
+
+  useEffect(() => {
+    getAllServings().then(setServingsMap).catch(() => {});
+    getFamilyServings().then(setFamilyServings).catch(() => {});
+  }, []);
+
+  const servingsFor = (id: string, base: number) => servingsMap[id] ?? base;
+  const setServingsExact = (id: string, val: number) => {
+    const next = Math.max(1, val);
+    setServingsMap(prev => ({ ...prev, [id]: next }));
+    setServingsStore(id, next);
+  };
 
   // Handle import button press - check premium status
   const handleImportPress = () => {
@@ -89,26 +109,6 @@ export default function CookbookScreen() {
             }
           },
         },
-      ]
-    );
-  };
-
-  const addToCart = async (recipe: MyRecipe) => {
-    const recipeFormat = myRecipeToRecipe(recipe);
-    const result = await addRecipesToShoppingList([{ recipe: recipeFormat }]);
-    
-    if ('error' in result) {
-      Alert.alert('Error', result.error);
-      return;
-    }
-
-    setCartIds(prev => new Set(prev).add(recipe.id));
-    Alert.alert(
-      'Added to Cart! 🛒',
-      `${result.added} items added`,
-      [
-        { text: 'Done', style: 'cancel' },
-        { text: 'View Cart', onPress: () => router.push('/shopping') },
       ]
     );
   };
@@ -179,6 +179,9 @@ export default function CookbookScreen() {
           recipes={owned}
           refreshing={refreshing}
           onRefresh={onRefresh}
+          servingsFor={servingsFor}
+          setServingsExact={setServingsExact}
+          familyServings={familyServings}
           onRemoved={id => setOwned(prev => prev.filter(r => r.id !== id))}
         />
       ) : recipes.length === 0 ? (
@@ -245,7 +248,6 @@ export default function CookbookScreen() {
           </View>
 
           {recipes.map(recipe => {
-            const inCart = cartIds.has(recipe.id);
             return (
               <View key={recipe.id} style={styles.card}>
                 <TouchableOpacity
@@ -272,45 +274,20 @@ export default function CookbookScreen() {
                     {recipe.sourceUrl && (
                       <Text style={styles.cardSource}>📱 Imported</Text>
                     )}
+                    <ServingsStepper
+                      value={servingsFor(recipe.id, recipe.servings)}
+                      onChange={n => setServingsExact(recipe.id, n)}
+                      familyServings={familyServings}
+                    />
                   </View>
                 </TouchableOpacity>
 
-                <View style={styles.cardActions}>
-                  {/* Cooking your own recipe used to mean opening it first and
-                      finding the button in there. The creator tab had a cook
-                      button on the card; this one didn't. */}
-                  {recipe.steps.length > 0 && (
-                    <TouchableOpacity
-                      style={styles.cookButton}
-                      onPress={() =>
-                        router.push(`/cook/${recipe.id}?source=mine&servings=${recipe.servings}`)
-                      }
-                    >
-                      <Text style={styles.cartButtonText}>👨‍🍳</Text>
-                    </TouchableOpacity>
-                  )}
-                  {/* Nothing to shop for on a note — the button would report
-                      "0 items added" and look broken. */}
-                  <TouchableOpacity
-                    style={[
-                      styles.cartButton,
-                      inCart && styles.cartButtonAdded,
-                      recipe.ingredients.length === 0 && styles.cartButtonDisabled,
-                    ]}
-                    onPress={() => addToCart(recipe)}
-                    disabled={inCart || recipe.ingredients.length === 0}
-                  >
-                    <Text style={[styles.cartButtonText, inCart && styles.cartButtonTextAdded]}>
-                      {inCart ? '✓' : '🛒'}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDelete(recipe)}
-                  >
-                    <Text style={styles.deleteButtonText}>🗑️</Text>
-                  </TouchableOpacity>
-                </View>
+                <RecipeActions
+                  recipe={myRecipeToRecipe(recipe)}
+                  source="mine"
+                  servings={servingsFor(recipe.id, recipe.servings)}
+                  onRemove={() => handleDelete(recipe)}
+                />
               </View>
             );
           })}
@@ -340,11 +317,17 @@ function CreatorsTab({
   refreshing,
   onRefresh,
   onRemoved,
+  servingsFor,
+  setServingsExact,
+  familyServings,
 }: {
   recipes: CookbookCreatorRecipe[];
   refreshing: boolean;
   onRefresh: () => void;
   onRemoved: (id: string) => void;
+  servingsFor: (id: string, base: number) => number;
+  setServingsExact: (id: string, val: number) => void;
+  familyServings: number | null;
 }) {
   // Filter by creator. Only worth showing once there's more than one — a chip
   // row with a single chip is just clutter.
@@ -462,25 +445,23 @@ function CreatorsTab({
               {!recipe.available && (
                 <Text style={styles.cardGone}>Removed by creator · your copy</Text>
               )}
+              <ServingsStepper
+                value={servingsFor(recipe.id, recipe.servings)}
+                onChange={n => setServingsExact(recipe.id, n)}
+                familyServings={familyServings}
+              />
             </View>
           </TouchableOpacity>
 
-          <View style={styles.cardActions}>
-            <TouchableOpacity
-              style={styles.cartButton}
-              onPress={() =>
-                router.push(`/cook/${recipe.id}?source=purchase&servings=${recipe.servings}`)
-              }
-            >
-              <Text style={styles.cartButtonText}>👨‍🍳</Text>
-            </TouchableOpacity>
-            {/* No remove button on a purchase — see the comment above. */}
-            {!recipe.purchased && (
-              <TouchableOpacity style={styles.deleteButton} onPress={() => remove(recipe)}>
-                <Text style={styles.deleteButtonText}>🗑️</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          {/* No remove button on a purchase: removing it would throw away
+              something the user paid for. */}
+          <RecipeActions
+            recipe={recipe}
+            source={recipe.purchased ? 'purchase' : 'creator'}
+            servings={servingsFor(recipe.id, recipe.servings)}
+            onRemove={recipe.purchased ? undefined : () => remove(recipe)}
+            removeIcon="bookmark"
+          />
         </View>
       ))}
 
@@ -589,34 +570,4 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   cardMeta: { fontSize: 12, color: '#888', marginTop: 4 },
   cardSource: { fontSize: 11, color: '#F2701E', fontWeight: '500', marginTop: 4 },
-  cardActions: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10, gap: 8 },
-  cartButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E9EEF8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cartButtonAdded: { backgroundColor: '#E8F5E9' },
-  cartButtonDisabled: { opacity: 0.3 },
-  cookButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFE9DC',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cartButtonText: { fontSize: 18 },
-  cartButtonTextAdded: { color: '#3C8D40' },
-  deleteButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFF0F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteButtonText: { fontSize: 16 },
 });
