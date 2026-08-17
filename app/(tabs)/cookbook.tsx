@@ -190,7 +190,7 @@ export default function CookbookScreen() {
         </TouchableOpacity>
       </View>
 
-      {!loading && tab === 'mine' && recipes.length > 0 && (
+      {!loading && (tab === 'mine' ? recipes.length > 0 : owned.length > 0) && (
         <View style={styles.findBar}>
           <View style={styles.searchBox}>
             <Ionicons name="search" size={16} color="#9A9A9A" />
@@ -198,7 +198,7 @@ export default function CookbookScreen() {
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search your recipes and notes"
+              placeholder={tab === 'mine' ? 'Search your recipes and notes' : 'Search creator recipes'}
               placeholderTextColor="#AAA"
               returnKeyType="search"
               clearButtonMode="while-editing"
@@ -229,7 +229,9 @@ export default function CookbookScreen() {
         </View>
       ) : tab === 'creators' ? (
         <CreatorsTab
-          recipes={owned}
+          recipes={owned.filter(matches)}
+          totalCount={owned.length}
+          onClearSearch={() => { setQuery(''); setActiveFilters([]); }}
           refreshing={refreshing}
           onRefresh={onRefresh}
           servingsFor={servingsFor}
@@ -392,6 +394,8 @@ export default function CookbookScreen() {
  */
 function CreatorsTab({
   recipes,
+  totalCount,
+  onClearSearch,
   refreshing,
   onRefresh,
   onRemoved,
@@ -400,6 +404,8 @@ function CreatorsTab({
   familyServings,
 }: {
   recipes: CookbookCreatorRecipe[];
+  totalCount: number;
+  onClearSearch: () => void;
   refreshing: boolean;
   onRefresh: () => void;
   onRemoved: (id: string) => void;
@@ -439,6 +445,21 @@ function CreatorsTab({
       ]
     );
   };
+
+  if (recipes.length === 0 && totalCount > 0) {
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyIcon}>🔍</Text>
+        <Text style={styles.emptyText}>Nothing matches</Text>
+        <Text style={styles.emptySubtext}>
+          No creator recipe here matches that search or those filters.
+        </Text>
+        <TouchableOpacity style={styles.secondaryButton} onPress={onClearSearch}>
+          <Text style={styles.secondaryButtonText}>Clear search and filters</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (recipes.length === 0) {
     return (

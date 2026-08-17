@@ -18,6 +18,7 @@ import { fetchMyRecipes, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes'
 import { fetchCookbookCreatorRecipes, CookbookCreatorRecipe } from '../../lib/recipes';
 import { buildRecipePool, filterByDietary, shuffled, withIngredients } from '../../lib/planner';
 import { WEEKDAYS, startOfWeek, addDays, weekKey, fmtDay } from '../../lib/week';
+import WeekPlanBoard from '../../components/WeekPlanBoard';
 import { Modal } from 'react-native';
 import { useCallback } from 'react';
 import { HEADER_TOP } from '../../lib/layout';
@@ -36,6 +37,8 @@ export default function BudgetScreen() {
   const [generating, setGenerating] = useState(false);
   const [adding, setAdding] = useState(false);
   const [showCookbookPicker, setShowCookbookPicker] = useState(false);
+  const [pendingDay, setPendingDay] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [pickerTab, setPickerTab] = useState<'mine' | 'creators'>('mine');
   
   // Cookbook recipes for the picker
@@ -139,12 +142,29 @@ export default function BudgetScreen() {
   };
 
   const swapMeal = async (id: string) => {
+    const all = filterByDietary(await loadPool(), activeFilters);
+    const current = mealPlan.find(m => m.id === id)?.recipe.id;
     const used = mealPlan.map(m => m.recipe.id);
-    const options = filterByDietary(await loadPool(), activeFilters).filter(
-      r => !used.includes(r.id)
-    );
-    if (!options.length) return;
-    const [pick] = await withIngredients([options[Math.floor(Math.random() * options.length)]]);
+
+    // Prefer something not already in the week. Once everything is in there,
+    // fall back to anything other than what this slot already holds — the
+    // button used to filter out every candidate and then return silently,
+    // which is indistinguishable from a broken button.
+    const unused = all.filter(r => !used.includes(r.id));
+    const others = all.filter(r => r.id !== current);
+    const from = unused.length ? unused : others;
+
+    if (!from.length) {
+      Alert.alert(
+        'Nothing to swap in',
+        all.length <= 1
+          ? 'Your cookbook has only this one recipe to offer. Add a few more and the swap will have something to reach for.'
+          : 'No other recipe matches the filters you have set.'
+      );
+      return;
+    }
+
+    const [pick] = await withIngredients([from[Math.floor(Math.random() * from.length)]]);
     setPlan(plan => plan.map(m => (m.id === id ? { ...m, recipe: pick, done: false } : m)));
   };
 
@@ -156,26 +176,31 @@ export default function BudgetScreen() {
     setPlan(plan => plan.filter(m => m.id !== id));
   };
 
-  const addMeal = async () => {
-    const all = filterByDietary(await loadPool(), activeFilters);
-    if (!all.length) {
-      Alert.alert('Nothing to add yet', 'Add recipes to your cookbook first.');
-      return;
-    }
-    const used = mealPlan.map(m => m.recipe.id);
-    const unused = all.filter(r => !used.includes(r.id));
-    const from = unused.length ? unused : all;
-    const [pick] = await withIngredients([from[Math.floor(Math.random() * from.length)]]);
-    setPlan(plan => [...plan, { id: `m${Date.now()}`, recipe: pick, done: false }]);
-  };
-
   // Add a specific recipe from the user's cookbook, skipping duplicates.
   const addFromCookbook = (recipe: Recipe) => {
     setPlan(plan =>
       plan.some(m => m.recipe.id === recipe.id)
         ? plan
-        : [...plan, { id: `m${Date.now()}-${recipe.id}`, recipe, done: false }]
+        : [
+            ...plan,
+            {
+              id: `m${Date.now()}-${recipe.id}`,
+              recipe,
+              done: false,
+              // Opened from a specific day's "Add a meal" → land there.
+              // Opened from the button under the week → the first free day.
+              day: pendingDay ?? firstFreeDay(plan),
+            },
+          ]
     );
+  };
+
+  // The earliest day with nothing on it, so repeated adds fill the week out
+  // rather than stacking on Monday.
+  const firstFreeDay = (plan: PlannedMeal[]): number => {
+    const used = new Set(plan.map((m, i) => m.day ?? i % 7));
+    for (let d = 0; d < 7; d++) if (!used.has(d)) return d;
+    return 0;
   };
 
   const addWeekToShoppingList = async () => {
@@ -208,7 +233,7 @@ export default function BudgetScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!dragging}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.backButton} />
@@ -295,20 +320,7 @@ export default function BudgetScreen() {
           </Text>
         )}
 
-        {/* Generate Button */}
-        <TouchableOpacity
-          style={styles.generateButton}
-          onPress={regeneratePlan}
-          disabled={generating}
-        >
-          {generating ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.generateButtonText}>
-              {activeFilters.length > 0 ? '🎲 Generate with filters' : '🎲 Generate New Plan'}
-            </Text>
-          )}
-        </TouchableOpacity>
+
 
         {/* Meal Plan */}
         <View style={styles.section}>
@@ -325,67 +337,28 @@ export default function BudgetScreen() {
             </Text>
           )}
 
-          {mealPlan.map((meal, i) => (
-            <View key={meal.id} style={[styles.mealCard, meal.done && styles.mealCardDone]}>
-              <TouchableOpacity
-                style={styles.mealMain}
-                activeOpacity={0.8}
-                onPress={() =>
-                  // Own recipes live on the cookbook screen; /recipe/[id] only
-                  // knows about creator recipes and cannot resolve a
-                  // my_recipes id at all.
-                  router.push(
-                    meal.recipe.source === 'mine'
-                      ? `/cookbook/${meal.recipe.id}`
-                      : `/recipe/${meal.recipe.id}`
-                  )
-                }
-              >
-                <Image source={{ uri: meal.recipe.image }} style={styles.mealImage} />
-                <View style={styles.mealContent}>
-                  <Text style={styles.mealDay}>
-                    {WEEKDAYS[i % 7]} · {fmtDay(addDays(weekStart, i))}
-                  </Text>
-                  <Text
-                    style={[styles.mealTitle, meal.done && styles.mealTitleDone]}
-                    numberOfLines={2}
-                  >
-                    {meal.recipe.title}
-                  </Text>
-                  <View style={styles.mealMeta}>
-                    <Text style={styles.mealMetaText}>⏱ {meal.recipe.prepTime + meal.recipe.cookTime}min</Text>
-                    {FEATURES.budget && (
-                      <Text style={styles.mealMetaText}>💰 ${meal.recipe.cost.toFixed(2)}</Text>
-                    )}
-                    <Text style={styles.mealMetaText}>🔥 {meal.recipe.calories}cal</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-              <View style={styles.mealActions}>
-                <TouchableOpacity
-                  style={[styles.checkbox, meal.done && styles.checkboxChecked]}
-                  onPress={() => toggleDone(meal.id)}
-                >
-                  {meal.done && <Text style={styles.checkmark}>✓</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconButton} onPress={() => swapMeal(meal.id)}>
-                  <Text style={styles.iconButtonText}>↻</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconButton} onPress={() => removeMeal(meal.id)}>
-                  <Text style={styles.iconButtonRemove}>×</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-
-          <View style={styles.addRow}>
-            <TouchableOpacity style={[styles.addMealButton, styles.addRowItem]} onPress={addMeal}>
-              <Text style={styles.addMealButtonText}>+ Add a meal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.addFavButton, styles.addRowItem]} onPress={() => setShowCookbookPicker(true)}>
-              <Text style={styles.addFavButtonText}>📚 From cookbook</Text>
-            </TouchableOpacity>
-          </View>
+          <WeekPlanBoard
+            weekStart={weekStart}
+            meals={mealPlan}
+            onChange={next => setWeekPlan(key, next)}
+            onOpen={meal =>
+              router.push(
+                meal.recipe.source === 'mine'
+                  ? `/cookbook/${meal.recipe.id}`
+                  : `/recipe/${meal.recipe.id}`
+              )
+            }
+            onCook={meal =>
+              router.push(
+                `/cook/${meal.recipe.id}?source=${meal.recipe.source === 'mine' ? 'mine' : 'creator'}&servings=${meal.recipe.servings}`
+              )
+            }
+            onSwap={meal => swapMeal(meal.id)}
+            onRemove={meal => removeMeal(meal.id)}
+            onToggleDone={meal => toggleDone(meal.id)}
+            onAddToDay={day => { setPendingDay(day); setShowCookbookPicker(true); }}
+            onDragStateChange={setDragging}
+          />
 
           {allDone && (
             <TouchableOpacity style={styles.nextWeekButton} onPress={() => goToWeek(1)}>
@@ -394,31 +367,22 @@ export default function BudgetScreen() {
           )}
         </View>
 
-        {/* Add whole week to the shopping list */}
+        {/* One button, and it says what it will add. The separate "shopping
+            list preview" card that used to sit under it is gone: the Shopping
+            tab is one tap away in the nav bar, so a second door to it was
+            just another thing to read. */}
         <TouchableOpacity
           style={[styles.addWeekButton, adding && styles.addWeekButtonDisabled]}
           onPress={addWeekToShoppingList}
-          disabled={adding}
+          disabled={adding || totalIngredients === 0}
         >
           {adding ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.addWeekButtonText}>🛒 Add Week to Shopping List</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* Shopping List Preview */}
-        <TouchableOpacity style={styles.shoppingListCard} onPress={() => router.push('/shopping')}>
-          <View style={styles.shoppingListIcon}>
-            <Text style={styles.shoppingListIconText}>🛒</Text>
-          </View>
-          <View style={styles.shoppingListContent}>
-            <Text style={styles.shoppingListTitle}>Shopping List</Text>
-            <Text style={styles.shoppingListSubtitle}>
-              {totalIngredients} items{FEATURES.budget ? ` • Est. $${totalCost.toFixed(2)}` : ''}
+            <Text style={styles.addWeekButtonText}>
+              🛒 Add to shopping list ({totalIngredients})
             </Text>
-          </View>
-          <Text style={styles.shoppingListArrow}>→</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.bottomSpacer} />
@@ -646,19 +610,26 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     fontWeight: '600',
   },
-  generateButton: {
-    backgroundColor: '#1A1A1A',
+  fromCookbookButton: {
+    backgroundColor: '#0D2B63',
     marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
+    marginTop: 4,
+    paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
   },
-  generateButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '700',
+  fromCookbookText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  generateButton: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    paddingVertical: 13,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E4DACA',
+    backgroundColor: 'transparent',
   },
+  generateButtonText: { color: '#0D2B63', fontSize: 15, fontWeight: '600' },
   weekNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -733,29 +704,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 24,
   },
-  mealCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    marginBottom: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  mealCardDone: {
-    opacity: 0.55,
-  },
-  mealMain: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  mealImage: {
-    width: 100,
-    height: 100,
-  },
   mealContent: {
     flex: 1,
     padding: 12,
@@ -768,86 +716,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  mealTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginTop: 4,
-    marginBottom: 8,
-  },
   mealTitleDone: {
     textDecorationLine: 'line-through',
     color: '#999',
   },
-  mealMeta: {
-    flexDirection: 'row',
-  },
-  mealMetaText: {
-    fontSize: 12,
-    color: '#888',
-    marginRight: 12,
-  },
-  mealActions: {
-    width: 52,
-    backgroundColor: '#F7F7F7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-  },
-  checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#CFCFCF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#3C8D40',
-    borderColor: '#3C8D40',
-  },
-  checkmark: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  iconButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconButtonText: {
-    fontSize: 18,
-    color: '#888',
-  },
-  iconButtonRemove: {
-    fontSize: 22,
-    color: '#E53935',
-    fontWeight: '700',
-  },
-  addRow: { flexDirection: 'row', gap: 10 },
-  addRowItem: { flex: 1 },
-  addMealButton: {
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EEE',
-    borderStyle: 'dashed',
-  },
-  addFavButton: {
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: '#FFF0EA',
-    borderWidth: 1,
-    borderColor: '#FFD3C2',
-  },
-  addFavButtonText: { fontSize: 14, fontWeight: '700', color: '#F2701E' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: { backgroundColor: '#FFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
@@ -864,11 +736,6 @@ const styles = StyleSheet.create({
   favAddDoneText: { color: '#3C8D40' },
   favImageEmpty: { backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
   favImageEmptyText: { fontSize: 20 },
-  addMealButtonText: {
-    fontSize: 14,
-    color: '#F2701E',
-    fontWeight: '600',
-  },
   addWeekButton: {
     backgroundColor: '#F2701E',
     marginHorizontal: 20,
@@ -884,43 +751,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '700',
-  },
-  shoppingListCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    marginHorizontal: 20,
-    padding: 16,
-    borderRadius: 16,
-  },
-  shoppingListIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  shoppingListIconText: {
-    fontSize: 24,
-  },
-  shoppingListContent: {
-    flex: 1,
-  },
-  shoppingListTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  shoppingListSubtitle: {
-    fontSize: 13,
-    color: '#3C8D40',
-    marginTop: 2,
-  },
-  shoppingListArrow: {
-    fontSize: 20,
-    color: '#3C8D40',
   },
   bottomSpacer: {
     height: 40,

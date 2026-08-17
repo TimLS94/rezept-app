@@ -8,6 +8,10 @@ export type PlannedMeal = {
   id: string;
   recipe: Recipe;
   done?: boolean;
+  /** 0 = Monday … 6 = Sunday. Absent on plans saved before days existed; the
+   *  board derives one from the position so an old plan still reads as a
+   *  week rather than a single overloaded Monday. */
+  day?: number;
 };
 
 export type PlansByWeek = Record<string, PlannedMeal[]>;

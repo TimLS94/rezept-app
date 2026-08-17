@@ -91,7 +91,7 @@ export default function DiscoverScreen() {
           ]
         );
       } else {
-        // A right-swipe saves the recipe to Favorites
+        // A right-swipe saves the recipe to Inspiration
         addFavorite(recipe);
         setLiked(prev => [...prev, recipe]);
       }
@@ -252,13 +252,13 @@ export default function DiscoverScreen() {
             <Text style={styles.emptyText}>That's everyone!</Text>
             <Text style={styles.emptySubtext}>
               {liked.length > 0
-                ? `${liked.length} ${liked.length === 1 ? 'recipe' : 'recipes'} saved to Favorites`
+                ? `${liked.length} ${liked.length === 1 ? 'recipe' : 'recipes'} saved to Inspiration`
                 : 'No matches this time'}
             </Text>
             {liked.length > 0 && (
               <>
                 <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/favorites')}>
-                  <Text style={styles.primaryButtonText}>❤️ View Favorites</Text>
+                  <Text style={styles.primaryButtonText}>✨ View Inspiration</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.secondaryButton} onPress={addLikedToShoppingList}>
                   <Text style={styles.secondaryButtonText}>🛒 Add to Shopping List</Text>

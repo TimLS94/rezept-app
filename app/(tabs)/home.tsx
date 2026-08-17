@@ -120,7 +120,7 @@ export default function HomeScreen() {
         <View style={styles.navGroup}>
           <NavCard icon="flame" title="Discover" subtitle="Swipe to save your favorites" onPress={() => router.push('/discover')} />
           <NavCard icon="scan" title="Fridge Scan" subtitle="Snap your fridge • Cook without shopping" onPress={() => router.push('/fridge')} />
-          <NavCard icon="heart" title="Favorites" subtitle="Cook, plan or add to cart" onPress={() => router.push('/favorites')} />
+          <NavCard icon="sparkles" title="Inspiration" subtitle="What you swiped — cook it or keep it" onPress={() => router.push('/favorites')} />
           {canImportToCookbook(role) && (
             <NavCard icon="book" title="My Cookbook" subtitle="Your own & imported recipes" onPress={() => router.push('/cookbook')} />
           )}
