@@ -38,6 +38,9 @@ const MAX_SCREENSHOTS = 10;
 // cents, so a handful of free ones is cheap next to the conversion it buys.
 const FREE_IMPORT_LIMIT = 3;
 
+const MIN_TEXT_HEIGHT = 180;
+const MAX_TEXT_HEIGHT = 360;
+
 export default function ImportRecipeScreen() {
   const { isGuest, role, isPremium, refresh } = useAuth();
   const [ownedCount, setOwnedCount] = useState<number | null>(null);
@@ -48,10 +51,13 @@ export default function ImportRecipeScreen() {
   const [inputMode, setInputMode] = useState<InputMode>('screenshot'); // Default to screenshot
   const [url, setUrl] = useState('');
   const [manualText, setManualText] = useState('');
-  // The field grows with its content instead of scrolling inside a fixed box.
-  // Nested scrolling — a 200pt window inside a scrolling page — is what made a
-  // long recipe unreadable: neither scroll surface did what the finger meant.
-  const [textHeight, setTextHeight] = useState(180);
+  // The field grows with its content, but only so far. Unbounded growth turned
+  // a long recipe into a page you had to scroll twenty times to get past; a
+  // fixed 200pt box made it scroll inside a window while the page scrolled too.
+  // Growing to a comfortable maximum and scrolling internally beyond that means
+  // a normal recipe never scrolls twice and a very long one still fits on
+  // screen.
+  const [textHeight, setTextHeight] = useState(MIN_TEXT_HEIGHT);
   const [textFocused, setTextFocused] = useState(false);
   const [screenshots, setScreenshots] = useState<string[]>([]); // base64 images
   const [screenshotUris, setScreenshotUris] = useState<string[]>([]); // for preview
@@ -460,11 +466,15 @@ export default function ImportRecipeScreen() {
                   </View>
                 </View>
                 <TextInput
-                  style={[styles.input, styles.textArea, { height: Math.max(180, textHeight) }]}
+                  style={[
+                    styles.input,
+                    styles.textArea,
+                    { height: Math.min(MAX_TEXT_HEIGHT, Math.max(MIN_TEXT_HEIGHT, textHeight)) },
+                  ]}
                   onContentSizeChange={e => setTextHeight(e.nativeEvent.contentSize.height + 24)}
                   onFocus={() => setTextFocused(true)}
                   onBlur={() => setTextFocused(false)}
-                  scrollEnabled={false}
+                  scrollEnabled={textHeight > MAX_TEXT_HEIGHT}
                   value={manualText}
                   onChangeText={setManualText}
                   placeholder="Paste the recipe caption or description here...
