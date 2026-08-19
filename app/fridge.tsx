@@ -313,9 +313,13 @@ export default function FridgeScreen() {
     <View style={styles.container}>
       {header}
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        {/* Only on the way in. Once there are photos or results the picture
-            has done its job and the screen belongs to your actual food. */}
-        {shots.length === 0 && !items?.length && (
+        {/* Shown whenever no photos are staged — this is the header of the
+            scan area, not a one-time splash.
+            It used to also require an empty result list, which meant anyone
+            with a previous scan never saw it: loadScan() restores the last
+            results on mount, so `items` is already full the moment the screen
+            opens. */}
+        {shots.length === 0 && (
           <View style={styles.hero}>
             <FridgeArt scanning={scanning} />
             <Text style={styles.heroTitle}>See what you can cook right now</Text>
