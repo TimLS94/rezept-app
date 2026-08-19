@@ -15,6 +15,7 @@ import {
 import { addRecipesToShoppingList } from '../lib/shopping';
 import { fetchCookableRecipes } from '../lib/recipes';
 import Paywall from '../components/Paywall';
+import FridgeArt from '../components/FridgeArt';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
 import { HEADER_TOP } from '../lib/layout';
 
@@ -312,6 +313,19 @@ export default function FridgeScreen() {
     <View style={styles.container}>
       {header}
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        {/* Only on the way in. Once there are photos or results the picture
+            has done its job and the screen belongs to your actual food. */}
+        {shots.length === 0 && !items?.length && (
+          <View style={styles.hero}>
+            <FridgeArt scanning={scanning} />
+            <Text style={styles.heroTitle}>See what you can cook right now</Text>
+            <Text style={styles.heroText}>
+              Photograph your fridge and get recipes ranked by how little you still
+              have to buy.
+            </Text>
+          </View>
+        )}
+
         <Text style={styles.lead}>
           Take up to {MAX_PHOTOS} photos of your fridge, freezer or pantry. Keep the door wide open and the shelves visible.
         </Text>
@@ -449,6 +463,22 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontFamily: FONTS.display, fontSize: 18, color: COLORS.navy, letterSpacing: 0.3 },
   body: { padding: 20 },
+  hero: { alignItems: 'center', paddingTop: 8, paddingBottom: 20 },
+  heroTitle: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 22,
+    color: COLORS.navy,
+    marginTop: 18,
+    textAlign: 'center',
+  },
+  heroText: {
+    fontSize: 14,
+    color: COLORS.warmGray,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 6,
+    paddingHorizontal: 20,
+  },
   lead: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.warmGray, lineHeight: 20, marginBottom: 14 },
   quotaBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.card,
