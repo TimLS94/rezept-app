@@ -26,9 +26,10 @@ export const PREMIUM_YEARLY_CENTS = 3999;
 
 export const PREMIUM_INCLUDES = [
   { icon: '🧊', title: 'Fridge Scan', text: 'Photograph your fridge and get recipes you can cook now — 3 scans a week.' },
-  { icon: '📥', title: 'Recipe import', text: 'Turn an Instagram or TikTok link, a screenshot or pasted text into a proper recipe.' },
+  { icon: '📥', title: 'Recipe import', text: 'Turn a screenshot, a photo or pasted text into a proper recipe.' },
   { icon: '📅', title: 'Meal planning', text: 'Plan your week and build the shopping list from it in one tap.' },
   { icon: '👨‍👩‍👧', title: 'Family portions', text: 'Per-person portion sizes so quantities scale to who is actually eating.' },
+  { icon: '✏️', title: 'Make it yours', text: 'Adapt any creator recipe to your kitchen — your amounts, your swaps, your notes. Their original stays untouched.' },
 ] as const;
 
 // Stated as plainly as the benefits, and shown right next to them. A paywall

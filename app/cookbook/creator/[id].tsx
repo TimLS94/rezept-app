@@ -14,6 +14,8 @@ import { Recipe, DietaryTag, Ingredient, totalTime } from '../../../data/recipes
 import { fetchDbRecipeById, saveCookbookEdits, getCookbookEdits, applyEdits, CookbookEdits } from '../../../lib/recipes';
 import { addRecipesToShoppingList, describeAdd } from '../../../lib/shopping';
 import RecipeEditor, { EditableRecipe } from '../../../components/RecipeEditor';
+import Paywall from '../../../components/Paywall';
+import { useAuth } from '../../../lib/auth';
 import { HEADER_TOP } from '../../../lib/layout';
 
 /**
@@ -27,6 +29,8 @@ export default function CookbookCreatorRecipeScreen() {
   const [loading, setLoading] = useState(true);
   const [addedToCart, setAddedToCart] = useState(false);
   const [draft, setDraft] = useState<EditableRecipe | null>(null);
+  const { isPremium } = useAuth();
+  const [showPaywall, setShowPaywall] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Load recipe and any existing edits
@@ -54,6 +58,13 @@ export default function CookbookCreatorRecipeScreen() {
   const displayRecipe = recipe ? applyEdits(recipe, edits) : null;
 
   const startEditing = () => {
+    // Editing a creator's recipe keeps a private patch over their original —
+    // your salt, your oven, your swaps — and that is a Premium feature, the
+    // same as bringing a recipe in from outside. Reading it is not gated.
+    if (!isPremium) {
+      setShowPaywall(true);
+      return;
+    }
     if (!displayRecipe) return;
     setDraft({
       title: displayRecipe.title,
@@ -216,7 +227,7 @@ export default function CookbookCreatorRecipeScreen() {
             <Text style={styles.headerBackText}>← Back</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={startEditing} style={styles.editButton}>
-            <Text style={styles.editButtonText}>✏️ Edit</Text>
+            <Text style={styles.editButtonText}>✏️ Edit{!isPremium && ' ✨'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -349,6 +360,15 @@ export default function CookbookCreatorRecipeScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* The paywall reloads the auth context itself, so this only has to
+          close and re-open the editor the user was reaching for. */}
+      <Paywall
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        onSubscribed={() => { setShowPaywall(false); startEditing(); }}
+        creatorName={recipe?.influencer?.name}
+      />
     </View>
   );
 }
