@@ -14,7 +14,39 @@ export type Preferences = {
   avoid?: string[];
   timeBudget?: '15' | '20-30' | '30-45' | '45+';
   cuisines?: string[];
+  /** Daily targets. Kept here rather than in their own table because they are
+   *  the same kind of thing as the rest: a statement of what you want, not a
+   *  record of what happened. */
+  nutrition?: {
+    goal?: 'lose' | 'maintain' | 'gain' | 'muscle';
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+  };
 };
+
+export const NUTRITION_GOALS = [
+  { id: 'lose', label: 'Lose weight', icon: '📉' },
+  { id: 'maintain', label: 'Maintain', icon: '⚖️' },
+  { id: 'gain', label: 'Gain weight', icon: '📈' },
+  { id: 'muscle', label: 'Build muscle', icon: '💪' },
+] as const;
+
+/**
+ * A starting point for the daily targets, so nobody faces four empty number
+ * fields. Deliberately rough — this is a suggestion to adjust, not a
+ * calculation anyone should act on medically, and the screen says so.
+ */
+export function suggestedTargets(goal: string | undefined): { calories: number; protein: number; carbs: number; fat: number } {
+  const base = { lose: 1800, maintain: 2200, gain: 2600, muscle: 2500 }[goal ?? 'maintain'] ?? 2200;
+  return {
+    calories: base,
+    protein: Math.round((base * 0.3) / 4),
+    carbs: Math.round((base * 0.4) / 4),
+    fat: Math.round((base * 0.3) / 9),
+  };
+}
 
 export const HOUSEHOLD = [
   { id: '1-2', label: '1–2 people' },

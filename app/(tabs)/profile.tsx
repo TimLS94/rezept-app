@@ -15,6 +15,7 @@ import {
   Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { fetchProfileStats, ProfileStats } from '../../lib/profileStats';
 import { router } from 'expo-router';
 import { fetchMyProfile } from '../../lib/profile';
 import { supabase, getCurrentUser } from '../../lib/supabase';
@@ -104,6 +105,8 @@ const navStyles = StyleSheet.create({
 });
 
 export default function ProfileScreen() {
+  const [stats, setStats] = useState<ProfileStats>({ liked: 0, cooked: 0, collections: 0, following: 0 });
+  useEffect(() => { fetchProfileStats().then(setStats).catch(() => {}); }, []);
   const { role, isGuest } = useAuth();
   const isCreator = canUploadRecipes(role);
   
@@ -628,13 +631,33 @@ export default function ProfileScreen() {
         )}
 
         {/* ── Everything you manage, grouped ────────────────────────── */}
+        {/* Four counted numbers. Each is a real count — a stat that is nearly
+            right is worse than none, because people check them against what
+            they can see and one wrong figure makes the rest suspect. */}
+        <View style={styles.statsRow}>
+          {[
+            { n: stats.liked, label: 'Recipes Liked' },
+            { n: stats.cooked, label: 'Meals Cooked' },
+            { n: stats.collections, label: 'Collections' },
+            { n: stats.following, label: 'Following' },
+          ].map(s2 => (
+            <View key={s2.label} style={styles.statCell}>
+              <Text style={styles.statNum}>{s2.n}</Text>
+              <Text style={styles.statCellLabel}>{s2.label}</Text>
+            </View>
+          ))}
+        </View>
+
         <View style={styles.navGroup}>
+          {/* One row, not two: household, diet, allergies, time and cuisines
+              are all the same screen and splitting them made the second row a
+              duplicate link. */}
           <NavRow icon="people-outline" title="Family & Preferences"
-            sub="Household, dietary needs, allergies"
+            sub="Household, kids, dietary needs, allergies, time, cuisines"
             onPress={() => router.push('/preferences')} />
-          <NavRow icon="time-outline" title="Cooking Preferences"
-            sub="Time you have, cuisines you enjoy"
-            onPress={() => router.push('/preferences')} last />
+          <NavRow icon="fitness-outline" title="Nutrition Goals"
+            sub="Calories, macros, what you're aiming for"
+            onPress={() => router.push('/profile/nutrition')} last />
         </View>
 
         <View style={styles.navGroup}>
@@ -647,6 +670,18 @@ export default function ProfileScreen() {
           <NavRow icon="cart-outline" title="Shopping list"
             sub="What you still need to buy"
             onPress={() => router.push('/shopping')} last />
+        </View>
+
+        <View style={styles.navGroup}>
+          <NavRow icon="time-outline" title="Cooking History"
+            sub="Everything you have cooked"
+            onPress={() => router.push('/profile/history')} />
+          <NavRow icon="star-outline" title="Rewards & Progress"
+            sub="Badges and streaks"
+            onPress={() => router.push('/profile/rewards')} />
+          <NavRow icon="help-circle-outline" title="Help & Support"
+            sub="Common questions, get in touch"
+            onPress={() => router.push('/help')} last />
         </View>
 
         {/* Account & Settings */}
@@ -784,6 +819,13 @@ const styles = StyleSheet.create({
   section: { padding: 20 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  statsRow: { flexDirection: 'row', gap: 8, marginHorizontal: 20, marginBottom: 16 },
+  statCell: {
+    flex: 1, backgroundColor: '#FFF', borderRadius: 12, paddingVertical: 14,
+    alignItems: 'center', borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  statNum: { fontSize: 20, fontWeight: '800', color: '#1A1A1A' },
+  statCellLabel: { fontSize: 10, color: '#8A8A8A', marginTop: 3, textAlign: 'center' },
   navGroup: {
     backgroundColor: '#FFF', borderRadius: 16, marginHorizontal: 20, marginBottom: 14,
     overflow: 'hidden', borderWidth: 1, borderColor: '#EFE7DC',
