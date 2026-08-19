@@ -1,74 +1,101 @@
-// A fridge, drawn rather than shipped.
+// An open fridge, drawn rather than shipped.
 //
-// The obvious move is a PNG, and it costs a few hundred kilobytes, a second
-// asset for dark mode, and something to re-export every time the palette
-// moves. This is plain Views: it takes its colours from the theme, scales to
-// any screen, and — the part a picture cannot do — the door opens while the
-// scan is running, so the wait has something to look at.
+// It stands open on purpose. The first version had a closed door that only
+// swung aside while a scan was running, which meant the thing you were meant
+// to look at — the food — was behind a panel every time you arrived. A fridge
+// with the door shut is a white box; the point of the picture is what is
+// inside it.
+//
+// Drawn from Views rather than a PNG: no few-hundred-kilobyte asset, no second
+// file for dark mode, no re-export when the palette moves, and it scales to
+// any screen. Everything takes its colour from the theme.
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import { COLORS } from '../lib/theme';
 
-// Each shelf is a row of items; a number is a width, the colour speaks for
-// itself. Roughly what a fridge looks like from the front, without pretending
-// to be a photograph.
-const SHELVES: { w: number; h: number; color: string; radius?: number }[][] = [
+type Item = { w: number; h: number; color: string; radius?: number; cap?: string };
+
+// Two columns of shelves, the way a fridge actually reads from the front:
+// jars and bottles up top, produce below. `cap` draws a lid in a darker shade.
+const LEFT: Item[][] = [
   [
-    { w: 16, h: 26, color: '#F3F0E8', radius: 4 },
-    { w: 14, h: 22, color: '#EDE7DA', radius: 4 },
-    { w: 18, h: 30, color: '#F2A03D', radius: 5 },
+    { w: 13, h: 20, color: '#F4F1EA', radius: 3, cap: '#D8D2C4' },
+    { w: 12, h: 17, color: '#EFEADD', radius: 3, cap: '#D8D2C4' },
   ],
   [
-    { w: 15, h: 32, color: '#FFFFFF', radius: 5 },
-    { w: 13, h: 28, color: '#8CBF6A', radius: 5 },
-    { w: 13, h: 28, color: '#F2C53D', radius: 5 },
+    { w: 12, h: 26, color: '#FFFFFF', radius: 4, cap: '#4A7EBB' },
+    { w: 11, h: 23, color: '#7FB069', radius: 4, cap: '#3F7A3F' },
+    { w: 11, h: 23, color: '#F2C53D', radius: 4, cap: '#C79A1E' },
   ],
   [
-    { w: 20, h: 20, color: '#7FB069', radius: 8 },
-    { w: 16, h: 18, color: '#E4572E', radius: 8 },
-    { w: 16, h: 18, color: '#F2A03D', radius: 8 },
+    { w: 16, h: 15, color: '#8CBF6A', radius: 7 },
+    { w: 14, h: 13, color: '#A8CC7E', radius: 7 },
   ],
   [
-    { w: 22, h: 18, color: '#5F9E4A', radius: 8 },
-    { w: 18, h: 16, color: '#EDE7DA', radius: 8 },
+    { w: 15, h: 14, color: '#5F9E4A', radius: 6 },
+    { w: 10, h: 12, color: '#E4572E', radius: 5 },
+    { w: 10, h: 12, color: '#F2A03D', radius: 5 },
+  ],
+];
+
+const RIGHT: Item[][] = [
+  [
+    { w: 11, h: 16, color: '#7FB069', radius: 3, cap: '#2F5E2F' },
+    { w: 11, h: 15, color: '#A8CC7E', radius: 3, cap: '#2F5E2F' },
+    { w: 13, h: 22, color: '#F2A03D', radius: 4, cap: '#2F5E2F' },
+  ],
+  [
+    { w: 17, h: 21, color: '#EFE3C8', radius: 5, cap: '#3F7A3F' },
+    { w: 11, h: 17, color: '#D8452F', radius: 4, cap: '#2A2A2A' },
+    { w: 11, h: 17, color: '#D8452F', radius: 4, cap: '#2A2A2A' },
+  ],
+  [
+    { w: 12, h: 14, color: '#F2A03D', radius: 6 },
+    { w: 12, h: 14, color: '#7FB069', radius: 6 },
+    { w: 12, h: 14, color: '#F2C53D', radius: 6 },
+  ],
+  [
+    { w: 16, h: 13, color: '#EFE9DC', radius: 6 },
+    { w: 16, h: 13, color: '#DDE7CE', radius: 6 },
   ],
 ];
 
 export default function FridgeArt({ scanning = false }: { scanning?: boolean }) {
-  // 0 = closed, 1 = open. The door swings on its right edge, so the hinge is
-  // the transform origin — which RN has no property for, hence the
-  // translate-rotate-translate sandwich.
-  const open = useRef(new Animated.Value(0)).current;
   const glow = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(open, {
-      toValue: scanning ? 1 : 0,
-      duration: 520,
-      easing: Easing.inOut(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-
     if (!scanning) { glow.setValue(0); return; }
+    // The interior light coming up and down while the scan runs, so the wait
+    // has something to watch.
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0.35, duration: 900, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0.22, duration: 800, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0.04, duration: 800, useNativeDriver: true }),
       ]),
     );
     loop.start();
     return () => loop.stop();
   }, [scanning]);
 
-  return (
-    <View style={styles.stage}>
-      <View style={styles.body}>
-        {SHELVES.map((row, i) => (
-          <View key={i} style={styles.shelf}>
-            <View style={styles.items}>
-              {row.map((item, j) => (
+  const column = (shelves: Item[][], key: string) => (
+    <View style={styles.column} key={key}>
+      {shelves.map((row, i) => (
+        <View key={i} style={styles.shelf}>
+          <View style={styles.items}>
+            {row.map((item, j) => (
+              <View key={j} style={{ alignItems: 'center' }}>
+                {item.cap && (
+                  <View
+                    style={{
+                      width: item.w - 3,
+                      height: 4,
+                      backgroundColor: item.cap,
+                      borderTopLeftRadius: 2,
+                      borderTopRightRadius: 2,
+                    }}
+                  />
+                )}
                 <View
-                  key={j}
                   style={{
                     width: item.w,
                     height: item.h,
@@ -76,63 +103,84 @@ export default function FridgeArt({ scanning = false }: { scanning?: boolean }) 
                     borderRadius: item.radius ?? 3,
                   }}
                 />
-              ))}
-            </View>
-            <View style={styles.shelfLine} />
+              </View>
+            ))}
           </View>
-        ))}
+          <View style={styles.shelfLine} />
+        </View>
+      ))}
+    </View>
+  );
 
-        {/* The light that comes on when the door opens. */}
-        <Animated.View style={[styles.light, { opacity: glow }]} pointerEvents="none" />
+  return (
+    <View style={styles.stage}>
+      {/* The open door, hinged left and angled back, so the fridge reads as
+          open rather than as a cabinet drawn from the front. */}
+      <View style={styles.door}>
+        <View style={styles.doorInner} />
+        <View style={styles.handle} />
       </View>
 
-      <Animated.View
-        style={[
-          styles.door,
-          {
-            transform: [
-              { translateX: 62 },
-              { rotateY: open.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-72deg'] }) },
-              { translateX: -62 },
-            ],
-          },
-        ]}
-      >
-        <View style={styles.handle} />
-      </Animated.View>
+      <View style={styles.body}>
+        <View style={styles.interior}>
+          {column(LEFT, 'l')}
+          <View style={styles.divider} />
+          {column(RIGHT, 'r')}
+        </View>
+        <Animated.View style={[styles.light, { opacity: glow }]} pointerEvents="none" />
+      </View>
     </View>
   );
 }
 
-const W = 128;
-const H = 168;
-
 const styles = StyleSheet.create({
-  stage: { width: W, height: H, alignSelf: 'center' },
+  stage: { width: 190, height: 180, alignSelf: 'center', flexDirection: 'row' },
+
+  door: {
+    width: 30,
+    height: 168,
+    alignSelf: 'center',
+    backgroundColor: '#EDE7DA',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#DDD4C2',
+    marginRight: -4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Angled back and squashed horizontally: the cheapest honest way to say
+    // "this panel is facing away from you" without a 3-D transform.
+    transform: [{ perspective: 600 }, { rotateY: '38deg' }],
+  },
+  doorInner: {
+    position: 'absolute',
+    top: 10, bottom: 10, left: 6, right: 6,
+    backgroundColor: '#F6F2E9',
+    borderRadius: 5,
+  },
+  handle: {
+    position: 'absolute',
+    right: 4,
+    width: 3,
+    height: 34,
+    borderRadius: 2,
+    backgroundColor: '#C3B9A6',
+  },
+
   body: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
+    height: 180,
     backgroundColor: '#FBFAF7',
     borderRadius: 14,
     borderWidth: 2,
     borderColor: '#E2DACB',
-    padding: 8,
-    justifyContent: 'space-between',
     overflow: 'hidden',
   },
+  interior: { flex: 1, flexDirection: 'row', padding: 7 },
+  divider: { width: 2, backgroundColor: '#EFE9DC', borderRadius: 1, marginHorizontal: 5 },
+  column: { flex: 1, justifyContent: 'space-between' },
   shelf: { flex: 1, justifyContent: 'flex-end' },
-  items: { flexDirection: 'row', alignItems: 'flex-end', gap: 5, paddingHorizontal: 4 },
-  shelfLine: { height: 2, backgroundColor: '#E7E0D2', borderRadius: 1, marginTop: 3 },
-  light: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.orange },
+  items: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
+  shelfLine: { height: 2, backgroundColor: '#E7E0D2', borderRadius: 1, marginTop: 2 },
 
-  door: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#F1ECE3',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#E2DACB',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingLeft: 8,
-  },
-  handle: { width: 5, height: 44, borderRadius: 3, backgroundColor: '#C9C0AE' },
+  light: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.orange },
 });
