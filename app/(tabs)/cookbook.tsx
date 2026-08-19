@@ -166,9 +166,10 @@ export default function CookbookScreen() {
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cookbook</Text>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/discover')} style={styles.addButton}>
-          <Text style={styles.addButtonText}>+ Add</Text>
-        </TouchableOpacity>
+        {/* Deliberately empty, to balance the back button. There used to be a
+            "+ Add" here that opened Discover: it added nothing, and it sat
+            right above the row that holds the real actions. */}
+        <View style={styles.addButton} />
       </View>
 
       <View style={styles.tabs}>
@@ -610,7 +611,6 @@ const styles = StyleSheet.create({
   backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   addButton: { width: 60, alignItems: 'flex-end' },
-  addButtonText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   loadingState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIcon: { fontSize: 64, marginBottom: 16 },
