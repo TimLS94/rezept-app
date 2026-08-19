@@ -348,11 +348,32 @@ export default function DiscoverScreen() {
                     <Text style={styles.cardTitle}>{recipe.title}</Text>
                     <View style={styles.cardMeta}>
                       <Text style={styles.cardMetaText}>⏱ {recipe.prepTime + recipe.cookTime} min</Text>
-                      <Text style={styles.cardMetaText}>🔥 {recipe.calories} cal</Text>
-                      <Text style={styles.cardMetaText}>💰 ${recipe.cost.toFixed(2)}</Text>
+                      <Text style={styles.cardMetaText}>📊 {recipe.difficulty}</Text>
+                      {recipe.calories > 0 && (
+                        <Text style={styles.cardMetaText}>🔥 {recipe.calories} cal</Text>
+                      )}
+                      {recipe.cost > 0 && recipe.servings > 0 && (
+                        <Text style={styles.cardMetaText}>
+                          💰 ${(recipe.cost / recipe.servings).toFixed(2)}/serving
+                        </Text>
+                      )}
                     </View>
-                    <Text style={styles.cardDescription}>{recipe.description}</Text>
+
+                    {/* Categories the recipe carries but never showed: how
+                        hard it is and whether children will eat it are what
+                        people sort on, and they were sitting unused on the
+                        record. */}
                     <View style={styles.tagRow}>
+                      {recipe.kidApproved && (
+                        <View style={styles.tagBadge}>
+                          <Text style={styles.tagBadgeText}>👶 Kid approved</Text>
+                        </View>
+                      )}
+                      {recipe.prepTime + recipe.cookTime <= 20 && (
+                        <View style={styles.tagBadge}>
+                          <Text style={styles.tagBadgeText}>⚡ Quick</Text>
+                        </View>
+                      )}
                       {recipe.dietary.map(tag => {
                         const meta = DIETARY_TAGS.find(t => t.id === tag);
                         return (
@@ -364,6 +385,7 @@ export default function DiscoverScreen() {
                         );
                       })}
                     </View>
+                    <Text style={styles.cardDescription}>{recipe.description}</Text>
                     <TouchableOpacity
                       style={styles.viewRecipeLink}
                       onPress={() => router.push(`/recipe/${recipe.id}`)}
@@ -428,14 +450,14 @@ const styles = StyleSheet.create({
   influencerAvatar: { width: 28, height: 28, borderRadius: 14, marginRight: 8 },
   influencerName: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
   influencerHandle: { fontSize: 12, color: '#F2701E', fontWeight: '500' },
-  viewProfileArrow: { fontSize: 24, color: '#CCC', marginLeft: 'auto', paddingLeft: 12 },
+  viewProfileArrow: { fontSize: 24, color: 'rgba(255,255,255,0.55)', marginLeft: 'auto', paddingLeft: 12 },
   cardTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 10 },
   cardMeta: { flexDirection: 'row', marginBottom: 12 },
-  cardMetaText: { fontSize: 13, color: 'rgba(255,255,255,0.72)', marginRight: 16 },
-  cardDescription: { fontSize: 15, color: '#444', lineHeight: 22, marginBottom: 14 },
+  cardMetaText: { fontSize: 13.5, color: '#FFFFFF', marginRight: 16, fontWeight: '600' },
+  cardDescription: { fontSize: 15, color: '#FFFFFF', lineHeight: 22, marginBottom: 14 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 14 },
   tagBadge: { backgroundColor: 'rgba(124,191,122,0.18)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, marginRight: 8, marginBottom: 8 },
-  tagBadgeText: { fontSize: 12, color: '#3C8D40', fontWeight: '600' },
+  tagBadgeText: { fontSize: 12, color: '#8FD49B', fontWeight: '600' },
   viewRecipeLink: { paddingVertical: 8 },
   viewRecipeLinkText: { fontSize: 14, color: '#F2701E', fontWeight: '600' },
   stampBase: { position: 'absolute', top: 40, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 4, borderRadius: 12, zIndex: 10 },
@@ -447,8 +469,8 @@ const styles = StyleSheet.create({
   actionButton: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 4 },
   skipButton: { width: 60, height: 60, borderRadius: 30 },
   skipButtonIcon: { fontSize: 28, color: '#E53935', fontWeight: '700' },
-  infoButton: { width: 48, height: 48, borderRadius: 24 },
-  infoButtonIcon: { fontSize: 20, color: '#888' },
+  infoButton: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#16263C', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' },
+  infoButtonIcon: { fontSize: 20, color: '#FFFFFF' },
   likeButton: { width: 60, height: 60, borderRadius: 30 },
   likeButtonIcon: { fontSize: 28, color: '#3C8D40' },
   emptyState: { alignItems: 'center', padding: 40 },
