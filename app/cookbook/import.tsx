@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
+import * as Clipboard from 'expo-clipboard';
 import {
   View,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Text,
   StyleSheet,
   TouchableOpacity,
@@ -44,6 +48,11 @@ export default function ImportRecipeScreen() {
   const [inputMode, setInputMode] = useState<InputMode>('screenshot'); // Default to screenshot
   const [url, setUrl] = useState('');
   const [manualText, setManualText] = useState('');
+  // The field grows with its content instead of scrolling inside a fixed box.
+  // Nested scrolling — a 200pt window inside a scrolling page — is what made a
+  // long recipe unreadable: neither scroll surface did what the finger meant.
+  const [textHeight, setTextHeight] = useState(180);
+  const [textFocused, setTextFocused] = useState(false);
   const [screenshots, setScreenshots] = useState<string[]>([]); // base64 images
   const [screenshotUris, setScreenshotUris] = useState<string[]>([]); // for preview
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -294,6 +303,11 @@ export default function ImportRecipeScreen() {
         <View style={{ width: 60 }} />
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={90}
+      >
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Input Step */}
         {step === 'input' && (
@@ -413,9 +427,44 @@ export default function ImportRecipeScreen() {
             {/* Text Mode */}
             {inputMode === 'text' && (
               <View style={styles.field}>
-                <Text style={styles.label}>Recipe Text</Text>
+                <View style={styles.fieldHeader}>
+                  <Text style={styles.label}>Recipe Text</Text>
+                  <View style={styles.fieldTools}>
+                    {manualText.length > 0 && (
+                      <Text style={styles.charCount}>
+                        {manualText.trim().split(/\s+/).length} words
+                      </Text>
+                    )}
+                    {manualText.length === 0 ? (
+                      <TouchableOpacity
+                        onPress={async () => {
+                          const t = await Clipboard.getStringAsync();
+                          if (t?.trim()) setManualText(t);
+                        }}
+                      >
+                        <Text style={styles.fieldAction}>Paste</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity onPress={() => setManualText('')}>
+                        <Text style={styles.fieldAction}>Clear</Text>
+                      </TouchableOpacity>
+                    )}
+                    {/* A multiline field has no return-to-dismiss — return
+                        inserts a newline — so without this the keyboard could
+                        only be dismissed by guessing where to tap. */}
+                    {textFocused && (
+                      <TouchableOpacity onPress={() => Keyboard.dismiss()}>
+                        <Text style={styles.fieldActionStrong}>Done</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
                 <TextInput
-                  style={[styles.input, styles.textArea]}
+                  style={[styles.input, styles.textArea, { height: Math.max(180, textHeight) }]}
+                  onContentSizeChange={e => setTextHeight(e.nativeEvent.contentSize.height + 24)}
+                  onFocus={() => setTextFocused(true)}
+                  onBlur={() => setTextFocused(false)}
+                  scrollEnabled={false}
                   value={manualText}
                   onChangeText={setManualText}
                   placeholder="Paste the recipe caption or description here...
@@ -436,7 +485,6 @@ Steps:
 4. Toss with pasta"
                   placeholderTextColor="#999"
                   multiline
-                  numberOfLines={12}
                   textAlignVertical="top"
                 />
               </View>
@@ -513,6 +561,7 @@ Steps:
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -608,10 +657,22 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   textArea: {
-    minHeight: 200,
+    minHeight: 180,
     textAlignVertical: 'top',
     paddingTop: 14,
+    fontSize: 15,
+    lineHeight: 22,
   },
+  fieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  fieldTools: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  charCount: { fontSize: 12, color: '#9A9A9A' },
+  fieldAction: { fontSize: 14, color: '#F2701E', fontWeight: '600' },
+  fieldActionStrong: { fontSize: 14, color: '#0D2B63', fontWeight: '700' },
   urlHint: {
     fontSize: 12,
     color: '#999',
