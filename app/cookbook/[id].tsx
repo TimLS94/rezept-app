@@ -16,6 +16,8 @@ import { addRecipesToShoppingList, describeAdd } from '../../lib/shopping';
 import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
 import { HEADER_TOP } from '../../lib/layout';
+import { shareRecipe } from '../../lib/share';
+import { Ionicons } from '@expo/vector-icons';
 import { goBackOr } from '../../lib/nav';
 
 export default function CookbookRecipeScreen() {
@@ -181,9 +183,16 @@ export default function CookbookRecipeScreen() {
       <Header
         title="Recipe"
         right={
-          <TouchableOpacity onPress={startEditing}>
-            <Text style={styles.editLink}>Edit</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            {/* Your own recipes live nowhere public, so this sends the whole
+                thing as text rather than a link that would open nothing. */}
+            <TouchableOpacity onPress={() => shareRecipe(myRecipeToRecipe(recipe), 'mine')}>
+              <Ionicons name="share-outline" size={20} color="#F2701E" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={startEditing}>
+              <Text style={styles.editLink}>Edit</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -343,6 +352,7 @@ const styles = StyleSheet.create({
   backText: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
   headerRight: { width: 60, alignItems: 'flex-end' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   editLink: { fontSize: 16, color: '#F2701E', fontWeight: '600' },
   saveHeaderBtn: { width: 60, alignItems: 'flex-end' },
   saveHeaderTxt: { fontSize: 16, color: '#F2701E', fontWeight: '700' },

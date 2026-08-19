@@ -32,6 +32,7 @@ import Paywall from '../../components/Paywall';
 import { purchaseRecipe, purchaseCreatorSubscription } from '../../lib/purchases';
 import { usd, findRecipeTier, findCreatorSubTier } from '../../lib/pricing';
 import { goBackOr } from '../../lib/nav';
+import { shareRecipe } from '../../lib/share';
 import { HEADER_TOP } from '../../lib/layout';
 
 type FamilyMember = {
@@ -291,22 +292,7 @@ export default function RecipeDetailScreen() {
 
   // Share a recipe with friends — free recipes only. Premium content stays
   // behind the paywall and cannot be shared out.
-  const shareRecipe = async () => {
-    if (!recipe) return;
-    if (recipe.isPaid) {
-      Alert.alert('Premium recipe', 'Premium recipes are subscriber-only and cannot be shared.');
-      return;
-    }
-    const link = `https://spoondrop.app/recipe/${recipe.id}`;
-    const time = recipe.prepTime + recipe.cookTime;
-    try {
-      await Share.share({
-        message: `Check out "${recipe.title}" by ${recipe.influencer.handle} on SpoonDrop 🍳\n⏱ ${time} min • 🔥 ${recipe.calories} cal\n\n${link}`,
-      });
-    } catch {
-      // user dismissed the share sheet — nothing to do
-    }
-  };
+  const shareThis = () => recipe && shareRecipe(recipe, 'creator');
 
   const loadFamilyMembers = async () => {
     const user = await getCurrentUser();
@@ -444,7 +430,7 @@ export default function RecipeDetailScreen() {
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
           {!recipe.isPaid && (
-            <TouchableOpacity style={styles.shareButton} onPress={shareRecipe}>
+            <TouchableOpacity style={styles.shareButton} onPress={shareThis}>
               <Text style={styles.shareButtonText}>📤</Text>
             </TouchableOpacity>
           )}

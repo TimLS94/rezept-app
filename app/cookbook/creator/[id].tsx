@@ -15,6 +15,8 @@ import { fetchDbRecipeById, saveCookbookEdits, getCookbookEdits, applyEdits, Coo
 import { addRecipesToShoppingList, describeAdd } from '../../../lib/shopping';
 import RecipeEditor, { EditableRecipe } from '../../../components/RecipeEditor';
 import Paywall from '../../../components/Paywall';
+import { shareRecipe } from '../../../lib/share';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../lib/auth';
 import { HEADER_TOP } from '../../../lib/layout';
 
@@ -225,6 +227,12 @@ export default function CookbookCreatorRecipeScreen() {
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBack}>
             <Text style={styles.headerBackText}>← Back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => displayRecipe && shareRecipe(displayRecipe, 'creator')}
+            style={styles.editButton}
+          >
+            <Ionicons name="share-outline" size={19} color="#F2701E" />
           </TouchableOpacity>
           <TouchableOpacity onPress={startEditing} style={styles.editButton}>
             <Text style={styles.editButtonText}>✏️ Edit{!isPremium && ' ✨'}</Text>

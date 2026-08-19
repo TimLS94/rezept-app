@@ -233,7 +233,7 @@ export default function CookModeScreen() {
             </View>
           )}
 
-          <Text style={styles.feedbackLabel}>How was it?</Text>
+          <Text style={styles.feedbackLabel}>Was it SpoonDrop good?</Text>
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map(n => (
               <TouchableOpacity key={n} onPress={() => { setRating(n); if (logId) saveCookRating(logId, n); }}>
