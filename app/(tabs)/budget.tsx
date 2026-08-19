@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  TextInput,
   Image,
   ActivityIndicator,
   Alert
@@ -32,7 +33,6 @@ const buildPlan = (pool: Recipe[]): PlannedMeal[] =>
 export default function BudgetScreen() {
   const { plansByWeek, setWeekPlan, updateWeekPlan } = useMealPlan();
   const [weeklyBudget] = useState(150);
-  const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [generating, setGenerating] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -40,11 +40,30 @@ export default function BudgetScreen() {
   const [pendingDay, setPendingDay] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const [pickerTab, setPickerTab] = useState<'mine' | 'creators'>('mine');
+  // Search and dietary filters belong here rather than over the week: this is
+  // where you are looking for one particular recipe among everything you own.
+  const [pickerQuery, setPickerQuery] = useState('');
+  const [pickerFilters, setPickerFilters] = useState<DietaryTag[]>([]);
+
+  // Description is searched as well as title, because a note's whole content
+  // is its description.
+  const pickerMatches = (r: { title: string; description: string; dietary: DietaryTag[] }) => {
+    const q = pickerQuery.trim().toLowerCase();
+    const hitsQuery =
+      q === '' || r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q);
+    return hitsQuery && pickerFilters.every(tag => r.dietary.includes(tag));
+  };
+
+  const togglePickerFilter = (tag: DietaryTag) =>
+    setPickerFilters(prev => (prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]));
+
   
   // Cookbook recipes for the picker
   const [myRecipes, setMyRecipes] = useState<MyRecipe[]>([]);
   const [creatorRecipes, setCreatorRecipes] = useState<CookbookCreatorRecipe[]>([]);
   const [loadingCookbook, setLoadingCookbook] = useState(false);
+  const shownMine = myRecipes.filter(pickerMatches);
+  const shownCreators = creatorRecipes.filter(pickerMatches);
 
   // Load cookbook when picker opens
   const loadCookbook = async () => {
@@ -76,15 +95,6 @@ export default function BudgetScreen() {
   const goToToday = () => setWeekStart(startOfWeek(new Date()));
 
   const setPlan = (updater: (plan: PlannedMeal[]) => PlannedMeal[]) => updateWeekPlan(key, updater);
-
-  // Changing a filter only narrows what the next Generate may pick. It no
-  // longer silently rebuilds the week — losing a plan you'd already adjusted
-  // because you tapped "vegetarian" is not what that tap meant.
-  const toggleFilter = (tag: DietaryTag) => {
-    setActiveFilters(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
-  };
 
   const totalCost = mealPlan.reduce((sum, meal) => sum + meal.recipe.cost, 0);
   const remaining = weeklyBudget - totalCost;
@@ -123,13 +133,11 @@ export default function BudgetScreen() {
   const regeneratePlan = async () => {
     setGenerating(true);
     try {
-      const options = filterByDietary(await loadPool(), activeFilters);
+      const options = await loadPool();
       if (options.length === 0) {
         Alert.alert(
           'Nothing to plan with yet',
-          activeFilters.length
-            ? 'No recipe matches those filters. Try removing one, or add more recipes to your cookbook.'
-            : 'Add recipes to your cookbook first — import from photos, write your own, or save creator recipes.'
+          'Add recipes to your cookbook first — import from photos, write your own, or save creator recipes.',
         );
         return;
       }
@@ -142,7 +150,7 @@ export default function BudgetScreen() {
   };
 
   const swapMeal = async (id: string) => {
-    const all = filterByDietary(await loadPool(), activeFilters);
+    const all = await loadPool();
     const current = mealPlan.find(m => m.id === id)?.recipe.id;
     const used = mealPlan.map(m => m.recipe.id);
 
@@ -157,9 +165,7 @@ export default function BudgetScreen() {
     if (!from.length) {
       Alert.alert(
         'Nothing to swap in',
-        all.length <= 1
-          ? 'Your cookbook has only this one recipe to offer. Add a few more and the swap will have something to reach for.'
-          : 'No other recipe matches the filters you have set.'
+        'Your cookbook has only this one recipe to offer. Add a few more and the swap will have something to reach for.'
       );
       return;
     }
@@ -291,37 +297,6 @@ export default function BudgetScreen() {
           </View>
         )}
 
-        {/* Dietary Filters */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {DIETARY_TAGS.map(tag => {
-            const active = activeFilters.includes(tag.id);
-            return (
-              <TouchableOpacity
-                key={tag.id}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => toggleFilter(tag.id)}
-              >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                  {tag.icon} {tag.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Filters narrow the next Generate rather than rebuilding the week
-            on the spot — tapping "vegetarian" should not discard a plan you
-            already adjusted. Without saying so, the chips looked broken:
-            they highlighted and nothing else happened. */}
-        {activeFilters.length > 0 && (
-          <Text style={styles.filterHint}>
-            {activeFilters.length} filter{activeFilters.length > 1 ? 's' : ''} set — generate to apply
-          </Text>
-        )}
 
 
 
@@ -420,7 +395,7 @@ export default function BudgetScreen() {
                 onPress={() => setPickerTab('mine')}
               >
                 <Text style={[styles.pickerTabText, pickerTab === 'mine' && styles.pickerTabTextActive]}>
-                  My recipes ({myRecipes.length})
+                  My recipes ({shownMine.length})
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -428,10 +403,44 @@ export default function BudgetScreen() {
                 onPress={() => setPickerTab('creators')}
               >
                 <Text style={[styles.pickerTabText, pickerTab === 'creators' && styles.pickerTabTextActive]}>
-                  From creators ({creatorRecipes.length})
+                  From creators ({shownCreators.length})
                 </Text>
               </TouchableOpacity>
             </View>
+
+            <View style={styles.pickerSearchBox}>
+              <Text style={styles.pickerSearchIcon}>🔍</Text>
+              <TextInput
+                style={styles.pickerSearchInput}
+                value={pickerQuery}
+                onChangeText={setPickerQuery}
+                placeholder="Search your cookbook"
+                placeholderTextColor="#AAA"
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+              />
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.pickerChips}
+            >
+              {DIETARY_TAGS.map(tag => {
+                const active = pickerFilters.includes(tag.id);
+                return (
+                  <TouchableOpacity
+                    key={tag.id}
+                    style={[styles.pickerChip, active && styles.pickerChipActive]}
+                    onPress={() => togglePickerFilter(tag.id)}
+                  >
+                    <Text style={[styles.pickerChipText, active && styles.pickerChipTextActive]}>
+                      {tag.icon} {tag.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
             {loadingCookbook ? (
               <View style={styles.modalLoading}>
@@ -442,7 +451,7 @@ export default function BudgetScreen() {
                 <Text style={styles.modalEmpty}>No recipes yet. Import or write your own in the Cookbook.</Text>
               ) : (
                 <ScrollView style={{ maxHeight: 380 }}>
-                  {myRecipes.map(r => {
+                  {shownMine.map(r => {
                     const recipe = myRecipeToRecipe(r);
                     const timesInWeek = mealPlan.filter(m => m.recipe.id === recipe.id).length;
                     return (
@@ -476,7 +485,7 @@ export default function BudgetScreen() {
                 <Text style={styles.modalEmpty}>No creator recipes saved. Browse creators to add recipes.</Text>
               ) : (
                 <ScrollView style={{ maxHeight: 380 }}>
-                  {creatorRecipes.map(r => {
+                  {shownCreators.map(r => {
                     const timesInWeek = mealPlan.filter(m => m.recipe.id === r.id).length;
                     return (
                       <View key={r.id} style={styles.favRow}>
@@ -587,40 +596,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
-  },
-  filterRow: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#FFF',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#EEE',
-  },
-  filterChipActive: {
-    backgroundColor: '#F2701E',
-    borderColor: '#F2701E',
-  },
-  filterChipText: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
-  },
-  filterChipTextActive: {
-    color: '#FFF',
-    fontWeight: '600',
-  },
-  filterHint: {
-    fontSize: 12,
-    color: '#8A4B1E',
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-    fontWeight: '600',
   },
   fromCookbookButton: {
     backgroundColor: '#0D2B63',
@@ -784,6 +759,31 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     fontWeight: '600',
   },
+  pickerSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FFF9F2',
+    borderWidth: 1,
+    borderColor: '#EFE7DC',
+  },
+  pickerSearchIcon: { fontSize: 14 },
+  pickerSearchInput: { flex: 1, fontSize: 15, color: '#1A1A1A', paddingVertical: 0 },
+  pickerChips: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4, gap: 8 },
+  pickerChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: '#F4F1EC',
+  },
+  pickerChipActive: { backgroundColor: '#0D2B63' },
+  pickerChipText: { fontSize: 12, color: '#666', fontWeight: '600' },
+  pickerChipTextActive: { color: '#FFF' },
   modalLoading: {
     padding: 40,
     alignItems: 'center',
