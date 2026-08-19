@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { fetchMyProfile } from '../../lib/profile';
 import { supabase, getCurrentUser } from '../../lib/supabase';
@@ -70,6 +71,37 @@ type CreatorRecipe = {
   category: string;
   is_paid: boolean;
 };
+
+function NavRow({ icon, title, sub, onPress, last }: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  title: string;
+  sub: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  return (
+    <TouchableOpacity style={[navStyles.row, last && navStyles.rowLast]} onPress={onPress}>
+      <Ionicons name={icon} size={21} color="#0D2B63" style={navStyles.icon} />
+      <View style={{ flex: 1 }}>
+        <Text style={navStyles.title}>{title}</Text>
+        <Text style={navStyles.sub}>{sub}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color="#C9C0AE" />
+    </TouchableOpacity>
+  );
+}
+
+const navStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 15, paddingHorizontal: 16,
+    borderBottomWidth: 1, borderBottomColor: '#F2EDE5',
+  },
+  rowLast: { borderBottomWidth: 0 },
+  icon: { width: 32 },
+  title: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
+  sub: { fontSize: 12.5, color: '#8A8A8A', marginTop: 2 },
+});
 
 export default function ProfileScreen() {
   const { role, isGuest } = useAuth();
@@ -595,6 +627,28 @@ export default function ProfileScreen() {
           </>
         )}
 
+        {/* ── Everything you manage, grouped ────────────────────────── */}
+        <View style={styles.navGroup}>
+          <NavRow icon="people-outline" title="Family & Preferences"
+            sub="Household, dietary needs, allergies"
+            onPress={() => router.push('/preferences')} />
+          <NavRow icon="time-outline" title="Cooking Preferences"
+            sub="Time you have, cuisines you enjoy"
+            onPress={() => router.push('/preferences')} last />
+        </View>
+
+        <View style={styles.navGroup}>
+          <NavRow icon="book-outline" title="My Cookbook"
+            sub="Your recipes and the ones you saved"
+            onPress={() => router.push('/cookbook')} />
+          <NavRow icon="sparkles-outline" title="Inspiration"
+            sub="What you swiped in Discover"
+            onPress={() => router.push('/favorites')} />
+          <NavRow icon="cart-outline" title="Shopping list"
+            sub="What you still need to buy"
+            onPress={() => router.push('/shopping')} last />
+        </View>
+
         {/* Account & Settings */}
         <TouchableOpacity style={styles.settingsCard} onPress={() => router.push('/settings')}>
           <View style={styles.settingsIcon}>
@@ -730,6 +784,10 @@ const styles = StyleSheet.create({
   section: { padding: 20 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  navGroup: {
+    backgroundColor: '#FFF', borderRadius: 16, marginHorizontal: 20, marginBottom: 14,
+    overflow: 'hidden', borderWidth: 1, borderColor: '#EFE7DC',
+  },
   addButton: { backgroundColor: '#F2701E', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   addButtonText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
   budgetInput: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, padding: 16, marginTop: 12 },
