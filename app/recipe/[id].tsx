@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -9,6 +9,7 @@ import {
   Modal,
   ActivityIndicator,
   Share,
+  Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -31,6 +32,7 @@ import Paywall from '../../components/Paywall';
 import { purchaseRecipe, purchaseCreatorSubscription } from '../../lib/purchases';
 import { usd, findRecipeTier, findCreatorSubTier } from '../../lib/pricing';
 import { goBackOr } from '../../lib/nav';
+import { HEADER_TOP } from '../../lib/layout';
 
 type FamilyMember = {
   id: string;
@@ -91,6 +93,14 @@ export default function RecipeDetailScreen() {
   // True while we are still looking. Without it "not found" and "not loaded
   // yet" are the same state, and the screen can only ever show a spinner.
   const [resolving, setResolving] = useState(!localRecipe && !!id);
+
+  // Fades the status-bar scrim in over the last 60pt of the hero.
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrimOpacity = scrollY.interpolate({
+    inputRange: [180, 240],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   // Uploaded recipes aren't in the local catalogue — fetch them from Supabase.
   useEffect(() => {
@@ -412,7 +422,18 @@ export default function RecipeDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.statusScrim, { opacity: scrimOpacity }]}
+      />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
+      >
         {/* Hero Image */}
         <View style={styles.heroContainer}>
           <TouchableOpacity activeOpacity={0.95} onPress={() => setViewerUri(recipe.image)}>
@@ -856,7 +877,7 @@ const styles = StyleSheet.create({
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' },
   shareButton: { position: 'absolute', top: 50, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
   shareButtonText: { fontSize: 18 },
-  backButton: { position: 'absolute', top: 50, left: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
+  backButton: { position: 'absolute', top: HEADER_TOP, left: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
   backButtonText: { fontSize: 20, color: '#1A1A1A' },
   heroContent: { position: 'absolute', bottom: 20, left: 20, right: 20 },
   badges: { flexDirection: 'row', marginBottom: 10 },
@@ -906,7 +927,16 @@ const styles = StyleSheet.create({
   stepNumberText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
   stepText: { fontSize: 15, color: '#1A1A1A', lineHeight: 22 },
   stepImage: { width: '100%', height: 170, borderRadius: 12, marginTop: 10 },
-  bottomSpacer: { height: 100 },
+  // Tall enough to clear the fixed bottom bar. At 100 the "Favorite" and
+  // "Add to cookbook" buttons ended up underneath it and could not be reached.
+  bottomSpacer: { height: 190 },
+  statusScrim: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: HEADER_TOP,
+    backgroundColor: '#FFF',
+    zIndex: 5,
+  },
   bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 32, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
   copyButton: {
     marginHorizontal: 16,
