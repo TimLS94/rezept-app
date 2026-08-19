@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
+  Easing,
   PanResponder,
   Dimensions,
   Alert,
@@ -171,6 +172,28 @@ export default function DiscoverScreen() {
       },
     })
   ).current;
+
+  // A nudge on the way in: the card leans right, back past centre, and
+  // settles. It runs through `position`, the same value a finger drives, so
+  // the rotation and the LIKE/SKIP overlays come along by themselves — it
+  // looks like the start of a real swipe rather than a decoration.
+  //
+  // Once per mount, not per card. Discover is a tab and stays mounted, so this
+  // is effectively once per app launch: enough to teach the gesture, rare
+  // enough not to become a tic on every recipe.
+  const nudged = useRef(false);
+  useEffect(() => {
+    if (nudged.current || isGuest) return;
+    nudged.current = true;
+    const t = setTimeout(() => {
+      Animated.sequence([
+        Animated.timing(position, { toValue: { x: 46, y: 0 }, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+        Animated.timing(position, { toValue: { x: -34, y: 0 }, duration: 380, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }),
+        Animated.spring(position, { toValue: { x: 0, y: 0 }, friction: 5, useNativeDriver: false }),
+      ]).start();
+    }, 700); // let the first card finish appearing before it moves
+    return () => clearTimeout(t);
+  }, [isGuest]);
 
   const rotate = position.x.interpolate({
     inputRange: [-width / 2, 0, width / 2],
