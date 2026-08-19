@@ -471,7 +471,15 @@ export default function ImportRecipeScreen() {
                     styles.textArea,
                     { height: Math.min(MAX_TEXT_HEIGHT, Math.max(MIN_TEXT_HEIGHT, textHeight)) },
                   ]}
-                  onContentSizeChange={e => setTextHeight(e.nativeEvent.contentSize.height + 24)}
+                  onContentSizeChange={e => {
+                    // Store the measurement as-is. Adding a constant fed the
+                    // result back in: the measured size already includes the
+                    // padding, so every pass added another 24pt and the field
+                    // oscillated. The threshold stops sub-pixel reflows from
+                    // re-rendering on every keystroke.
+                    const h = e.nativeEvent.contentSize.height;
+                    setTextHeight(prev => (Math.abs(prev - h) > 4 ? h : prev));
+                  }}
                   onFocus={() => setTextFocused(true)}
                   onBlur={() => setTextFocused(false)}
                   scrollEnabled={textHeight > MAX_TEXT_HEIGHT}
