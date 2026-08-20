@@ -58,7 +58,18 @@ export default function RecipeEditor({ value, onChange }: Props) {
   };
 
   const setNutrition = (patch: Partial<Nutrition>) =>
-    onChange({ ...value, nutrition: { ...(value.nutrition ?? {}), ...patch } });
+    onChange({
+      ...value,
+      nutrition: {
+        // Carry the calories field in if the nutrition object has none yet.
+        // Typing only protein used to write { protein } with no calories,
+        // and a patch like that read as "this recipe has no calories" —
+        // the meal then counted its macros while showing "no data".
+        ...(value.calories > 0 ? { calories: value.calories } : {}),
+        ...(value.nutrition ?? {}),
+        ...patch,
+      },
+    });
 
   const estimate = async () => {
     if (estimating) return;

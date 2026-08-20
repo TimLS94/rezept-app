@@ -79,17 +79,24 @@ export async function fetchLoggedMeals(from: Date, to: Date): Promise<LoggedMeal
 
   const table = new Map<string, Nutrition>();
   for (const row of [...(creator.data ?? []), ...(mine.data ?? [])] as any[]) {
-    const n: Nutrition = row.nutrition ?? {};
+    const n: Nutrition = { ...(row.nutrition ?? {}) };
     // `calories` predates the nutrition column, so a recipe can have one
     // without the other. Prefer the structured value, fall back to the column.
     if (n.calories == null && row.calories) n.calories = row.calories;
     if (n.calories != null || n.protein != null) table.set(row.id, n);
   }
-  // Your edits win over the creator's original: if you filled the figures in
-  // yourself, those are the ones you meant to count.
+  // Your edits win over the creator's original, field by field — not as a
+  // wholesale replacement. Typing protein into a creator's recipe writes a
+  // patch that holds protein and nothing else; replacing the whole entry with
+  // it threw away the calories that recipe already had, so the meal counted
+  // its macros and showed "no data" for its calories in the same breath.
   for (const row of (edits.data ?? []) as any[]) {
-    const n = row.edits?.nutrition;
-    if (n && (n.calories != null || n.protein != null)) table.set(row.recipe_id, n);
+    const e = row.edits ?? {};
+    const patch: Nutrition = { ...(table.get(row.recipe_id) ?? {}), ...(e.nutrition ?? {}) };
+    // The editor keeps calories in a field of their own as well, and an edit
+    // that only touched that field still means the calories changed.
+    if (e.nutrition?.calories == null && e.calories) patch.calories = e.calories;
+    if (patch.calories != null || patch.protein != null) table.set(row.recipe_id, patch);
   }
 
   // Seed recipes carry calories in the bundle and nothing else.

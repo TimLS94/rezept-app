@@ -19,6 +19,20 @@ import MacroRing from '../../components/MacroRing';
 
 type Mode = 'today' | 'week';
 
+/** What to print on the right of a meal row: calories if we have them, the
+ *  macros if that is all the recipe carries, nothing if it carries neither. */
+function mealFigure(m: { nutrition?: { calories?: number; protein?: number; carbs?: number; fat?: number } }): string | null {
+  const n = m.nutrition;
+  if (!n) return null;
+  if (n.calories) return `${Math.round(n.calories)} cal`;
+  const macros = [
+    n.protein != null ? `${Math.round(n.protein)}P` : null,
+    n.carbs != null ? `${Math.round(n.carbs)}C` : null,
+    n.fat != null ? `${Math.round(n.fat)}F` : null,
+  ].filter(Boolean);
+  return macros.length ? macros.join(' · ') : null;
+}
+
 export default function NutritionLogScreen() {
   const [mode, setMode] = useState<Mode>('today');
   const [offset, setOffset] = useState(0);       // days or weeks back
@@ -70,14 +84,24 @@ export default function NutritionLogScreen() {
     ? offset === 0 ? 'Today' : from.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })
     : `${from.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${addDays(from, 6).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
 
-  const Macro = ({ label, value, goal }: { label: string; value: number; goal?: number }) => (
-    <View style={styles.macroRow}>
-      <Text style={styles.macroLabel}>{label}</Text>
-      <Text style={styles.macroValue}>
-        {value}{goal ? ` / ${goal}` : ''}<Text style={styles.macroUnit}>g</Text>
-      </Text>
-    </View>
-  );
+  // Number plus a slim track. Three bare figures next to a ring left the
+  // right-hand half of the card with nothing to read at a glance.
+  const Macro = ({ label, value, goal }: { label: string; value: number; goal?: number }) => {
+    const pct = goal && goal > 0 ? Math.min(value / goal, 1) : 0;
+    return (
+      <View style={styles.macro}>
+        <View style={styles.macroRow}>
+          <Text style={styles.macroLabel}>{label}</Text>
+          <Text style={styles.macroValue}>
+            {Math.round(value)}{goal ? ` / ${goal}` : ''}<Text style={styles.macroUnit}>g</Text>
+          </Text>
+        </View>
+        <View style={styles.macroTrack}>
+          <View style={[styles.macroFill, { width: `${pct * 100}%` }]} />
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -195,8 +219,11 @@ export default function NutritionLogScreen() {
                     {m.nutrition?.estimated ? ' · estimated' : ''}
                   </Text>
                 </View>
-                <Text style={m.nutrition?.calories ? styles.mealCal : styles.mealNoCal}>
-                  {m.nutrition?.calories ? `${m.nutrition.calories} cal` : 'no data'}
+                {/* A meal with macros but no calories is not "no data" — the
+                    totals above count it, and saying otherwise on the same
+                    screen made the two contradict each other. */}
+                <Text style={mealFigure(m) ? styles.mealCal : styles.mealNoCal}>
+                  {mealFigure(m) ?? 'no data'}
                 </Text>
               </View>
             ))
@@ -235,12 +262,15 @@ const styles = StyleSheet.create({
   navLabel: { fontSize: 15, fontWeight: '700', color: COLORS.navy },
 
   body: { paddingHorizontal: 20 },
-  summary: { flexDirection: 'row', alignItems: 'center', gap: 18, backgroundColor: '#FFF', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#EFE7DC' },
-  macros: { flex: 1, gap: 12 },
+  summary: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: '#FFF', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#EFE7DC' },
+  macros: { flex: 1, gap: 14 },
+  macro: { gap: 6 },
   macroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  macroLabel: { fontSize: 14, color: COLORS.navy, fontWeight: '600' },
-  macroValue: { fontSize: 14, color: COLORS.warmGray, fontWeight: '700' },
-  macroUnit: { fontSize: 12, color: COLORS.warmGray },
+  macroLabel: { fontSize: 13.5, color: COLORS.navy, fontWeight: '600' },
+  macroValue: { fontSize: 13.5, color: COLORS.warmGray, fontWeight: '700' },
+  macroUnit: { fontSize: 11.5, color: COLORS.warmGray },
+  macroTrack: { height: 5, borderRadius: 3, backgroundColor: '#F3EDE4', overflow: 'hidden' },
+  macroFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.orange },
 
   disclaimer: { fontSize: 12, color: COLORS.warmGray, lineHeight: 17, marginTop: 12 },
   unknownNote: { fontSize: 12.5, color: '#8A4B1E', lineHeight: 18, marginTop: 10, backgroundColor: '#FFF3E9', padding: 12, borderRadius: 12 },

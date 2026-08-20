@@ -10,7 +10,7 @@
 // optimisation, never a requirement: a wrong or missing hint costs one extra
 // round trip, not a failure.
 import { RECIPES, Recipe } from '../data/recipes';
-import { fetchDbRecipeById, fetchPurchasedRecipes } from './recipes';
+import { fetchDbRecipeById, fetchPurchasedRecipes, getCookbookEdits, applyEdits } from './recipes';
 import { fetchMyRecipeById, myRecipeToRecipe } from './myRecipes';
 
 export type CookableSource = 'seed' | 'mine' | 'creator' | 'purchase';
@@ -55,6 +55,22 @@ async function fromPurchaseSnapshot(id: string): Promise<Cookable | undefined> {
 }
 
 /**
+ * Lay the user's own edits over a creator's recipe.
+ *
+ * Editing a creator recipe writes a private patch — your servings, your
+ * ingredients, your nutrition. Cook mode read straight from `recipes` and
+ * never looked at the patch, so everything you changed was cooked the
+ * creator's way and logged with the creator's figures. One extra round trip,
+ * and only for recipes that can have a patch at all.
+ */
+async function withEdits(c: Cookable): Promise<Cookable> {
+  if (c.source !== 'creator' && c.source !== 'purchase') return c;
+  const edits = await getCookbookEdits(c.recipe.id);
+  if (!edits || Object.keys(edits).length === 0) return c;
+  return { ...c, recipe: applyEdits(c.recipe, edits) };
+}
+
+/**
  * Resolve `id` to something cook mode can run, from any source the user has
  * legitimate access to. Returns undefined only when the recipe genuinely isn't
  * reachable — deleted, never existed, or not theirs.
@@ -72,7 +88,7 @@ export async function loadCookable(id: string, hint?: CookableSource): Promise<C
     if (hit) return hit;
   } else if (hint === 'creator' || hint === 'purchase') {
     const hit = await fromCreator(id);
-    if (hit) return hit;
+    if (hit) return withEdits(hit);
   }
 
   // No hint, or the hint missed: ask both tables at once. They're different
@@ -83,7 +99,8 @@ export async function loadCookable(id: string, hint?: CookableSource): Promise<C
     hint === 'creator' || hint === 'purchase' ? Promise.resolve(undefined) : fromCreator(id),
   ]);
   if (mine) return mine;
-  if (creator) return creator;
+  if (creator) return withEdits(creator);
 
-  return fromPurchaseSnapshot(id);
+  const snapshot = await fromPurchaseSnapshot(id);
+  return snapshot ? withEdits(snapshot) : undefined;
 }
