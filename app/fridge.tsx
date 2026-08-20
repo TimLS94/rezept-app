@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, TextInput,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +50,7 @@ export default function FridgeScreen() {
   const [shots, setShots] = useState<Shot[]>([]);
   const [scanning, setScanning] = useState(false);
   const [items, setItems] = useState<string[] | null>(null);
+  const [typed, setTyped] = useState('');
   const [matches, setMatches] = useState<RecipeMatch[]>([]);
   const [showPaywall, setShowPaywall] = useState(false);
   const [quota, setQuota] = useState<FridgeQuota | null>(null);
@@ -221,15 +222,39 @@ export default function FridgeScreen() {
     }
   };
 
-  // Removing a misdetected item only re-runs the local ranking — no second AI call.
-  const dropItem = useCallback(async (item: string) => {
-    if (!items) return;
-    const next = items.filter(i => i !== item);
+  // Both corrections take the same path: change the list, save it, re-rank
+  // locally. Neither costs a second AI call, and neither costs a scan.
+  const useItems = useCallback(async (next: string[]) => {
     setItems(next);
     await saveScan(next);   // the correction sticks too, not just the raw scan
     const recipes = await fetchCookableRecipes();
     setMatches(matchRecipes(recipes, next));
-  }, [items]);
+  }, []);
+
+  const dropItem = useCallback(async (item: string) => {
+    if (!items) return;
+    useItems(items.filter(i => i !== item));
+  }, [items, useItems]);
+
+  /**
+   * Add something the camera could not see.
+   *
+   * A photo shows the front of one shelf. The tin at the back, the freezer,
+   * the thing already on the counter — none of that is in the picture, and
+   * before this the only way to include it was to spend another of three
+   * weekly scans photographing it. Typing costs nothing.
+   */
+  const addItem = useCallback(async () => {
+    const name = typed.trim().toLowerCase();
+    if (!name) return;
+    const current = items ?? [];
+    if (current.some(i => i.toLowerCase() === name)) {
+      setTyped('');
+      return;   // already there; silently accepting a duplicate would be a lie
+    }
+    setTyped('');
+    useItems([...current, name]);
+  }, [typed, items, useItems]);
 
   const reset = () => {
     setShots([]);
@@ -374,6 +399,32 @@ export default function FridgeScreen() {
           )}
         </View>
 
+        {/* No scan yet: you can still say what you have. Three scans a week is
+            not many, and someone who knows their own fridge should not have
+            to spend one to be told. */}
+        {!items && (
+          <View style={styles.addRow}>
+            <Text style={styles.addIcon}>{typed.trim() ? foodIcon(typed) : '✍️'}</Text>
+            <TextInput
+              style={styles.addInput}
+              value={typed}
+              onChangeText={setTyped}
+              onSubmitEditing={addItem}
+              placeholder="Or type what you have — no scan needed"
+              placeholderTextColor={COLORS.warmGray}
+              autoCapitalize="none"
+              returnKeyType="done"
+            />
+            <TouchableOpacity
+              style={[styles.addItemBtn, !typed.trim() && styles.addItemBtnOff]}
+              onPress={addItem}
+              disabled={!typed.trim()}
+            >
+              <Text style={styles.addItemBtnText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <TouchableOpacity
           style={[styles.scanBtn, (!shots.length || scanning || quota?.remaining === 0) && styles.scanBtnDisabled]}
           onPress={scan}
@@ -394,7 +445,11 @@ export default function FridgeScreen() {
               </Text>
               <TouchableOpacity onPress={reset}><Text style={styles.resetText}>Start over</Text></TouchableOpacity>
             </View>
-            <Text style={styles.hint}>Tap anything it got wrong to remove it.</Text>
+            <Text style={styles.hint}>
+              Tap anything it got wrong to remove it, and add whatever the photo missed —
+              the back of the shelf, the freezer, the tin in the cupboard. Neither costs
+              a scan.
+            </Text>
             <View style={styles.chips}>
               {items.map(item => (
                 <TouchableOpacity key={item} style={styles.chip} onPress={() => dropItem(item)}>
@@ -403,6 +458,27 @@ export default function FridgeScreen() {
                   <Ionicons name="close" size={13} color={COLORS.warmGray} />
                 </TouchableOpacity>
               ))}
+            </View>
+
+            <View style={styles.addRow}>
+              <Text style={styles.addIcon}>{typed.trim() ? foodIcon(typed) : '➕'}</Text>
+              <TextInput
+                style={styles.addInput}
+                value={typed}
+                onChangeText={setTyped}
+                onSubmitEditing={addItem}
+                placeholder="Add what else you have"
+                placeholderTextColor={COLORS.warmGray}
+                autoCapitalize="none"
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={[styles.addItemBtn, !typed.trim() && styles.addItemBtnOff]}
+                onPress={addItem}
+                disabled={!typed.trim()}
+              >
+                <Text style={styles.addItemBtnText}>Add</Text>
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.sectionTitle}>Cook tonight</Text>
@@ -527,6 +603,16 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 7,
   },
   chipIcon: { fontSize: 14 },
+  addRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FFF', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: '#EFE7DC', marginTop: 12, marginBottom: 4,
+  },
+  addIcon: { fontSize: 17 },
+  addInput: { flex: 1, fontFamily: FONTS.body, fontSize: 15, color: COLORS.charcoal, paddingVertical: 6 },
+  addItemBtn: { backgroundColor: COLORS.orange, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
+  addItemBtnOff: { backgroundColor: '#E6DED2' },
+  addItemBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
   chipText: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.charcoal },
 
   empty: { fontFamily: FONTS.body, fontSize: 13.5, color: COLORS.warmGray },

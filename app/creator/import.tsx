@@ -206,7 +206,7 @@ export default function ImportRecipeScreen() {
       cookTime: recipe.cookTime,
       servings: recipe.servings,
       calories: recipe.calories,
-      cost: 0,
+      cost: recipe.cost ?? 0,
       difficulty: recipe.difficulty,
       dietary: recipe.dietary.filter(d => 
         ['healthy', 'high-protein', 'gluten-free', 'vegetarian', 'vegan', 'dairy-free'].includes(d)
@@ -514,6 +514,24 @@ export default function ImportRecipeScreen() {
                     style={styles.editInputSmall}
                     value={String(recipe.calories)}
                     onChangeText={(t) => setRecipe({ ...recipe, calories: parseInt(t) || 0 })}
+                    keyboardType="numeric"
+                  />
+                </View>
+                {/* Cost was hardcoded to zero here, so a creator who imported
+                    a recipe published it with no price on the ingredients —
+                    while the same creator filling the form by hand could set
+                    one. The app shows cost per serving in three places, and
+                    all three were blank for imported recipes. */}
+                <View style={styles.metaEditItem}>
+                  <Text style={styles.editLabel}>Cost ($)</Text>
+                  <TextInput
+                    style={styles.editInputSmall}
+                    value={recipe.cost ? String(recipe.cost) : ''}
+                    onChangeText={(t) =>
+                      setRecipe({ ...recipe, cost: parseFloat(t.replace(',', '.')) || 0 })
+                    }
+                    placeholder="0"
+                    placeholderTextColor="#BBB"
                     keyboardType="numeric"
                   />
                 </View>

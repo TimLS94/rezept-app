@@ -21,6 +21,11 @@ export type ExtractedRecipe = {
     category: 'produce' | 'meat' | 'dairy' | 'pantry' | 'bakery' | 'frozen' | 'other';
   }[];
   steps: string[];
+  /** Total ingredient cost, if the person reviewing the import fills one in.
+   *  The model is never asked to guess a price — it cannot know what things
+   *  cost where you shop, and a made-up figure would end up on the card as a
+   *  fact. */
+  cost?: number;
 };
 
 export type ExtractionResult =

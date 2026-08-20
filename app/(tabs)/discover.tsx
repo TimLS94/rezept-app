@@ -452,8 +452,11 @@ const styles = StyleSheet.create({
   influencerHandle: { fontSize: 12, color: '#F2701E', fontWeight: '500' },
   viewProfileArrow: { fontSize: 24, color: 'rgba(255,255,255,0.55)', marginLeft: 'auto', paddingLeft: 12 },
   cardTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 10 },
-  cardMeta: { flexDirection: 'row', marginBottom: 12 },
-  cardMetaText: { fontSize: 13.5, color: '#FFFFFF', marginRight: 16, fontWeight: '600' },
+  // Wraps. Four facts do not fit across a card this wide, so the cost — the
+  // last one added and the one people asked for — was running off the edge
+  // instead of dropping to a second line.
+  cardMeta: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6, marginBottom: 12 },
+  cardMetaText: { fontSize: 13.5, color: '#FFFFFF', fontWeight: '600' },
   cardDescription: { fontSize: 15, color: '#FFFFFF', lineHeight: 22, marginBottom: 14 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 14 },
   tagBadge: { backgroundColor: 'rgba(124,191,122,0.18)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, marginRight: 8, marginBottom: 8 },
