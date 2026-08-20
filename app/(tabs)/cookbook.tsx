@@ -28,12 +28,20 @@ import ServingsStepper from '../../components/ServingsStepper';
 import { getAllServings, setServings as setServingsStore } from '../../lib/servings';
 import { getFamilyServings } from '../../lib/family';
 import { HEADER_TOP } from '../../lib/layout';
+import {
+  fetchCollections, ensureDefaultCollections, createCollection,
+  COLLECTION_ICONS, Collection,
+} from '../../lib/collections';
+import { Modal } from 'react-native';
 
 // Two kinds of thing live in a cookbook, and they behave differently: what you
 // wrote (yours, editable, deletable) and what you got from a creator (theirs,
 // read-only, kept because you paid for it). One list mixing both would need an
 // exception on every action, so they get a tab each.
-type Tab = 'mine' | 'creators';
+// A third tab groups what the other two hold. Collections cut across both —
+// "Dessert" is a thing you cook, not a thing you own — so it cannot live
+// inside either list.
+type Tab = 'mine' | 'creators' | 'collections';
 
 export default function CookbookScreen() {
   const { user, isGuest, isPremium, refresh } = useAuth();
@@ -50,6 +58,9 @@ export default function CookbookScreen() {
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
   const [servingsMap, setServingsMap] = useState<Record<string, number>>({});
   const [familyServings, setFamilyServings] = useState<number | null>(null);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [newCollection, setNewCollection] = useState<{ name: string; icon: string } | null>(null);
+  const [savingCollection, setSavingCollection] = useState(false);
 
   useEffect(() => {
     getAllServings().then(setServingsMap).catch(() => {});
@@ -90,10 +101,36 @@ export default function CookbookScreen() {
   // Both tabs load together, in one round trip's worth of time — switching tabs
   // should never be a loading spinner.
   const loadRecipes = async () => {
-    const [mine, bought] = await Promise.all([fetchMyRecipes(), fetchCookbookCreatorRecipes()]);
+    const [mine, bought, cols] = await Promise.all([
+      fetchMyRecipes(),
+      fetchCookbookCreatorRecipes(),
+      fetchCollections(),
+    ]);
     setRecipes(mine);
     setOwned(bought);
+    // An empty tab with a "+" on it is a question, not a starting point, so a
+    // new account gets Breakfast/Lunch/Dinner/Dessert/Snacks as ordinary rows
+    // it can rename or throw away.
+    setCollections(await ensureDefaultCollections(cols));
     setLoading(false);
+  };
+
+  const saveNewCollection = async () => {
+    if (!newCollection || savingCollection) return;
+    const name = newCollection.name.trim();
+    if (!name) {
+      Alert.alert('Name needed', 'Give the collection a name so you can find it again.');
+      return;
+    }
+    setSavingCollection(true);
+    const result = await createCollection(name, newCollection.icon);
+    setSavingCollection(false);
+    if ('error' in result) {
+      Alert.alert('Could not create', result.error);
+      return;
+    }
+    setNewCollection(null);
+    setCollections(await fetchCollections());
   };
 
   // useFocusEffect already fires on mount, so a separate mount effect would
@@ -186,12 +223,20 @@ export default function CookbookScreen() {
           onPress={() => setTab('creators')}
         >
           <Text style={[styles.tabText, tab === 'creators' && styles.tabTextActive]}>
-            From creators{owned.length ? ` (${owned.length})` : ''}
+            Creators{owned.length ? ` (${owned.length})` : ''}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, tab === 'collections' && styles.tabActive]}
+          onPress={() => setTab('collections')}
+        >
+          <Text style={[styles.tabText, tab === 'collections' && styles.tabTextActive]}>
+            Collections{collections.length ? ` (${collections.length})` : ''}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {!loading && (tab === 'mine' ? recipes.length > 0 : owned.length > 0) && (
+      {!loading && tab !== 'collections' && (tab === 'mine' ? recipes.length > 0 : owned.length > 0) && (
         <View style={styles.findBar}>
           <View style={styles.searchBox}>
             <Ionicons name="search" size={16} color="#9A9A9A" />
@@ -228,6 +273,13 @@ export default function CookbookScreen() {
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color="#F2701E" />
         </View>
+      ) : tab === 'collections' ? (
+        <CollectionsTab
+          collections={collections}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onNew={() => setNewCollection({ name: '', icon: '📁' })}
+        />
       ) : tab === 'creators' ? (
         <CreatorsTab
           recipes={owned.filter(matches)}
@@ -383,7 +435,104 @@ export default function CookbookScreen() {
         onClose={() => setShowPaywall(false)}
         onSubscribed={refresh}
       />
+
+      <Modal
+        visible={!!newCollection}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setNewCollection(null)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHead}>
+              <TouchableOpacity onPress={() => setNewCollection(null)}>
+                <Text style={styles.sheetCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.sheetTitle}>New collection</Text>
+              <TouchableOpacity onPress={saveNewCollection} disabled={savingCollection}>
+                <Text style={styles.sheetSave}>{savingCollection ? '…' : 'Create'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.sheetInput}
+              value={newCollection?.name ?? ''}
+              onChangeText={t => setNewCollection(c => (c ? { ...c, name: t } : c))}
+              placeholder="Sunday roasts, Kids' favourites, Quick lunches…"
+              placeholderTextColor="#AAA"
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={saveNewCollection}
+            />
+
+            <ScrollView contentContainerStyle={styles.iconGrid}>
+              {COLLECTION_ICONS.map(icon => (
+                <TouchableOpacity
+                  key={icon}
+                  style={[styles.iconCell, newCollection?.icon === icon && styles.iconCellOn]}
+                  onPress={() => setNewCollection(c => (c ? { ...c, icon } : c))}
+                >
+                  <Text style={styles.iconCellText}>{icon}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
+  );
+}
+
+/**
+ * The collections list. Deliberately just a list of doors: everything you can
+ * do to a collection — rename it, re-icon it, add recipes, delete it — lives
+ * inside it, where there is room to say what each action does.
+ */
+function CollectionsTab({
+  collections, refreshing, onRefresh, onNew,
+}: {
+  collections: Collection[];
+  refreshing: boolean;
+  onRefresh: () => void;
+  onNew: () => void;
+}) {
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F2701E" />}
+      contentContainerStyle={styles.collectionList}
+    >
+      <Text style={styles.collectionHint}>
+        Group anything from either tab. A collection is only a grouping —
+        deleting one never deletes a recipe.
+      </Text>
+
+      {collections.map(c => (
+        <TouchableOpacity
+          key={c.id}
+          style={styles.collectionRow}
+          onPress={() => router.push(`/cookbook/collection/${c.id}`)}
+        >
+          <View style={styles.collectionIcon}>
+            <Text style={styles.collectionIconText}>{c.icon}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.collectionName}>{c.name}</Text>
+            <Text style={styles.collectionCount}>
+              {c.count === 0 ? 'Empty' : `${c.count} recipe${c.count === 1 ? '' : 's'}`}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#C9BFB0" />
+        </TouchableOpacity>
+      ))}
+
+      <TouchableOpacity style={styles.newCollection} onPress={onNew}>
+        <Ionicons name="add" size={18} color="#F2701E" />
+        <Text style={styles.newCollectionText}>New collection</Text>
+      </TouchableOpacity>
+
+      <View style={{ height: 40 }} />
+    </ScrollView>
   );
 }
 
@@ -584,6 +733,48 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, fontWeight: '600', color: '#999' },
   tabTextActive: { color: '#0D2B63' },
   cardGone: { fontSize: 11, color: '#B0402A', fontWeight: '600', marginTop: 4 },
+
+  collectionList: { padding: 20, gap: 10 },
+  collectionHint: { fontSize: 12.5, color: '#8A8378', lineHeight: 18, marginBottom: 4 },
+  collectionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: '#FFF', borderRadius: 16, padding: 14,
+  },
+  collectionIcon: {
+    width: 46, height: 46, borderRadius: 14, backgroundColor: '#FFF3E9',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  collectionIconText: { fontSize: 22 },
+  collectionName: { fontSize: 16, fontWeight: '700', color: '#0D2B63' },
+  collectionCount: { fontSize: 12.5, color: '#8A8378', marginTop: 2 },
+  newCollection: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 16, borderRadius: 16,
+    borderWidth: 1, borderColor: '#F0D9C4', borderStyle: 'dashed',
+  },
+  newCollectionText: { fontSize: 15, fontWeight: '700', color: '#F2701E' },
+
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: '#FFF9F2', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 16, paddingBottom: 28, maxHeight: '80%',
+  },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  sheetTitle: { fontSize: 16, fontWeight: '700', color: '#0D2B63' },
+  sheetCancel: { fontSize: 15, color: '#8A8378' },
+  sheetSave: { fontSize: 15, fontWeight: '700', color: '#F2701E' },
+  sheetInput: {
+    backgroundColor: '#FFF', borderRadius: 12, padding: 14, fontSize: 16,
+    borderWidth: 1, borderColor: '#EFE7DC', marginBottom: 14,
+  },
+  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 10 },
+  iconCell: {
+    width: 54, height: 54, borderRadius: 14, backgroundColor: '#FFF',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  iconCellOn: { borderColor: '#F2701E', borderWidth: 2, backgroundColor: '#FFF3E9' },
+  iconCellText: { fontSize: 24 },
   chipRow: { paddingHorizontal: 20, paddingTop: 14, gap: 8 },
   chip: {
     paddingHorizontal: 14,
