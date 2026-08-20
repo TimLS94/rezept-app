@@ -20,6 +20,7 @@ import { buildRecipePool, shuffled } from '../../lib/planner';
 import { fetchMyRecipes, myRecipeToRecipe } from '../../lib/myRecipes';
 import { fetchCookbookCreatorRecipes } from '../../lib/recipes';
 import { loadScan, matchRecipes } from '../../lib/fridge';
+import { fetchPopularThisWeek, isPopular, Popularity } from '../../lib/popular';
 import { COLORS, FONTS } from '../../lib/theme';
 import { HEADER_TOP } from '../../lib/layout';
 
@@ -57,6 +58,8 @@ export default function HomeScreen() {
   // answers "how close am I"; this answers "what does it cost me to say yes",
   // which is the question someone standing in their kitchen is actually asking.
   const [toBuy, setToBuy] = useState<Record<string, number>>({});
+  // recipe id → how many people cooked it in the last seven days.
+  const [popular, setPopular] = useState<Record<string, Popularity>>({});
 
   useFocusEffect(
     useCallback(() => {
@@ -79,7 +82,19 @@ export default function HomeScreen() {
         const pool = await buildRecipePool(owned);
         const usable = (pool.length ? pool : RECIPES).filter(r => r.steps.length > 0);
         if (!active) return;
-        setPicks(shuffled(usable).slice(0, 8));
+
+        // What everyone else cooked this week, so the first suggestion can be
+        // something people are actually making. It still comes out of this
+        // user's own pool — their cookbook and their filters decide what is
+        // eligible, popularity only decides the order within it.
+        const trending = await fetchPopularThisWeek();
+        if (!active) return;
+        setPopular(trending);
+
+        const shuffledPool = shuffled(usable);
+        const hot = shuffledPool.filter(r => isPopular(trending[r.id]));
+        const rest = shuffledPool.filter(r => !isPopular(trending[r.id]));
+        setPicks([...hot, ...rest].slice(0, 8));
 
         // A real number or none at all.
         const scan = await loadScan();
@@ -176,6 +191,16 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.heroFoot}>
+                {/* Only when there are people behind it. A "popular" badge on
+                    a recipe one person cooked is your own cook log read back
+                    to you, which is not a thing the home screen should say. */}
+                {isPopular(popular[hero.id]) && (
+                  <View style={styles.hotChip}>
+                    <Text style={styles.hotText}>
+                      🔥 Popular this week · {popular[hero.id].people} people cooked it
+                    </Text>
+                  </View>
+                )}
                 <Text style={styles.heroTitle} numberOfLines={2}>{hero.title}</Text>
                 {/* Time is on the badge above; repeating it here spent a line
                     on something already answered. */}
@@ -267,7 +292,11 @@ export default function HomeScreen() {
                   <View style={styles.ideaFoot}>
                     <Text style={styles.ideaTitle} numberOfLines={2}>{r.title}</Text>
                     <Text style={styles.ideaSub} numberOfLines={1}>
-                      {[shoppingLine(r), chipsFor(r)[0]].filter(Boolean).join('  ·  ')}
+                      {[
+                        isPopular(popular[r.id]) ? '🔥 popular' : null,
+                        shoppingLine(r),
+                        chipsFor(r)[0],
+                      ].filter(Boolean).join('  ·  ')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -319,6 +348,11 @@ const styles = StyleSheet.create({
   heroFoot: { padding: 16 },
   heroTitle: { fontFamily: FONTS.display, fontSize: 24, color: '#FFF' },
   heroMeta: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 6 },
+  hotChip: {
+    alignSelf: 'flex-start', backgroundColor: COLORS.orange,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, marginBottom: 8,
+  },
+  hotText: { color: '#FFF', fontSize: 11.5, fontWeight: '700' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   chip: {
     backgroundColor: 'rgba(255,255,255,0.22)',
