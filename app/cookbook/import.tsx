@@ -207,13 +207,15 @@ export default function ImportRecipeScreen() {
       cookTime: recipe.cookTime,
       servings: recipe.servings,
       calories: recipe.calories,
-      cost: 0,
+      cost: recipe.cost ?? 0,
+      nutrition: recipe.nutrition,
       difficulty: recipe.difficulty,
       dietary: recipe.dietary.filter(d => 
         ['healthy', 'high-protein', 'gluten-free', 'vegetarian', 'vegan', 'dairy-free'].includes(d)
       ) as DietaryTag[],
       ingredients: recipe.ingredients as Ingredient[],
       steps: recipe.steps,
+      stepTimers: recipe.stepTimers,
       sourceUrl: recipe.sourceUrl?.trim() || undefined,
     });
 

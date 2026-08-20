@@ -42,6 +42,11 @@ export default function CookbookRecipeScreen() {
       cookTime: recipe.cookTime,
       servings: recipe.servings,
       calories: recipe.calories,
+      cost: recipe.cost,
+      // Without this the editor opened blank on nutrition every time: the
+      // figures were on the recipe and on screen, but the draft never carried
+      // them back in, so reopening Edit looked like the save had been lost.
+      nutrition: recipe.nutrition,
       difficulty: recipe.difficulty,
       dietary: recipe.dietary,
       ingredients: recipe.ingredients,
@@ -66,6 +71,8 @@ export default function CookbookRecipeScreen() {
       cookTime: draft.cookTime,
       servings: draft.servings,
       calories: draft.calories,
+      cost: draft.cost,
+      nutrition: draft.nutrition,
       difficulty: draft.difficulty,
       dietary: cleanDietary,
       ingredients: draft.ingredients as Ingredient[],
@@ -231,7 +238,22 @@ export default function CookbookRecipeScreen() {
             </TouchableOpacity>
           ) : null}
 
-          <NutritionStrip nutrition={recipe.nutrition} calories={recipe.calories} />
+          {/* Cost gets its own line rather than a fifth cell in the row above:
+              four cells already fill the width, and a fifth squeezed the
+              servings figure into its neighbour. */}
+          {recipe.cost > 0 ? (
+            <View style={styles.costRow}>
+              <Text style={styles.costValue}>${recipe.cost.toFixed(2)}</Text>
+              <Text style={styles.costLabel}>
+                for the whole recipe
+                {recipe.servings > 0
+                  ? ` · $${(recipe.cost / recipe.servings).toFixed(2)} per serving`
+                  : ''}
+              </Text>
+            </View>
+          ) : null}
+
+          <NutritionStrip nutrition={recipe.nutrition} calories={recipe.calories} flush />
 
           {/* Empty recipe: caption/video extraction produced no content */}
           {failedImport ? (
@@ -386,6 +408,19 @@ const styles = StyleSheet.create({
   metaItem: { alignItems: 'center' },
   metaValue: { fontSize: 18, fontWeight: '700', color: '#F2701E' },
   metaLabel: { fontSize: 12, color: '#888', marginTop: 2 },
+
+  costRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  costValue: { fontSize: 18, fontWeight: '700', color: '#F2701E' },
+  costLabel: { fontSize: 12, color: '#888', flex: 1 },
 
   sourceLink: { marginBottom: 16 },
   sourceLinkText: { fontSize: 14, color: '#F2701E', fontWeight: '600' },

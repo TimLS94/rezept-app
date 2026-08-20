@@ -10,8 +10,17 @@ import { COLORS, FONTS } from '../lib/theme';
 import type { Recipe } from '../data/recipes';
 
 export default function NutritionStrip({
-  nutrition, calories,
-}: { nutrition?: Recipe['nutrition']; calories?: number }) {
+  nutrition, calories, flush,
+}: {
+  nutrition?: Recipe['nutrition'];
+  calories?: number;
+  /**
+   * Set when the strip sits inside a container that already has its own
+   * padding. Without it the card carries its own 16pt margin on top of the
+   * parent's, and it ends up visibly narrower than everything around it.
+   */
+  flush?: boolean;
+}) {
   // `calories` predates the nutrition column, so a recipe can carry one
   // without the other. Either alone is worth showing.
   const kcal = nutrition?.calories ?? (calories && calories > 0 ? calories : undefined);
@@ -26,7 +35,7 @@ export default function NutritionStrip({
   );
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, flush && styles.cardFlush]}>
       <View style={styles.head}>
         <Text style={styles.title}>Per serving</Text>
         {nutrition?.estimated && <Text style={styles.badge}>estimated</Text>}
@@ -54,6 +63,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16, marginTop: 12,
     borderWidth: 1, borderColor: '#EFE7DC',
   },
+  cardFlush: { marginHorizontal: 0, marginTop: 0, marginBottom: 16 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   title: { fontFamily: FONTS.semibold, fontSize: 14, color: COLORS.navy },
   badge: {

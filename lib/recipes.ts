@@ -226,6 +226,7 @@ export async function removeRecipeFromCookbook(recipeId: string): Promise<{ ok: 
 // ── Cookbook Edits ─────────────────────────────────────────────────────────
 // Save local edits to a creator recipe in the cookbook
 export type CookbookEdits = {
+  cost?: number;
   nutrition?: Recipe['nutrition'];
   title?: string;
   description?: string;
@@ -267,6 +268,10 @@ export function applyEdits(recipe: Recipe, edits: CookbookEdits): Recipe {
     cookTime: edits.cookTime ?? recipe.cookTime,
     servings: edits.servings ?? recipe.servings,
     calories: edits.calories ?? recipe.calories,
+    // Nutrition and cost were saved but never merged back, so the numbers
+    // reappeared on screen only until the next read of the recipe.
+    nutrition: edits.nutrition ?? recipe.nutrition,
+    cost: edits.cost ?? recipe.cost,
     difficulty: edits.difficulty ?? recipe.difficulty,
     dietary: edits.dietary ?? recipe.dietary,
     ingredients: edits.ingredients ?? recipe.ingredients,

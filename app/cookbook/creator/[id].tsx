@@ -19,6 +19,7 @@ import { shareRecipe } from '../../../lib/share';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../lib/auth';
 import { HEADER_TOP } from '../../../lib/layout';
+import NutritionStrip from '../../../components/NutritionStrip';
 
 /**
  * View and edit a creator recipe that's in the user's cookbook.
@@ -75,6 +76,7 @@ export default function CookbookCreatorRecipeScreen() {
       cookTime: displayRecipe.cookTime,
       servings: displayRecipe.servings,
       calories: displayRecipe.calories,
+      cost: displayRecipe.cost,
       nutrition: displayRecipe.nutrition,
       difficulty: displayRecipe.difficulty,
       dietary: displayRecipe.dietary,
@@ -98,6 +100,7 @@ export default function CookbookCreatorRecipeScreen() {
       cookTime: draft.cookTime,
       servings: draft.servings,
       calories: draft.calories,
+      cost: draft.cost,
       nutrition: draft.nutrition,
       difficulty: draft.difficulty,
       dietary: cleanDietary,
@@ -305,6 +308,27 @@ export default function CookbookCreatorRecipeScreen() {
             </View>
           </View>
 
+          {displayRecipe.cost > 0 ? (
+            <View style={styles.costRow}>
+              <Text style={styles.costValue}>${displayRecipe.cost.toFixed(2)}</Text>
+              <Text style={styles.costLabel}>
+                for the whole recipe
+                {displayRecipe.servings > 0
+                  ? ` · $${(displayRecipe.cost / displayRecipe.servings).toFixed(2)} per serving`
+                  : ''}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* The figures the creator published, or your own if you edited them
+              — this screen showed neither, so a saved change had nowhere to
+              appear. */}
+          <NutritionStrip
+            nutrition={displayRecipe.nutrition}
+            calories={displayRecipe.calories}
+            flush
+          />
+
           {/* Dietary tags */}
           {displayRecipe.dietary.length > 0 && (
             <View style={styles.tagsRow}>
@@ -435,6 +459,13 @@ const styles = StyleSheet.create({
   description: { fontSize: 15, color: '#666', lineHeight: 22, marginBottom: 16 },
   statsRow: { flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 16 },
   stat: { flex: 1, alignItems: 'center' },
+  costRow: {
+    flexDirection: 'row', alignItems: 'baseline', gap: 8,
+    backgroundColor: '#FFF', borderRadius: 16,
+    paddingVertical: 12, paddingHorizontal: 16, marginBottom: 16,
+  },
+  costValue: { fontSize: 18, fontWeight: '700', color: '#F2701E' },
+  costLabel: { fontSize: 12, color: '#888', flex: 1 },
   statValue: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   statLabel: { fontSize: 11, color: '#888', marginTop: 4 },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },

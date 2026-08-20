@@ -13,6 +13,8 @@ export type EditableRecipe = {
   cookTime: number;
   servings: number;
   calories: number;
+  /** Total ingredient cost for the whole recipe, not per serving. */
+  cost?: number;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   dietary: string[];
   ingredients: Ingredient[];
@@ -170,11 +172,23 @@ export default function RecipeEditor({ value, onChange }: Props) {
 
       {/* Meta */}
       <View style={styles.card}>
+        {/* Two rows of two, not four across. Four fields on a phone left each
+            one about as wide as its own label, so "Cost ($)" ran into
+            "Servings" and the whole card read as a squeeze. */}
         <View style={styles.metaRow}>
-          <NumField label="Prep (min)" value={value.prepTime} onChange={(n) => set({ prepTime: n })} />
-          <NumField label="Cook (min)" value={value.cookTime} onChange={(n) => set({ cookTime: n })} />
-          <NumField label="Servings" value={value.servings} onChange={(n) => set({ servings: n })} />
+          <NumField label="Prep · min" value={value.prepTime} onChange={(n) => set({ prepTime: n })} />
+          <NumField label="Cook · min" value={value.cookTime} onChange={(n) => set({ cookTime: n })} />
         </View>
+        <View style={[styles.metaRow, styles.mt]}>
+          <NumField label="Servings" value={value.servings} onChange={(n) => set({ servings: n })} />
+          <NumField label="Cost · $ total" value={value.cost ?? 0} onChange={(n) => set({ cost: n })} />
+        </View>
+        {(value.cost ?? 0) > 0 && value.servings > 0 && (
+          <Text style={styles.hint}>
+            ${((value.cost ?? 0) / value.servings).toFixed(2)} per serving. Enter what the whole
+            recipe costs, so the per-serving figure follows the servings.
+          </Text>
+        )}
       </View>
 
       {/* Difficulty */}
@@ -294,11 +308,13 @@ export default function RecipeEditor({ value, onChange }: Props) {
                 nutrition: { ...(value.nutrition ?? {}), calories: n, estimated: false },
               })
             } />
-          <NumField label="Protein (g)" value={value.nutrition?.protein ?? 0}
+          <NumField label="Protein · g" value={value.nutrition?.protein ?? 0}
             onChange={n => setNutrition({ protein: n, estimated: false })} />
-          <NumField label="Carbs (g)" value={value.nutrition?.carbs ?? 0}
+        </View>
+        <View style={[styles.row, styles.mt]}>
+          <NumField label="Carbs · g" value={value.nutrition?.carbs ?? 0}
             onChange={n => setNutrition({ carbs: n, estimated: false })} />
-          <NumField label="Fat (g)" value={value.nutrition?.fat ?? 0}
+          <NumField label="Fat · g" value={value.nutrition?.fat ?? 0}
             onChange={n => setNutrition({ fat: n, estimated: false })} />
         </View>
 
