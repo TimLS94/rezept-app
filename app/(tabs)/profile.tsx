@@ -420,7 +420,7 @@ export default function ProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.backButton} />
-          <Text style={styles.headerTitle}>{isCreator ? 'Creator Profile' : 'Family Profile'}</Text>
+          <Text style={styles.headerTitle}>{isCreator ? 'Creator Profile' : 'Profile'}</Text>
           <View style={{ width: 60 }} />
         </View>
 
@@ -531,28 +531,10 @@ export default function ProfileScreen() {
           </>
         ) : (
           <>
-            {/* User Stats */}
-            <View style={styles.statsCard}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{familyMembers.length}</Text>
-                <Text style={styles.statLabel}>Members</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{getTotalPortions().toFixed(1)}x</Text>
-                <Text style={styles.statLabel}>Portions</Text>
-              </View>
-              {FEATURES.budget && (
-                <>
-                  <View style={styles.statDivider} />
-                  <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>${weeklyBudget}</Text>
-                    <Text style={styles.statLabel}>Weekly</Text>
-                  </View>
-                </>
-              )}
-            </View>
-
+            {/* A Members/Portions card used to sit here, counting a family
+                list that now lives in Family & Preferences — two numbers
+                about something you could neither see nor change from this
+                screen. The four counted stats above cover it. */}
             {/* Budget — roadmap V2, hidden behind the budget feature flag */}
             {FEATURES.budget && (
               <View style={styles.section}>

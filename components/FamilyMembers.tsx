@@ -163,8 +163,10 @@ export default function FamilyMembers() {
             autoFocus
           />
           <View style={styles.formRow}>
-            <TextInput
-              style={[styles.input, styles.small]}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>Age</Text>
+              <TextInput
+              style={styles.input}
               value={draft.age}
               onChangeText={t => {
                 const next = { ...draft, age: t.replace(/[^0-9]/g, '') };
@@ -173,9 +175,12 @@ export default function FamilyMembers() {
               placeholder="Age"
               placeholderTextColor="#BBB"
               keyboardType="number-pad"
-            />
-            <TextInput
-              style={[styles.input, styles.small]}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>Weight (lb)</Text>
+              <TextInput
+              style={styles.input}
               value={draft.weight}
               onChangeText={t => {
                 const next = { ...draft, weight: t.replace(/[^0-9.]/g, '') };
@@ -184,17 +189,25 @@ export default function FamilyMembers() {
               placeholder="Weight (lb)"
               placeholderTextColor="#BBB"
               keyboardType="decimal-pad"
-            />
+              />
+            </View>
           </View>
           <View style={styles.formRow}>
-            <TextInput
-              style={[styles.input, styles.small]}
-              value={draft.portion}
-              onChangeText={t => setDraft({ ...draft, portion: t.replace(/[^0-9.]/g, '') })}
-              placeholder="Portions (1 = adult)"
-              placeholderTextColor="#BBB"
-              keyboardType="decimal-pad"
-            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>Portion size</Text>
+              <TextInput
+                style={styles.input}
+                value={draft.portion}
+                onChangeText={t => setDraft({ ...draft, portion: t.replace(/[^0-9.]/g, '') })}
+                placeholder="1"
+                placeholderTextColor="#BBB"
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.fieldHint}>
+                1 = one adult serving. 0.5 for a small child, 1.5 for a big eater.
+                Suggested from age and weight — change it if you know better.
+              </Text>
+            </View>
           </View>
           <View style={styles.formRow}>
             {(['male', 'female'] as const).map(g => (
@@ -284,6 +297,8 @@ const styles = StyleSheet.create({
     fontSize: 15, color: '#1A1A1A', borderWidth: 1, borderColor: '#EFE7DC',
   },
   small: { flex: 1 },
+  fieldLabel: { fontSize: 12, color: COLORS.navy, fontWeight: '700', marginBottom: 5 },
+  fieldHint: { fontSize: 11, color: COLORS.warmGray, lineHeight: 15, marginTop: 5 },
   gender: {
     flex: 1, paddingVertical: 11, borderRadius: 10, alignItems: 'center',
     borderWidth: 1.5, borderColor: '#EFE7DC',
