@@ -22,6 +22,8 @@ export type Member = {
   /** Portions of an adult serving. Estimated from age and weight, then
    *  editable — a calculation cannot know that your teenager eats double. */
   portion: string;
+  /** The account holder. Always present, never removable. */
+  isSelf?: boolean;
 };
 
 // Roughly how much of an adult portion someone eats, from age and weight.
@@ -55,8 +57,9 @@ export default function FamilyMembers() {
     if (!user) { setLoading(false); return; }
     const { data } = await supabase
       .from('family_members')
-      .select('id, name, age, gender, weight, portion_multiplier')
+      .select('id, name, age, gender, weight, portion_multiplier, is_self')
       .eq('profile_id', user.id)
+      .order('is_self', { ascending: false })
       .order('created_at', { ascending: true });
     setMembers(
       (data ?? []).map((d: any) => ({
@@ -66,12 +69,47 @@ export default function FamilyMembers() {
         gender: (d.gender as 'male' | 'female') ?? 'male',
         weight: d.weight?.toString() ?? '',
         portion: (d.portion_multiplier ?? 1).toString(),
+        isSelf: d.is_self === true,
       })),
     );
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
+
+  // The account holder was missing from the list entirely, so portions were
+  // counted for everyone except the person doing the cooking: a household of
+  // four came out as three and the shopping list bought for three. "You" is
+  // created once, cannot be deleted, and is the person nutrition goals belong
+  // to.
+  useEffect(() => {
+    if (loading || members.some(m => m.isSelf)) return;
+    (async () => {
+      const user = await getCurrentUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('family_members')
+        .insert({
+          profile_id: user.id,
+          name: 'You',
+          age: null,
+          gender: 'male',
+          weight: null,
+          portion_multiplier: 1,
+          dietary_restrictions: [],
+          is_self: true,
+        })
+        .select()
+        .single();
+      if (data) {
+        setMembers(prev => [
+          { id: data.id, name: 'You', age: '', gender: 'male', weight: '', portion: '1', isSelf: true },
+          ...prev,
+        ]);
+        invalidateFamilyServings();
+      }
+    })();
+  }, [loading, members]);
 
   const startEdit = (m: Member) => setDraft({ ...m });
 
@@ -86,6 +124,7 @@ export default function FamilyMembers() {
 
     const row = {
       profile_id: user.id,
+      is_self: draft.isSelf ?? false,
       name: draft.name.trim(),
       age: parseInt(draft.age) || null,
       gender: draft.gender,
@@ -146,9 +185,13 @@ export default function FamilyMembers() {
                 .filter(Boolean).join('  ·  ')}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => remove(m)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="close" size={18} color={COLORS.warmGray} />
-          </TouchableOpacity>
+          {m.isSelf ? (
+            <Text style={styles.youTag}>you</Text>
+          ) : (
+            <TouchableOpacity onPress={() => remove(m)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close" size={18} color={COLORS.warmGray} />
+            </TouchableOpacity>
+          )}
         </TouchableOpacity>
       ))}
 
@@ -319,5 +362,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EFE7DC',
   },
   quickText: { fontSize: 13, color: COLORS.navy, fontWeight: '600' },
+  youTag: {
+    fontSize: 11, color: COLORS.orange, fontWeight: '700',
+    backgroundColor: '#FFF0E4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
   note: { fontSize: 12, color: COLORS.warmGray, lineHeight: 18, marginTop: 12 },
 });
