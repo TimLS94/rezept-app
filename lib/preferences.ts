@@ -11,6 +11,10 @@ import { DIETARY_TAGS } from '../data/recipes';
 export type Preferences = {
   household?: '1-2' | '3-4' | '5-6' | '6+';
   hasKids?: boolean;
+  /** Exactly how many people, since `household` is only a band. This is what
+   *  "Who you cook for" is built from; the band stays for the coarse
+   *  family_size the rest of the app already reads. */
+  peopleCount?: number;
   /** How many of the household are children. Only meaningful with hasKids. */
   kidsCount?: number;
   diets?: string[];
@@ -126,7 +130,7 @@ export async function savePreferences(prefs: Preferences): Promise<{ error?: str
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'not-authenticated' };
 
-  const servings = householdToServings(prefs.household);
+  const servings = prefs.peopleCount ?? householdToServings(prefs.household);
   const patch: Record<string, unknown> = {
     preferences: prefs,
     onboarded_at: new Date().toISOString(),

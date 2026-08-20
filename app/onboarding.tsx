@@ -59,7 +59,8 @@ export default function OnboardingScreen() {
     // Lay out the household as actual people, so "Who you cook for" is filled
     // in rather than empty with a plus button. Never overwrites an existing
     // list.
-    const people = householdToServings(prefs.household);
+    // The exact count if they set one, the band's number otherwise.
+    const people = prefs.peopleCount ?? householdToServings(prefs.household);
     if (people) {
       await seedHouseholdMembers(people, prefs.hasKids ? prefs.kidsCount ?? 1 : 0);
     }
@@ -118,8 +119,33 @@ export default function OnboardingScreen() {
             {HOUSEHOLD.map(o => (
               <Row key={o.id} label={o.label} icon="👥"
                 selected={prefs.household === o.id}
-                onPress={() => set({ household: o.id })} />
+                onPress={() => set({ household: o.id, peopleCount: householdToServings(o.id) ?? undefined })} />
             ))}
+
+            {/* The bands are quick to tap but they are ranges, and this answer
+                now becomes actual rows in "Who you cook for" — "3–4" would
+                give a household of three one person too many to delete. The
+                band fills this in; this is what gets used. */}
+            {prefs.household && (
+              <View style={styles.counterRow}>
+                <Text style={styles.switchLabel}>Exactly how many?</Text>
+                <View style={styles.counter}>
+                  <TouchableOpacity
+                    style={styles.counterBtn}
+                    onPress={() => set({ peopleCount: Math.max(1, (prefs.peopleCount ?? 2) - 1) })}
+                  >
+                    <Ionicons name="remove" size={18} color={COLORS.navy} />
+                  </TouchableOpacity>
+                  <Text style={styles.counterValue}>{prefs.peopleCount ?? 2}</Text>
+                  <TouchableOpacity
+                    style={styles.counterBtn}
+                    onPress={() => set({ peopleCount: Math.min(12, (prefs.peopleCount ?? 2) + 1) })}
+                  >
+                    <Ionicons name="add" size={18} color={COLORS.navy} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>I have kids</Text>
               <Switch
@@ -156,8 +182,11 @@ export default function OnboardingScreen() {
 
             {prefs.household && (
               <Text style={styles.helper}>
-                We will add {householdToServings(prefs.household)} people to "Who you cook for" —
-                {prefs.hasKids ? ` ${prefs.kidsCount ?? 1} of them children, at half a portion each.` : ' one portion each.'}
+                We will add {prefs.peopleCount ?? householdToServings(prefs.household)} people to
+                "Who you cook for" —
+                {prefs.hasKids
+                  ? ` ${prefs.kidsCount ?? 1} of them children, at half a portion each.`
+                  : ' one portion each.'}
                 {' '}All editable later.
               </Text>
             )}
