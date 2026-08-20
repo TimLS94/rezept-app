@@ -45,6 +45,12 @@ export type Recipe = {
   };
   /** Which table this came from. Absent means a creator recipe or seed data. */
   source?: 'mine';
+  /** Per-serving figures. `estimated` says whether a person or the model
+   *  produced them — the display must not blur the two. */
+  nutrition?: {
+    calories?: number; protein?: number; carbs?: number; fat?: number;
+    estimated?: boolean; estimated_at?: string;
+  };
   ingredients: Ingredient[];
   steps: string[];
   // Optional per-step photo (index-aligned with `steps`). Undefined/null = none.

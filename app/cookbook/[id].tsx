@@ -17,6 +17,7 @@ import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
 import { HEADER_TOP } from '../../lib/layout';
 import { shareRecipe } from '../../lib/share';
+import NutritionStrip from '../../components/NutritionStrip';
 import { Ionicons } from '@expo/vector-icons';
 import { goBackOr } from '../../lib/nav';
 
@@ -225,6 +226,8 @@ export default function CookbookRecipeScreen() {
               <Text style={styles.sourceLinkText}>📱 View original post</Text>
             </TouchableOpacity>
           ) : null}
+
+          <NutritionStrip nutrition={recipe.nutrition} calories={recipe.calories} />
 
           {/* Empty recipe: caption/video extraction produced no content */}
           {failedImport ? (

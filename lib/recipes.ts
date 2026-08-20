@@ -40,6 +40,7 @@ export function mapDbRecipe(row: any): Recipe {
     stepTimers: (Array.isArray(row.instructions) ? row.instructions : []).map((s: any) =>
       typeof s === 'string' ? null : (s?.timer ?? null)
     ),
+    nutrition: row.nutrition ?? undefined,
     isPaid: row.is_paid ?? false,
     // Real counts (survive premium stripping) + server lock flag for the teaser.
     ingredientsCount: row.ingredients_count ?? (Array.isArray(row.ingredients) ? row.ingredients.length : 0),
@@ -56,7 +57,7 @@ export function mapDbRecipe(row: any): Recipe {
 // comes from get_recipe_full (paywalled) or get_recipe_for_edit (owner only).
 export const RECIPE_LIST_COLUMNS =
   'id, title, description, image_url, prep_time, cook_time, servings, calories, cost, ' +
-  'difficulty, tags, kid_approved, is_paid, price_cents, influencer_id, influencer_name, ' +
+  'difficulty, tags, kid_approved, is_paid, price_cents, nutrition, influencer_id, influencer_name, ' +
   'influencer_handle, influencer_avatar, created_at, ingredients_count, steps_count';
 
 // Shared in-memory cache so Discover/Search/Home don't re-hit the network on

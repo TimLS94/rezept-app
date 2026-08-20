@@ -32,6 +32,7 @@ import Paywall from '../../components/Paywall';
 import { purchaseRecipe, purchaseCreatorSubscription } from '../../lib/purchases';
 import { usd, findRecipeTier, findCreatorSubTier } from '../../lib/pricing';
 import { goBackOr } from '../../lib/nav';
+import NutritionStrip from '../../components/NutritionStrip';
 import { shareRecipe } from '../../lib/share';
 import { HEADER_TOP } from '../../lib/layout';
 
@@ -740,6 +741,9 @@ export default function RecipeDetailScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Nutrition, with its provenance attached. */}
+        <NutritionStrip nutrition={recipe.nutrition} calories={recipe.calories} />
 
         <View style={styles.bottomSpacer} />
       </ScrollView>

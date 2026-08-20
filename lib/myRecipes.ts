@@ -16,6 +16,7 @@ export type MyRecipe = {
   dietary: DietaryTag[];
   ingredients: Ingredient[];
   steps: string[];
+  nutrition?: Recipe['nutrition'];
   // Index-aligned with `steps`. Null means "no timer on this step". Stored
   // inside the step object in the database, the same way creator recipes do it.
   stepTimers?: (number | null)[];
@@ -39,6 +40,7 @@ export type MyRecipeInput = {
   steps: string[];
   stepTimers?: (number | null)[];
   stepImages?: (string | null)[];
+  nutrition?: Recipe['nutrition'];
   sourceUrl?: string;
 };
 
@@ -90,6 +92,7 @@ function mapDbRow(row: any): MyRecipe {
     stepImages: (Array.isArray(row.instructions) ? row.instructions : []).map((s: any) =>
       typeof s === 'string' ? null : (s?.image ?? null)
     ),
+    nutrition: row.nutrition ?? undefined,
     sourceUrl: row.source_url,
     createdAt: row.created_at,
   };
@@ -117,6 +120,7 @@ export function myRecipeToRecipe(myRecipe: MyRecipe): Recipe {
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
     },
     source: 'mine',
+    nutrition: myRecipe.nutrition,
     ingredients: myRecipe.ingredients,
     steps: myRecipe.steps,
     stepTimers: myRecipe.stepTimers,
@@ -212,6 +216,7 @@ export async function saveMyRecipe(input: MyRecipeInput): Promise<SaveResult> {
       difficulty: input.difficulty,
       tags: input.dietary,
       ingredients: input.ingredients,
+      nutrition: input.nutrition ?? null,
       instructions: packSteps(input.steps, input.stepTimers, input.stepImages),
       source_url: input.sourceUrl,
     })
@@ -239,6 +244,7 @@ export async function updateMyRecipe(id: string, input: Partial<MyRecipeInput>):
   if (input.difficulty !== undefined) updates.difficulty = input.difficulty;
   if (input.dietary !== undefined) updates.tags = input.dietary;
   if (input.ingredients !== undefined) updates.ingredients = input.ingredients;
+  if (input.nutrition !== undefined) updates.nutrition = input.nutrition;
   if (input.steps !== undefined)
     updates.instructions = packSteps(input.steps, input.stepTimers, input.stepImages);
 
