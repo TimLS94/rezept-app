@@ -222,11 +222,26 @@ export default function CookbookRecipeScreen() {
           <Text style={styles.title}>{recipe.title}</Text>
           {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}
 
-          <View style={styles.metaRow}>
-            <Meta value={totalTime > 0 ? `${totalTime}` : '—'} label="min" />
-            <Meta value={`${recipe.servings}`} label="servings" />
-            <Meta value={recipe.calories > 0 ? `${recipe.calories}` : '—'} label="cal" />
-            <Meta value={recipe.difficulty} label="level" />
+          {/* One card for the plain facts. Cost is a footer line inside it
+              rather than a card of its own — stacking a third white box under
+              the other two made the page read as a pile of panels. */}
+          <View style={styles.factsCard}>
+            <View style={styles.metaRow}>
+              <Meta value={totalTime > 0 ? `${totalTime}` : '—'} label="min" />
+              <Meta value={`${recipe.servings}`} label="servings" />
+              <Meta value={recipe.calories > 0 ? `${recipe.calories}` : '—'} label="cal" />
+              <Meta value={recipe.difficulty} label="level" />
+            </View>
+            {recipe.cost > 0 ? (
+              <View style={styles.costFooter}>
+                <Text style={styles.costText}>
+                  ${recipe.cost.toFixed(2)} for the whole recipe
+                  {recipe.servings > 0
+                    ? ` · $${(recipe.cost / recipe.servings).toFixed(2)} per serving`
+                    : ''}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {recipe.sourceUrl ? (
@@ -236,21 +251,6 @@ export default function CookbookRecipeScreen() {
             >
               <Text style={styles.sourceLinkText}>📱 View original post</Text>
             </TouchableOpacity>
-          ) : null}
-
-          {/* Cost gets its own line rather than a fifth cell in the row above:
-              four cells already fill the width, and a fifth squeezed the
-              servings figure into its neighbour. */}
-          {recipe.cost > 0 ? (
-            <View style={styles.costRow}>
-              <Text style={styles.costValue}>${recipe.cost.toFixed(2)}</Text>
-              <Text style={styles.costLabel}>
-                for the whole recipe
-                {recipe.servings > 0
-                  ? ` · $${(recipe.cost / recipe.servings).toFixed(2)} per serving`
-                  : ''}
-              </Text>
-            </View>
           ) : null}
 
           <NutritionStrip nutrition={recipe.nutrition} calories={recipe.calories} flush />
@@ -397,30 +397,27 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
   description: { fontSize: 15, color: '#666', lineHeight: 22, marginBottom: 16 },
 
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  factsCard: {
     backgroundColor: '#FFF',
     borderRadius: 16,
     paddingVertical: 16,
     marginBottom: 16,
   },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-around' },
   metaItem: { alignItems: 'center' },
-  metaValue: { fontSize: 18, fontWeight: '700', color: '#F2701E' },
-  metaLabel: { fontSize: 12, color: '#888', marginTop: 2 },
+  // Navy, not orange. Orange is the colour of things you can press on this
+  // screen — spending it on numbers as well left nothing quiet on the page.
+  metaValue: { fontSize: 18, fontWeight: '700', color: '#0D2B63' },
+  metaLabel: { fontSize: 12, color: '#8A8378', marginTop: 2 },
 
-  costRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 16,
+  costFooter: {
+    marginTop: 14,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F3EDE4',
   },
-  costValue: { fontSize: 18, fontWeight: '700', color: '#F2701E' },
-  costLabel: { fontSize: 12, color: '#888', flex: 1 },
+  costText: { fontSize: 12.5, color: '#8A8378', textAlign: 'center' },
 
   sourceLink: { marginBottom: 16 },
   sourceLinkText: { fontSize: 14, color: '#F2701E', fontWeight: '600' },

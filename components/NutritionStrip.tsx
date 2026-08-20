@@ -63,7 +63,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 16, marginTop: 12,
     borderWidth: 1, borderColor: '#EFE7DC',
   },
-  cardFlush: { marginHorizontal: 0, marginTop: 0, marginBottom: 16 },
+  // Inside a padded screen the card has to match the cards around it, or it
+  // reads as a stray panel: same width, same corner, no extra outline.
+  cardFlush: {
+    marginHorizontal: 0, marginTop: 0, marginBottom: 16,
+    borderRadius: 16, borderWidth: 0, padding: 16,
+  },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   title: { fontFamily: FONTS.semibold, fontSize: 14, color: COLORS.navy },
   badge: {

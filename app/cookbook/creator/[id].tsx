@@ -288,37 +288,37 @@ export default function CookbookCreatorRecipeScreen() {
             <Text style={styles.description}>{displayRecipe.description}</Text>
           ) : null}
 
-          {/* Time & Stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{displayRecipe.prepTime}</Text>
-              <Text style={styles.statLabel}>Prep (min)</Text>
+          {/* Time & Stats, with the cost as a footer line in the same card. */}
+          <View style={styles.factsCard}>
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{displayRecipe.prepTime}</Text>
+                <Text style={styles.statLabel}>Prep (min)</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{displayRecipe.cookTime}</Text>
+                <Text style={styles.statLabel}>Cook (min)</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={[styles.statValue, { color: '#F2701E' }]}>{totalTime(displayRecipe)}</Text>
+                <Text style={styles.statLabel}>Total</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{displayRecipe.servings}</Text>
+                <Text style={styles.statLabel}>Servings</Text>
+              </View>
             </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{displayRecipe.cookTime}</Text>
-              <Text style={styles.statLabel}>Cook (min)</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={[styles.statValue, { color: '#F2701E' }]}>{totalTime(displayRecipe)}</Text>
-              <Text style={styles.statLabel}>Total</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{displayRecipe.servings}</Text>
-              <Text style={styles.statLabel}>Servings</Text>
-            </View>
+            {displayRecipe.cost > 0 ? (
+              <View style={styles.costFooter}>
+                <Text style={styles.costText}>
+                  ${displayRecipe.cost.toFixed(2)} for the whole recipe
+                  {displayRecipe.servings > 0
+                    ? ` · $${(displayRecipe.cost / displayRecipe.servings).toFixed(2)} per serving`
+                    : ''}
+                </Text>
+              </View>
+            ) : null}
           </View>
-
-          {displayRecipe.cost > 0 ? (
-            <View style={styles.costRow}>
-              <Text style={styles.costValue}>${displayRecipe.cost.toFixed(2)}</Text>
-              <Text style={styles.costLabel}>
-                for the whole recipe
-                {displayRecipe.servings > 0
-                  ? ` · $${(displayRecipe.cost / displayRecipe.servings).toFixed(2)} per serving`
-                  : ''}
-              </Text>
-            </View>
-          ) : null}
 
           {/* The figures the creator published, or your own if you edited them
               — this screen showed neither, so a saved change had nowhere to
@@ -457,15 +457,14 @@ const styles = StyleSheet.create({
   creatorName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
   creatorHandle: { fontSize: 12, color: '#888' },
   description: { fontSize: 15, color: '#666', lineHeight: 22, marginBottom: 16 },
-  statsRow: { flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 16 },
+  factsCard: { backgroundColor: '#FFF', borderRadius: 16, marginBottom: 16 },
+  statsRow: { flexDirection: 'row', padding: 16 },
   stat: { flex: 1, alignItems: 'center' },
-  costRow: {
-    flexDirection: 'row', alignItems: 'baseline', gap: 8,
-    backgroundColor: '#FFF', borderRadius: 16,
-    paddingVertical: 12, paddingHorizontal: 16, marginBottom: 16,
+  costFooter: {
+    marginHorizontal: 16, paddingBottom: 14, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: '#F3EDE4',
   },
-  costValue: { fontSize: 18, fontWeight: '700', color: '#F2701E' },
-  costLabel: { fontSize: 12, color: '#888', flex: 1 },
+  costText: { fontSize: 12.5, color: '#8A8378', textAlign: 'center' },
   statValue: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
   statLabel: { fontSize: 11, color: '#888', marginTop: 4 },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
