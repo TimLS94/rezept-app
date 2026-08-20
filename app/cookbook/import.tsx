@@ -18,7 +18,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth, canImportToCookbook } from '../../lib/auth';
 import { extractRecipeWithAI, extractRecipeFromImages, ExtractedRecipe } from '../../lib/openai';
-import { saveMyRecipe, countMyRecipes } from '../../lib/myRecipes';
+import { saveMyRecipe } from '../../lib/myRecipes';
+import {
+  fetchInstagramWithFallback, isValidInstagramUrl, buildExtractionContent,
+} from '../../lib/instagram';
+import { getImportQuota, recordImport, quotaText, ImportQuota } from '../../lib/importQuota';
+import { Ionicons } from '@expo/vector-icons';
 import Paywall from '../../components/Paywall';
 import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
@@ -26,24 +31,36 @@ import { HEADER_TOP } from '../../lib/layout';
 import { goBackOr } from '../../lib/nav';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
-// Import modes: screenshot from gallery, camera photo, or pasted text
-type InputMode = 'screenshot' | 'camera' | 'text';
+// Import modes: an Instagram link, a screenshot from the gallery, a camera
+// photo, or pasted text.
+type InputMode = 'link' | 'screenshot' | 'camera' | 'text';
 
 // A recipe's text can span several on-screen frames (ingredients + each step).
 // Vision de-dupes across images, so allow a comfortable number.
 const MAX_SCREENSHOTS = 10;
 
-// Free accounts may build a small cookbook before the paywall appears, so the
-// feature can be tried before it's bought. The AI cost of an import is ~0.24
-// cents, so a handful of free ones is cheap next to the conversion it buys.
-const FREE_IMPORT_LIMIT = 3;
+// Where an imported recipe goes, and why it is not a creator recipe.
+//
+// Everything imported here lands in `my_recipes`: your own cookbook, private
+// to you, with the link kept as its source. That is not a technical detail,
+// it is the only defensible answer. The person whose post you imported is not
+// a SpoonDrop creator — they have no account here, no say in it and no share
+// of anything it earns — so publishing their recipe into the creator
+// catalogue would be republishing someone else's work, and letting a user
+// sell it would be worse. Creator recipes are what a creator publishes about
+// their own cooking, which is a different act entirely and still lives behind
+// canUploadRecipes.
+//
+// The visible attribution follows from the same reasoning: the source link
+// travels with the recipe, and sharing it sends your copy, never a claim of
+// authorship.
 
 const MIN_TEXT_HEIGHT = 180;
 const MAX_TEXT_HEIGHT = 360;
 
 export default function ImportRecipeScreen() {
   const { isGuest, role, isPremium, refresh } = useAuth();
-  const [ownedCount, setOwnedCount] = useState<number | null>(null);
+  const [quota, setQuota] = useState<ImportQuota | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
   const params = useLocalSearchParams<{ sharedUrl?: string; sharedText?: string }>();
   
@@ -72,26 +89,17 @@ export default function ImportRecipeScreen() {
     setStep('review');
   };
 
-  // Handle incoming shared URL or text
+  // Only Premium sees a number, because only Premium can spend one.
   useEffect(() => {
-    if (isGuest || isPremium) return;
-    countMyRecipes().then(setOwnedCount);
-  }, [isGuest, isPremium]);
+    if (isPremium) getImportQuota().then(setQuota).catch(() => {});
+  }, [isPremium]);
 
   useEffect(() => {
     if (params.sharedUrl) {
-      // Keep the link as the recipe's source, but users can't extract straight
-      // from a URL — direct Instagram import is a creator-only feature. Guide
-      // them to screenshot the recipe instead.
+      // A link shared into the app now lands ready to import, rather than on
+      // an apology telling the user to go and take a screenshot instead.
       setUrl(params.sharedUrl);
-      setInputMode('screenshot');
-      setTimeout(() => {
-        Alert.alert(
-          'Recipe Link Received! 📱',
-          "We saved the link as the source. To import the recipe, add a screenshot of it — AI will read the ingredients and steps from the image.",
-          [{ text: 'Got it' }]
-        );
-      }, 300);
+      setInputMode('link');
     } else if (params.sharedText) {
       setManualText(params.sharedText);
       setInputMode('text');
@@ -145,8 +153,73 @@ export default function ImportRecipeScreen() {
     }
   };
 
+  /**
+   * Books the import against this week's allowance.
+   *
+   * Called once the AI has answered, not before: the allowance exists to cap
+   * what we spend, and a call that failed cost us nothing worth charging the
+   * user for. The pre-check below is what stops a call we already know will
+   * be refused.
+   */
+  const book = async (kind: string) => {
+    const after = await recordImport(kind);
+    setQuota(after);
+  };
+
+  /** True when there is nothing left to spend. Says so and stops. */
+  const outOfImports = (): boolean => {
+    if (!quota || quota.remaining > 0) return false;
+    Alert.alert('No imports left', quotaText(quota));
+    return true;
+  };
+
   const handleImport = async () => {
     setError('');
+    if (outOfImports()) return;
+
+    // Instagram link mode
+    if (inputMode === 'link') {
+      const link = url.trim();
+      if (!link) {
+        Alert.alert('Missing link', 'Paste an Instagram post or reel link.');
+        return;
+      }
+      if (!isValidInstagramUrl(link)) {
+        Alert.alert('Not an Instagram link', 'Use a link to a post, reel or IGTV video.');
+        return;
+      }
+
+      setStep('extracting');
+
+      const ig = await fetchInstagramWithFallback(link);
+      if (!ig.success) {
+        setError(ig.error);
+        setStep('input');
+        return;
+      }
+      if (ig.content.thumbnailUrl) setThumbnailUrl(ig.content.thumbnailUrl);
+
+      // The caption is what we can read. A post that keeps its recipe in the
+      // video and out of the caption has nothing for us to extract, and
+      // saying so beats returning an empty recipe.
+      const content = buildExtractionContent(ig.content);
+      if (!content.trim()) {
+        setError('That post has no recipe in its caption. Try a screenshot of it instead.');
+        setStep('input');
+        return;
+      }
+
+      const aiResult = await extractRecipeWithAI(content);
+      if (!aiResult.success) {
+        setError(aiResult.error);
+        setStep('input');
+        return;
+      }
+
+      await book('instagram');
+      showReview(aiResult.recipe);
+      return;
+    }
 
     // Screenshot or Camera mode (both use images)
     if (inputMode === 'screenshot' || inputMode === 'camera') {
@@ -171,6 +244,7 @@ export default function ImportRecipeScreen() {
         setThumbnailUrl(screenshotUris[0]);
       }
 
+      await book(inputMode);
       showReview(aiResult.recipe);
       return;
     }
@@ -191,6 +265,7 @@ export default function ImportRecipeScreen() {
       return;
     }
 
+    await book('text');
     showReview(aiResult.recipe);
   };
 
@@ -268,10 +343,11 @@ export default function ImportRecipeScreen() {
     );
   }
 
-  // Signed in but out of free imports: offer Premium rather than a dead end.
-  // Note this gates the IMPORT, not the role — publishing as a creator is a
-  // separate thing and still lives behind canUploadRecipes.
-  if (!isPremium && ownedCount !== null && ownedCount >= FREE_IMPORT_LIMIT) {
+  // Premium only, the same as the fridge scan and for the same reason: every
+  // import is an AI call billed per use. Note this gates the IMPORT, not the
+  // role — publishing as a creator is a separate thing and still lives behind
+  // canUploadRecipes.
+  if (!isPremium) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -283,10 +359,12 @@ export default function ImportRecipeScreen() {
         </View>
         <View style={styles.guestState}>
           <Text style={styles.guestIcon}>✨</Text>
-          <Text style={styles.guestTitle}>You've used your {FREE_IMPORT_LIMIT} free imports</Text>
+          <Text style={styles.guestTitle}>Importing is a Premium feature</Text>
           <Text style={styles.guestText}>
-            Premium turns a screenshot, a photo or pasted text into a
-            proper recipe — as often as you like.
+            Paste an Instagram link, a screenshot, a photo or plain text and it comes
+            back as a recipe you can cook from — ingredients, steps and all.
+            {'\n\n'}Ten imports a week, like the fridge scan. They go into your own
+            cookbook, with the link kept as the source.
           </Text>
           <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPaywall(true)}>
             <Text style={styles.primaryButtonText}>Unlock Premium</Text>
@@ -328,8 +406,27 @@ export default function ImportRecipeScreen() {
               </Text>
             </View>
 
+            {quota && (
+              <View style={styles.quotaBar}>
+                <Ionicons
+                  name={quota.remaining > 0 ? 'sparkles-outline' : 'time-outline'}
+                  size={14}
+                  color="#8A4B1E"
+                />
+                <Text style={styles.quotaText}>{quotaText(quota)}</Text>
+              </View>
+            )}
+
             {/* Mode Toggle */}
             <View style={styles.modeToggle}>
+              <TouchableOpacity
+                style={[styles.modeButton, inputMode === 'link' && styles.modeButtonActive]}
+                onPress={() => setInputMode('link')}
+              >
+                <Text style={[styles.modeButtonText, inputMode === 'link' && styles.modeButtonTextActive]}>
+                  🔗 Link
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modeButton, inputMode === 'screenshot' && styles.modeButtonActive]}
                 onPress={() => setInputMode('screenshot')}
@@ -355,6 +452,46 @@ export default function ImportRecipeScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {inputMode === 'link' && (
+              <View style={styles.field}>
+                <View style={styles.fieldHeader}>
+                  <Text style={styles.label}>Instagram link</Text>
+                  <View style={styles.fieldTools}>
+                    {url.length === 0 ? (
+                      <TouchableOpacity
+                        onPress={async () => {
+                          const t = await Clipboard.getStringAsync();
+                          if (t?.trim()) setUrl(t.trim());
+                        }}
+                      >
+                        <Text style={styles.fieldAction}>Paste</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity onPress={() => setUrl('')}>
+                        <Text style={styles.fieldAction}>Clear</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={url}
+                  onChangeText={setUrl}
+                  placeholder="https://www.instagram.com/reel/…"
+                  placeholderTextColor="#999"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                  returnKeyType="done"
+                />
+                <Text style={styles.helpText}>
+                  Reads the post's caption. If the recipe is only spoken in the video and
+                  never written down, use a screenshot instead — and you can share a post
+                  straight from Instagram into SpoonDrop.
+                </Text>
+              </View>
+            )}
 
             {/* Screenshot Mode */}
             {inputMode === 'screenshot' && (
@@ -621,6 +758,13 @@ const styles = StyleSheet.create({
   heroText: { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22 },
   field: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
+  helpText: { fontSize: 12.5, color: '#8A8378', lineHeight: 18, marginTop: 8 },
+  quotaBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#FFF3E9', borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 9, marginBottom: 14,
+  },
+  quotaText: { fontSize: 12.5, color: '#8A4B1E', fontWeight: '600' },
   input: {
     backgroundColor: '#FFF',
     borderRadius: 12,
@@ -662,14 +806,17 @@ const styles = StyleSheet.create({
   modeButton: {
     flex: 1,
     paddingVertical: 12,
+    paddingHorizontal: 2,
     alignItems: 'center',
     borderRadius: 10,
   },
   modeButtonActive: {
     backgroundColor: '#FFF',
   },
+  // Four across on a narrow phone: the labels have to be small enough that
+  // "Gallery" does not wrap into its neighbour.
   modeButtonText: {
-    fontSize: 14,
+    fontSize: 12.5,
     fontWeight: '600',
     color: '#888',
   },
