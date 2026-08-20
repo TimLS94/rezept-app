@@ -19,7 +19,7 @@ export type Preferences = {
    *  the same kind of thing as the rest: a statement of what you want, not a
    *  record of what happened. */
   nutrition?: {
-    goal?: 'lose' | 'maintain' | 'gain' | 'muscle';
+    goal?: 'lose' | 'maintain' | 'gain' | 'muscle' | 'custom';
     calories?: number;
     protein?: number;
     carbs?: number;
@@ -32,6 +32,10 @@ export const NUTRITION_GOALS = [
   { id: 'maintain', label: 'Maintain', icon: '⚖️' },
   { id: 'gain', label: 'Gain weight', icon: '📈' },
   { id: 'muscle', label: 'Build muscle', icon: '💪' },
+  // Picking this deliberately does not touch the numbers: someone who has
+  // their own targets already knows them, and overwriting them with a
+  // suggestion would be the opposite of what the choice means.
+  { id: 'custom', label: 'My own numbers', icon: '✏️' },
 ] as const;
 
 /**

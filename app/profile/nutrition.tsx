@@ -24,12 +24,13 @@ export default function NutritionGoalsScreen() {
   const setN = (patch: Partial<NonNullable<Preferences['nutrition']>>) =>
     setPrefs(p => ({ ...p, nutrition: { ...(p.nutrition ?? {}), ...patch } }));
 
-  const pickGoal = (goal: 'lose' | 'maintain' | 'gain' | 'muscle') => {
-    const t = suggestedTargets(goal);
-    // Filling the targets in on choosing a goal is the whole point of asking:
-    // most people know "I want to lose weight" and not "1800 kcal, 135g
-    // protein". They stay editable.
-    setN({ goal, ...t });
+  const pickGoal = (goal: NonNullable<Preferences['nutrition']>['goal']) => {
+    // "My own numbers" leaves the fields alone. Every other goal fills them
+    // in, which is the point of asking: most people know "I want to lose
+    // weight" and not "1800 kcal, 135g protein". They stay editable either
+    // way, and editing one flips the goal to custom below.
+    if (goal === 'custom') { setN({ goal }); return; }
+    setN({ goal, ...suggestedTargets(goal) });
   };
 
   const num = (v: number | undefined) => (v == null ? '' : String(v));
@@ -77,8 +78,10 @@ export default function NutritionGoalsScreen() {
 
         <Text style={styles.label}>Daily targets</Text>
         <Text style={styles.note}>
-          A rough starting point based on your goal — adjust it to whatever you actually
-          follow. These are not medical advice, and nothing in the app is blocked by them.
+          {n.goal === 'custom'
+            ? 'Your own numbers. Nothing is suggested or overwritten here.'
+            : 'A rough starting point based on your goal — change any figure and it becomes yours.'}
+          {' '}These are not medical advice, and nothing in the app is blocked by them.
           Leave a field empty to stop tracking it.
         </Text>
 
@@ -94,7 +97,7 @@ export default function NutritionGoalsScreen() {
               <TextInput
                 style={styles.input}
                 value={num(n[f.key])}
-                onChangeText={t => setN({ [f.key]: parse(t) })}
+                onChangeText={t => setN({ [f.key]: parse(t), goal: 'custom' })}
                 keyboardType="number-pad"
                 placeholder="—"
                 placeholderTextColor="#BBB"
