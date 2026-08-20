@@ -11,6 +11,8 @@ import { DIETARY_TAGS } from '../data/recipes';
 export type Preferences = {
   household?: '1-2' | '3-4' | '5-6' | '6+';
   hasKids?: boolean;
+  /** How many of the household are children. Only meaningful with hasKids. */
+  kidsCount?: number;
   diets?: string[];
   avoid?: string[];
   timeBudget?: '15' | '20-30' | '30-45' | '45+';

@@ -23,10 +23,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../lib/theme';
 import { HEADER_TOP } from '../lib/layout';
 import {
-  Preferences, savePreferences,
+  Preferences, savePreferences, householdToServings,
   HOUSEHOLD, DIETS, AVOID, TIME_BUDGET, CUISINES,
 } from '../lib/preferences';
 import { saveConsent, MARKETING_EMAIL_NOTE, PUSH_NOTE } from '../lib/consent';
+import { seedHouseholdMembers } from '../lib/family';
 
 const STEPS = 8;
 
@@ -55,6 +56,13 @@ export default function OnboardingScreen() {
     // and refusing to let someone into the app because a preference did not
     // save would be the wrong trade.
     await savePreferences(prefs);
+    // Lay out the household as actual people, so "Who you cook for" is filled
+    // in rather than empty with a plus button. Never overwrites an existing
+    // list.
+    const people = householdToServings(prefs.household);
+    if (people) {
+      await seedHouseholdMembers(people, prefs.hasKids ? prefs.kidsCount ?? 1 : 0);
+    }
     // Recorded separately from the preferences, and always — including when
     // both answers are no. "Asked and declined" is a fact worth having.
     await saveConsent(pushOk, emailOk);
@@ -116,10 +124,43 @@ export default function OnboardingScreen() {
               <Text style={styles.switchLabel}>I have kids</Text>
               <Switch
                 value={!!prefs.hasKids}
-                onValueChange={v => set({ hasKids: v })}
+                onValueChange={v => set({ hasKids: v, kidsCount: v ? (prefs.kidsCount ?? 1) : undefined })}
                 trackColor={{ true: COLORS.green, false: '#DDD' }}
               />
             </View>
+
+            {/* How many, not just whether. A child eats about half an adult
+                portion, so the difference between "one of four" and "three of
+                four" is the difference between shopping for 3.5 and for 2.5 —
+                and that is the number the whole app scales from. */}
+            {prefs.hasKids && (
+              <View style={styles.counterRow}>
+                <Text style={styles.switchLabel}>How many?</Text>
+                <View style={styles.counter}>
+                  <TouchableOpacity
+                    style={styles.counterBtn}
+                    onPress={() => set({ kidsCount: Math.max(1, (prefs.kidsCount ?? 1) - 1) })}
+                  >
+                    <Ionicons name="remove" size={18} color={COLORS.navy} />
+                  </TouchableOpacity>
+                  <Text style={styles.counterValue}>{prefs.kidsCount ?? 1}</Text>
+                  <TouchableOpacity
+                    style={styles.counterBtn}
+                    onPress={() => set({ kidsCount: Math.min(8, (prefs.kidsCount ?? 1) + 1) })}
+                  >
+                    <Ionicons name="add" size={18} color={COLORS.navy} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {prefs.household && (
+              <Text style={styles.helper}>
+                We will add {householdToServings(prefs.household)} people to "Who you cook for" —
+                {prefs.hasKids ? ` ${prefs.kidsCount ?? 1} of them children, at half a portion each.` : ' one portion each.'}
+                {' '}All editable later.
+              </Text>
+            )}
           </>
         )}
 
@@ -277,6 +318,21 @@ const styles = StyleSheet.create({
   consentTitle: { flex: 1, fontFamily: FONTS.semibold, fontSize: 15, color: COLORS.navy },
   consentText: { fontSize: 12.5, color: COLORS.warmGray, lineHeight: 18, marginTop: 10 },
   legal: { fontSize: 11.5, color: COLORS.warmGray, lineHeight: 17, marginTop: 4 },
+  counterRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  counter: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: '#FFF', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 6,
+    borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  counterBtn: {
+    width: 32, height: 32, borderRadius: 8, backgroundColor: COLORS.cream,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  counterValue: { fontFamily: FONTS.semibold, fontSize: 17, color: COLORS.navy, minWidth: 18, textAlign: 'center' },
+  helper: { fontSize: 12.5, color: COLORS.warmGray, lineHeight: 18, marginTop: 14 },
   progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 24, paddingTop: HEADER_TOP },
   seg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#E7DFD1' },
   segOn: { backgroundColor: COLORS.orange },
