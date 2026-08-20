@@ -1,21 +1,27 @@
 -- ============================================================================
--- An allowance for recipe imports, shaped exactly like the fridge scan's.
+-- An allowance for recipe imports, shaped like the fridge scan's.
 --
--- Imports are the most expensive thing a user can ask for: reading a caption
--- is cheap, reading ten screenshots is not, and both are billed per call. A
--- Premium subscription buys the feature; the allowance is what stops one
--- account from being able to run the bill up without limit.
+-- Two buckets, because the two kinds of import do not cost the same and are
+-- not used the same way:
 --
--- Ten per rolling seven days. Deliberately generous for the way people
--- actually import — an evening of saving recipes stays well under it — and
--- useless to anyone pointing a script at it. It sits on top of the per-op
--- daily caps in ai_quota.sql, which exist for a different reason: those guard
--- the gateway, this one is what the user sees.
+--   instagram — 3 per rolling 7 days. Pulling a post costs a scraper call on
+--   top of the AI call, and it is the one path where a single tap in another
+--   app spends one of ours. Three is the same allowance as the fridge scan.
+--
+--   everything else — 10 per rolling 7 days. A screenshot or pasted text is
+--   one AI call and no third-party service, and it is what someone sitting
+--   down to fill their cookbook actually does.
+--
+-- The buckets are separate, not shared: using all three Instagram imports
+-- does not touch the ten you have for screenshots. Both sit on top of the
+-- per-op daily caps in ai_quota.sql, which guard the gateway; these are the
+-- numbers the user sees.
 --
 -- No client INSERT policy on the table. The RPC is the only writer, so the
 -- allowance cannot be side-stepped by simply not recording an import.
 --
--- Idempotent. Run in the Supabase SQL Editor.
+-- Idempotent. Safe to re-run over the earlier single-bucket version.
+-- Run in the Supabase SQL Editor.
 -- ============================================================================
 
 begin;
@@ -38,42 +44,65 @@ create policy "Users view own imports" on public.recipe_imports
 
 grant select on public.recipe_imports to authenticated;
 
-create or replace function public.import_quota()
+-- The first version took no argument. Leaving it in place would make
+-- import_quota() ambiguous against the defaulted one below.
+drop function if exists public.import_quota();
+
+create or replace function public.import_limit(p_kind text)
+returns int language sql immutable as $$
+  select case when p_kind = 'instagram' then 3 else 10 end;
+$$;
+
+create or replace function public.import_quota(p_kind text default null)
 returns jsonb language sql stable security definer set search_path = public as $$
   select jsonb_build_object(
-    'limit', 10,
+    'kind', coalesce(p_kind, 'other'),
+    'limit', public.import_limit(p_kind),
     'used', count(*),
-    'remaining', greatest(0, 10 - count(*)),
-    -- When the oldest import in the window ages out, one slot frees up.
+    'remaining', greatest(0, public.import_limit(p_kind) - count(*)),
+    -- When the oldest import in this bucket ages out, one slot frees up.
     'resets_at', min(created_at) + interval '7 days'
   )
   from public.recipe_imports
-  where user_id = auth.uid() and created_at > now() - interval '7 days';
+  where user_id = auth.uid()
+    and created_at > now() - interval '7 days'
+    -- Same bucket as the kind being asked about: Instagram counts Instagram,
+    -- everything else counts everything else.
+    and (case when p_kind = 'instagram'
+              then kind = 'instagram'
+              else coalesce(kind, '') <> 'instagram' end);
 $$;
-grant execute on function public.import_quota() to authenticated;
+grant execute on function public.import_quota(text) to authenticated;
 
 -- Records an import and returns the allowance that remains AFTER it. Refuses
 -- without recording when the caller is already at the limit, so a client that
 -- skips the pre-check still cannot overrun it.
 create or replace function public.record_import(p_kind text default null)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare used int;
+declare used int; lim int;
 begin
   if auth.uid() is null then
     return jsonb_build_object('ok', false, 'error', 'not_signed_in');
   end if;
 
+  lim := public.import_limit(p_kind);
+
   select count(*) into used
   from public.recipe_imports
-  where user_id = auth.uid() and created_at > now() - interval '7 days';
+  where user_id = auth.uid()
+    and created_at > now() - interval '7 days'
+    and (case when p_kind = 'instagram'
+              then kind = 'instagram'
+              else coalesce(kind, '') <> 'instagram' end);
 
-  if used >= 10 then
-    return jsonb_build_object('ok', false, 'error', 'quota_exceeded') || public.import_quota();
+  if used >= lim then
+    return jsonb_build_object('ok', false, 'error', 'quota_exceeded')
+           || public.import_quota(p_kind);
   end if;
 
   insert into public.recipe_imports (user_id, kind) values (auth.uid(), p_kind);
 
-  return jsonb_build_object('ok', true) || public.import_quota();
+  return jsonb_build_object('ok', true) || public.import_quota(p_kind);
 end; $$;
 grant execute on function public.record_import(text) to authenticated;
 

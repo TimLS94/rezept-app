@@ -22,7 +22,9 @@ import { saveMyRecipe } from '../../lib/myRecipes';
 import {
   fetchInstagramWithFallback, isValidInstagramUrl, buildExtractionContent,
 } from '../../lib/instagram';
-import { getImportQuota, recordImport, quotaText, ImportQuota } from '../../lib/importQuota';
+import {
+  getImportQuota, recordImport, quotaText, ImportQuota, ImportKind,
+} from '../../lib/importQuota';
 import { Ionicons } from '@expo/vector-icons';
 import Paywall from '../../components/Paywall';
 import { DietaryTag, Ingredient } from '../../data/recipes';
@@ -60,7 +62,12 @@ const MAX_TEXT_HEIGHT = 360;
 
 export default function ImportRecipeScreen() {
   const { isGuest, role, isPremium, refresh } = useAuth();
-  const [quota, setQuota] = useState<ImportQuota | null>(null);
+  // One per bucket. Instagram is scarcer than the rest, so showing a single
+  // number would misstate whichever mode the user is not looking at.
+  const [quotas, setQuotas] = useState<Record<'instagram' | 'other', ImportQuota | null>>({
+    instagram: null,
+    other: null,
+  });
   const [showPaywall, setShowPaywall] = useState(false);
   const params = useLocalSearchParams<{ sharedUrl?: string; sharedText?: string }>();
   
@@ -91,8 +98,16 @@ export default function ImportRecipeScreen() {
 
   // Only Premium sees a number, because only Premium can spend one.
   useEffect(() => {
-    if (isPremium) getImportQuota().then(setQuota).catch(() => {});
+    if (!isPremium) return;
+    Promise.all([getImportQuota('instagram'), getImportQuota('screenshot')])
+      .then(([instagram, other]) => setQuotas({ instagram, other }))
+      .catch(() => {});
   }, [isPremium]);
+
+  /** The allowance the current mode spends from. */
+  const bucketOf = (mode: InputMode): 'instagram' | 'other' =>
+    mode === 'link' ? 'instagram' : 'other';
+  const activeQuota = quotas[bucketOf(inputMode)];
 
   useEffect(() => {
     if (params.sharedUrl) {
@@ -161,15 +176,21 @@ export default function ImportRecipeScreen() {
    * user for. The pre-check below is what stops a call we already know will
    * be refused.
    */
-  const book = async (kind: string) => {
+  const book = async (kind: ImportKind) => {
     const after = await recordImport(kind);
-    setQuota(after);
+    setQuotas(prev => ({ ...prev, [kind === 'instagram' ? 'instagram' : 'other']: after }));
   };
 
-  /** True when there is nothing left to spend. Says so and stops. */
+  /** True when this mode's allowance is spent. Says which, and stops. */
   const outOfImports = (): boolean => {
-    if (!quota || quota.remaining > 0) return false;
-    Alert.alert('No imports left', quotaText(quota));
+    const q = activeQuota;
+    if (!q || q.remaining > 0) return false;
+    Alert.alert(
+      q.kind === 'instagram' ? 'No Instagram imports left' : 'No imports left',
+      q.kind === 'instagram'
+        ? `${quotaText(q)} A screenshot of the post still works — that comes out of a different allowance.`
+        : quotaText(q),
+    );
     return true;
   };
 
@@ -244,7 +265,7 @@ export default function ImportRecipeScreen() {
         setThumbnailUrl(screenshotUris[0]);
       }
 
-      await book(inputMode);
+      await book(inputMode as ImportKind);
       showReview(aiResult.recipe);
       return;
     }
@@ -363,8 +384,8 @@ export default function ImportRecipeScreen() {
           <Text style={styles.guestText}>
             Paste an Instagram link, a screenshot, a photo or plain text and it comes
             back as a recipe you can cook from — ingredients, steps and all.
-            {'\n\n'}Ten imports a week, like the fridge scan. They go into your own
-            cookbook, with the link kept as the source.
+            {'\n\n'}Three Instagram imports a week, plus ten from screenshots, photos
+            or text. They go into your own cookbook, with the link kept as the source.
           </Text>
           <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPaywall(true)}>
             <Text style={styles.primaryButtonText}>Unlock Premium</Text>
@@ -406,14 +427,14 @@ export default function ImportRecipeScreen() {
               </Text>
             </View>
 
-            {quota && (
+            {activeQuota && (
               <View style={styles.quotaBar}>
                 <Ionicons
-                  name={quota.remaining > 0 ? 'sparkles-outline' : 'time-outline'}
+                  name={activeQuota.remaining > 0 ? 'sparkles-outline' : 'time-outline'}
                   size={14}
                   color="#8A4B1E"
                 />
-                <Text style={styles.quotaText}>{quotaText(quota)}</Text>
+                <Text style={styles.quotaText}>{quotaText(activeQuota)}</Text>
               </View>
             )}
 
