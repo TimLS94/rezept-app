@@ -98,6 +98,38 @@ function mapDbRow(row: any): MyRecipe {
   };
 }
 
+/**
+ * A shared snapshot — a `my_recipes` row with its identity stripped off —
+ * read back as a recipe. Someone sent you their copy; it is not yours until
+ * you import it, so it carries no id of its own until then.
+ */
+export function snapshotToMyRecipe(row: any): MyRecipe {
+  return mapDbRow({ ...row, id: 'shared', created_at: row?.created_at ?? new Date().toISOString() });
+}
+
+/** The same snapshot as something saveMyRecipe can take. */
+export function snapshotToInput(row: any): MyRecipeInput {
+  const r = snapshotToMyRecipe(row);
+  return {
+    title: r.title,
+    description: r.description,
+    image: r.image,
+    prepTime: r.prepTime,
+    cookTime: r.cookTime,
+    servings: r.servings,
+    calories: r.calories,
+    cost: r.cost,
+    difficulty: r.difficulty,
+    dietary: r.dietary,
+    ingredients: r.ingredients,
+    steps: r.steps,
+    stepTimers: r.stepTimers,
+    stepImages: r.stepImages,
+    nutrition: r.nutrition,
+    sourceUrl: r.sourceUrl,
+  };
+}
+
 // Convert MyRecipe to Recipe format (for shopping list compatibility)
 export function myRecipeToRecipe(myRecipe: MyRecipe): Recipe {
   return {

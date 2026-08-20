@@ -130,6 +130,8 @@ create table public.shopping_items (
   unit        text default '',
   category    text default 'other',
   checked     boolean default false,
+  -- Null means "read one from the name"; set only when the user picked one.
+  icon        text,
   created_at  timestamptz default timezone('utc'::text, now()) not null
 );
 create index shopping_items_user_id_idx on public.shopping_items(user_id);

@@ -12,8 +12,33 @@
 //   readable in a message.
 import { Share } from 'react-native';
 import { Recipe } from '../data/recipes';
+import { supabase } from './supabase';
 
 const SITE = 'https://spoondrop.app';
+
+// The app's own scheme, which works today. The https address above is the
+// nicer link and is what universal links will use, but spoondrop.app does not
+// resolve yet — sending it on its own would be sending a dead link.
+const APP_SCHEME = 'spoondrop://';
+
+/**
+ * A link that opens this recipe inside SpoonDrop.
+ *
+ * Returns null when the share could not be created — an unsigned-in user, a
+ * database that has not run recipe_shares.sql. Callers fall back to sending
+ * the recipe as text, which is what they did before links existed.
+ */
+export async function createShareLink(
+  recipe: Recipe,
+  source: 'creator' | 'mine',
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc('create_recipe_share', {
+    p_kind: source === 'mine' ? 'mine' : 'creator',
+    p_recipe_id: recipe.id,
+  });
+  if (error || !data?.ok || !data.token) return null;
+  return `${APP_SCHEME}s/${data.token}`;
+}
 
 function formatAmount(amount: number, unit: string): string {
   if (!amount) return unit || '';
@@ -59,11 +84,31 @@ export function recipeAsText(recipe: Recipe): string {
  */
 export async function shareRecipe(recipe: Recipe, source: 'creator' | 'mine'): Promise<void> {
   const time = recipe.prepTime + recipe.cookTime;
+  const link = await createShareLink(recipe, source);
 
-  const message =
+  // With a link, both kinds travel the same way: a few lines to read in the
+  // message and one tap to open it in the app, where a creator recipe lands
+  // on its own screen — paywall included — and a personal one offers to be
+  // imported into the recipient's cookbook.
+  //
+  // Without one, a personal recipe still travels as its full text. That is
+  // worth keeping: it is readable by someone who does not have the app, and
+  // it is the only thing that ever worked for recipes that exist nowhere
+  // public.
+  const headline =
     source === 'creator'
-      ? `Check out "${recipe.title}" by ${recipe.influencer.handle} on SpoonDrop 🍳\n` +
-        `⏱ ${time} min • 🔥 ${recipe.calories} cal\n\n${SITE}/recipe/${recipe.id}`
+      ? `Check out "${recipe.title}" by ${recipe.influencer.handle} on SpoonDrop 🍳`
+      : `I made "${recipe.title}" — here it is 🍳`;
+
+  const facts = [
+    time > 0 ? `⏱ ${time} min` : null,
+    recipe.calories > 0 ? `🔥 ${recipe.calories} cal` : null,
+  ].filter(Boolean).join(' • ');
+
+  const message = link
+    ? [headline, facts, '', `Open in SpoonDrop: ${link}`].filter(Boolean).join('\n')
+    : source === 'creator'
+      ? `${headline}\n${facts}\n\n${SITE}/recipe/${recipe.id}`
       : recipeAsText(recipe);
 
   try {

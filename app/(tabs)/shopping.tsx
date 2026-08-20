@@ -23,6 +23,8 @@ import { fetchDbRecipeById } from '../../lib/recipes';
 import SwipeToDelete from '../../components/SwipeToDelete';
 import { hintSeen, markHintSeen, HINT_SWIPE_TO_DELETE } from '../../lib/hints';
 import { HEADER_TOP } from '../../lib/layout';
+import { foodIcon, matchFoodIcon, ICON_CHOICES, UNKNOWN_ICON } from '../../lib/foodIcons';
+import { Modal } from 'react-native';
 
 type ShoppingItem = {
   id: string;
@@ -33,6 +35,8 @@ type ShoppingItem = {
   checked: boolean;
   recipe_id?: string;
   recipe_name?: string;
+  /** Set only when the user picked one by hand; otherwise read from the name. */
+  icon?: string | null;
 };
 
 const CATEGORIES = [
@@ -62,6 +66,10 @@ export default function ShoppingScreen() {
   const [loading, setLoading] = useState(true);
   const [showChecked, setShowChecked] = useState(true);
   const [newItemName, setNewItemName] = useState('');
+  // The icon shown on the add row. Null means "follow the name", which is the
+  // right default: the icon updates as you type and only stops if you say so.
+  const [newItemIcon, setNewItemIcon] = useState<string | null>(null);
+  const [pickingIcon, setPickingIcon] = useState(false);
   const [viewMode, setViewMode] = useState<'category' | 'recipe'>('category');
   // Recipe view: collapsed by default; tapping a card expands only that one.
   const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
@@ -141,28 +149,49 @@ export default function ShoppingScreen() {
   };
 
   const addItem = async () => {
-    if (!newItemName.trim()) return;
-    
+    const name = newItemName.trim();
+    if (!name) return;
+
     const user = await getCurrentUser();
     if (!user) return;
 
-    const { data, error } = await supabase
+    // A hand-added item used to land in "Other" whatever it was, so a list
+    // built by typing had one section. The icon carries a category with it,
+    // so picking 🧀 files it under Dairy without a second question.
+    const matched = matchFoodIcon(name);
+    const chosen = newItemIcon ? ICON_CHOICES.find(c => c.icon === newItemIcon) : null;
+    const category = chosen?.category ?? matched?.category ?? 'other';
+
+    const row = {
+      user_id: user.id,
+      name,
+      amount: 1,
+      unit: '',
+      category,
+      checked: false,
+    };
+
+    // The icon column arrived after this table did. On a database that has
+    // not run shopping_item_icons.sql yet the insert would fail outright and
+    // adding an item would silently do nothing, so a rejected column is
+    // retried without it rather than lost.
+    let { data, error } = await supabase
       .from('shopping_items')
-      .insert({
-        user_id: user.id,
-        name: newItemName.trim(),
-        amount: 1,
-        unit: '',
-        category: 'other',
-        checked: false,
-      })
+      .insert((newItemIcon ? { ...row, icon: newItemIcon } : row) as any)
       .select()
       .single();
 
-    if (data) {
-      setItems([...items, data]);
+    if (error && newItemIcon && /icon/i.test(error.message)) {
+      ({ data, error } = await supabase.from('shopping_items').insert(row).select().single());
     }
+
+    if (error) {
+      Alert.alert('Could not add', error.message);
+      return;
+    }
+    if (data) setItems([...items, data]);
     setNewItemName('');
+    setNewItemIcon(null);
   };
 
   const clearChecked = async () => {
@@ -470,6 +499,13 @@ export default function ShoppingScreen() {
 
       {/* Add Item */}
       <View style={styles.addItemContainer}>
+        {/* Shows what the item will be filed as before it is added, and opens
+            the picker if the guess is wrong. */}
+        <TouchableOpacity style={styles.iconPickBtn} onPress={() => setPickingIcon(true)}>
+          <Text style={styles.iconPickText}>
+            {newItemIcon ?? (newItemName.trim() ? foodIcon(newItemName) : UNKNOWN_ICON)}
+          </Text>
+        </TouchableOpacity>
         <TextInput
           style={styles.addItemInput}
           placeholder="Add item..."
@@ -483,6 +519,43 @@ export default function ShoppingScreen() {
           <Text style={styles.addItemButtonText}>+</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={pickingIcon} animationType="slide" transparent onRequestClose={() => setPickingIcon(false)}>
+        <View style={styles.pickerBackdrop}>
+          <View style={styles.pickerSheet}>
+            <View style={styles.pickerHead}>
+              <Text style={styles.pickerTitle}>Pick an icon</Text>
+              <TouchableOpacity onPress={() => setPickingIcon(false)}>
+                <Text style={styles.pickerDone}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.pickerHint}>
+              It also decides which section the item lands in.
+            </Text>
+            <ScrollView contentContainerStyle={styles.pickerGrid}>
+              <TouchableOpacity
+                style={[styles.pickerCell, newItemIcon === null && styles.pickerCellOn]}
+                onPress={() => { setNewItemIcon(null); setPickingIcon(false); }}
+              >
+                <Text style={styles.pickerCellIcon}>
+                  {newItemName.trim() ? foodIcon(newItemName) : UNKNOWN_ICON}
+                </Text>
+                <Text style={styles.pickerCellLabel}>auto</Text>
+              </TouchableOpacity>
+              {ICON_CHOICES.map(c => (
+                <TouchableOpacity
+                  key={c.icon}
+                  style={[styles.pickerCell, newItemIcon === c.icon && styles.pickerCellOn]}
+                  onPress={() => { setNewItemIcon(c.icon); setPickingIcon(false); }}
+                >
+                  <Text style={styles.pickerCellIcon}>{c.icon}</Text>
+                  <Text style={styles.pickerCellLabel} numberOfLines={1}>{c.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {items.length === 0 ? (
@@ -522,6 +595,9 @@ export default function ShoppingScreen() {
                     <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
                       {item.checked && <Text style={styles.checkmark}>✓</Text>}
                     </View>
+                    <Text style={[styles.itemIcon, item.checked && styles.itemIconChecked]}>
+                      {item.icon ?? foodIcon(item.name)}
+                    </Text>
                     <View style={styles.itemInfo}>
                       <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>
                         {formatAmount(item.amount, item.unit)} {item.name}
@@ -603,6 +679,9 @@ export default function ShoppingScreen() {
                     <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
                       {item.checked && <Text style={styles.checkmark}>✓</Text>}
                     </View>
+                    <Text style={[styles.itemIcon, item.checked && styles.itemIconChecked]}>
+                      {item.icon ?? foodIcon(item.name)}
+                    </Text>
                     <View style={styles.itemInfo}>
                       <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>
                         {formatAmount(item.amount, item.unit)} {item.name}
@@ -672,8 +751,35 @@ const styles = StyleSheet.create({
   viewToggleActive: { backgroundColor: '#FFF' },
   viewToggleText: { fontSize: 14, color: '#888', fontWeight: '500' },
   viewToggleTextActive: { color: '#1A1A1A', fontWeight: '600' },
-  addItemContainer: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 16 },
-  addItemInput: { flex: 1, backgroundColor: '#FFF', borderRadius: 12, padding: 14, fontSize: 16, marginRight: 10 },
+  addItemContainer: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 16, gap: 10 },
+  addItemInput: { flex: 1, backgroundColor: '#FFF', borderRadius: 12, padding: 14, fontSize: 16 },
+  iconPickBtn: {
+    width: 48, height: 48, borderRadius: 12, backgroundColor: '#FFF',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  iconPickText: { fontSize: 22 },
+  itemIcon: { fontSize: 18, width: 26, textAlign: 'center', marginRight: 4 },
+  itemIconChecked: { opacity: 0.4 },
+
+  pickerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
+  pickerSheet: {
+    backgroundColor: '#FFF9F2', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 28, maxHeight: '75%',
+  },
+  pickerHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  pickerTitle: { fontSize: 17, fontWeight: '700', color: '#0D2B63' },
+  pickerDone: { fontSize: 16, fontWeight: '700', color: '#F2701E' },
+  pickerHint: { fontSize: 12.5, color: '#8A8378', marginTop: 4, marginBottom: 12 },
+  pickerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 12 },
+  pickerCell: {
+    width: 64, height: 64, borderRadius: 14, backgroundColor: '#FFF',
+    alignItems: 'center', justifyContent: 'center', gap: 2,
+    borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  pickerCellOn: { borderColor: '#F2701E', borderWidth: 2, backgroundColor: '#FFF3E9' },
+  pickerCellIcon: { fontSize: 24 },
+  pickerCellLabel: { fontSize: 8.5, color: '#8A8378', maxWidth: 58 },
   addItemButton: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#F2701E', justifyContent: 'center', alignItems: 'center' },
   addItemButtonText: { fontSize: 24, color: '#FFF', fontWeight: '600' },
   emptyState: { alignItems: 'center', padding: 60 },

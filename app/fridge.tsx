@@ -18,6 +18,7 @@ import Paywall from '../components/Paywall';
 import FridgeArt from '../components/FridgeArt';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
 import { HEADER_TOP } from '../lib/layout';
+import { foodIcon } from '../lib/foodIcons';
 
 const MAX_PHOTOS = 3;
 
@@ -397,6 +398,7 @@ export default function FridgeScreen() {
             <View style={styles.chips}>
               {items.map(item => (
                 <TouchableOpacity key={item} style={styles.chip} onPress={() => dropItem(item)}>
+                  <Text style={styles.chipIcon}>{foodIcon(item)}</Text>
                   <Text style={styles.chipText}>{item}</Text>
                   <Ionicons name="close" size={13} color={COLORS.warmGray} />
                 </TouchableOpacity>
@@ -524,6 +526,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.card,
     borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 7,
   },
+  chipIcon: { fontSize: 14 },
   chipText: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.charcoal },
 
   empty: { fontFamily: FONTS.body, fontSize: 13.5, color: COLORS.warmGray },

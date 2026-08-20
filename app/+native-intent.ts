@@ -29,6 +29,18 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
       return `/auth-callback?payload=${encodeURIComponent(path)}`;
     }
 
+    // A shared recipe link. Two forms reach us: our own scheme, which works
+    // today (spoondrop://s/<token> arrives as /s/<token> and needs nothing),
+    // and the https address, which will start arriving the moment
+    // spoondrop.app serves an apple-app-site-association file. Handling both
+    // here means switching on universal links later needs no new native
+    // build — the OTA path stays open.
+    const shared = path.match(/^(?:https?:\/\/(?:www\.)?spoondrop\.app)?\/s\/([A-Za-z0-9_-]+)/);
+    if (shared) return `/s/${shared[1]}`;
+
+    const recipeLink = path.match(/^(?:https?:\/\/(?:www\.)?spoondrop\.app)\/recipe\/([A-Za-z0-9-]+)/);
+    if (recipeLink) return `/recipe/${recipeLink[1]}`;
+
     // `path` can be a full URL (https://www.instagram.com/reel/…) for App Links,
     // or just the path portion (/reel/…) depending on how the OS delivered it.
     let candidate = path;
