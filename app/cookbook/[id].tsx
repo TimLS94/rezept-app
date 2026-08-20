@@ -162,7 +162,9 @@ export default function CookbookRecipeScreen() {
             <Text style={styles.saveHeaderTxt}>{saving ? '…' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={styles.editBody}>
             <RecipeEditor value={draft} onChange={setDraft} />
             <View style={{ height: 40 }} />
@@ -198,7 +200,9 @@ export default function CookbookRecipeScreen() {
           </View>
         }
       />
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {recipe.image ? (
           <Image source={{ uri: recipe.image }} style={styles.hero} />
         ) : (

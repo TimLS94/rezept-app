@@ -62,7 +62,9 @@ export default function NutritionGoalsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <Text style={styles.label}>What are you aiming for?</Text>
         <View style={styles.goals}>
           {NUTRITION_GOALS.map(g => {

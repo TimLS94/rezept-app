@@ -196,7 +196,9 @@ export default function UploadRecipeScreen() {
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {/* Import instead of typing */}
         <TouchableOpacity style={styles.importBanner} onPress={() => router.push('/creator/import')}>
           <Text style={styles.importIcon}>✨</Text>

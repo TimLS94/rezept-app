@@ -210,7 +210,9 @@ export default function CookbookCreatorRecipeScreen() {
             <Text style={styles.saveButtonText}>{saving ? '...' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={styles.editBody}>
             <RecipeEditor value={draft} onChange={setDraft} />
             <View style={{ height: 40 }} />
@@ -224,7 +226,9 @@ export default function CookbookCreatorRecipeScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBack}>

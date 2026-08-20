@@ -72,7 +72,9 @@ export default function PreferencesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         {/* The band selector and the kids toggle used to sit here. Both were
             saying, less precisely, what the list below says exactly — and
             having both on one screen meant two answers to the same question
