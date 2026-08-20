@@ -21,7 +21,8 @@ import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
 WebBrowser.maybeCompleteAuthSession();
-import { useAuth, canUploadRecipes } from '../lib/auth';
+import { useAuth } from '../lib/auth';
+import { landAfterAuth } from '../lib/nav';
 
 export default function LoginScreen() {
   const { refresh } = useAuth();
@@ -30,10 +31,11 @@ export default function LoginScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Route by role after auth: creators go to their Studio, everyone else Home.
-  const landAfterAuth = async () => {
+  // Route after auth. The decision — onboarding first, then Studio or Home by
+  // role — lives in lib/nav so every way in agrees on it.
+  const land = async () => {
     const role = await refresh();
-    router.replace(canUploadRecipes(role) ? '/creator' : '/home');
+    await landAfterAuth(role);
   };
 
   // Passwordless email-code mode (more robust on mobile than a magic-link deep link).
@@ -73,7 +75,7 @@ export default function LoginScreen() {
         Alert.alert('Success', 'Check your email for verification link!');
         return;
       }
-      await landAfterAuth();
+      await land();
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -112,7 +114,7 @@ export default function LoginScreen() {
       Alert.alert('Error', error.message);
       return;
     }
-    await landAfterAuth();
+    await land();
   };
 
   const handleGoogleSignIn = async () => {
@@ -138,7 +140,7 @@ export default function LoginScreen() {
           
           if (accessToken && refreshToken) {
             await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-            await landAfterAuth();
+            await land();
           }
         }
       }
@@ -174,7 +176,7 @@ export default function LoginScreen() {
       if (fullName) {
         await supabase.auth.updateUser({ data: { full_name: fullName } }).catch(() => {});
       }
-      await landAfterAuth();
+      await land();
     } catch (error: any) {
       // User dismissing the Apple sheet is not an error worth surfacing.
       if (error?.code !== 'ERR_REQUEST_CANCELED') {

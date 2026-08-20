@@ -14,15 +14,32 @@ import {
   Preferences, loadPreferences, savePreferences,
   DIETS, AVOID, TIME_BUDGET, CUISINES,
 } from '../lib/preferences';
+import { loadConsent, saveConsent, Consent, MARKETING_EMAIL_NOTE, PUSH_NOTE } from '../lib/consent';
 
 export default function PreferencesScreen() {
   const [prefs, setPrefs] = useState<Preferences>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [consent, setConsent] = useState<Consent>({ push: false, marketingEmail: false });
+
   useEffect(() => {
     loadPreferences().then(r => { setPrefs(r.prefs); setLoading(false); });
+    loadConsent().then(setConsent).catch(() => {});
   }, []);
+
+  // Saved the moment it is switched, not on the Save button. Withdrawing
+  // consent must take effect even if the person then backs out of the screen
+  // — leaving it pending behind a button they did not press is exactly the
+  // failure CAN-SPAM's opt-out rule exists to prevent.
+  const setPush = async (on: boolean) => {
+    setConsent(c => ({ ...c, push: on }));
+    await saveConsent(on, null);
+  };
+  const setEmail = async (on: boolean) => {
+    setConsent(c => ({ ...c, marketingEmail: on }));
+    await saveConsent(null, on);
+  };
 
   const toggleIn = (key: 'diets' | 'avoid' | 'cuisines', id: string) =>
     setPrefs(p => {
@@ -105,6 +122,26 @@ export default function PreferencesScreen() {
         <Text style={styles.label}>Cuisines you enjoy</Text>
         <Chips group="cuisines" options={CUISINES} />
 
+        <Text style={styles.label}>Getting in touch</Text>
+        <View style={styles.consentCard}>
+          <View style={styles.consentHead}>
+            <Text style={styles.consentIcon}>🔔</Text>
+            <Text style={styles.consentTitle}>Notifications on your phone</Text>
+            <Switch value={consent.push} onValueChange={setPush}
+              trackColor={{ true: COLORS.orange, false: '#DDD3C4' }} />
+          </View>
+          <Text style={styles.consentText}>{PUSH_NOTE}</Text>
+        </View>
+        <View style={styles.consentCard}>
+          <View style={styles.consentHead}>
+            <Text style={styles.consentIcon}>✉️</Text>
+            <Text style={styles.consentTitle}>Email about what's new</Text>
+            <Switch value={consent.marketingEmail} onValueChange={setEmail}
+              trackColor={{ true: COLORS.orange, false: '#DDD3C4' }} />
+          </View>
+          <Text style={styles.consentText}>{MARKETING_EMAIL_NOTE}</Text>
+        </View>
+
         <View style={{ height: 50 }} />
       </ScrollView>
     </View>
@@ -113,6 +150,14 @@ export default function PreferencesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.cream },
+  consentCard: {
+    backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  consentHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  consentIcon: { fontSize: 20 },
+  consentTitle: { flex: 1, fontFamily: FONTS.semibold, fontSize: 15, color: COLORS.navy },
+  consentText: { fontSize: 12.5, color: COLORS.warmGray, lineHeight: 18, marginTop: 10 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: HEADER_TOP, paddingBottom: 16,

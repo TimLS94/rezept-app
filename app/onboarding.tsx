@@ -26,13 +26,18 @@ import {
   Preferences, savePreferences,
   HOUSEHOLD, DIETS, AVOID, TIME_BUDGET, CUISINES,
 } from '../lib/preferences';
+import { saveConsent, MARKETING_EMAIL_NOTE, PUSH_NOTE } from '../lib/consent';
 
-const STEPS = 7;
+const STEPS = 8;
 
 export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const [prefs, setPrefs] = useState<Preferences>({});
   const [saving, setSaving] = useState(false);
+  // Both start off. Consent that was never given must not look like consent,
+  // and a pre-ticked box is the difference between asking and assuming.
+  const [pushOk, setPushOk] = useState(false);
+  const [emailOk, setEmailOk] = useState(false);
 
   const set = (patch: Partial<Preferences>) => setPrefs(p => ({ ...p, ...patch }));
 
@@ -50,6 +55,9 @@ export default function OnboardingScreen() {
     // and refusing to let someone into the app because a preference did not
     // save would be the wrong trade.
     await savePreferences(prefs);
+    // Recorded separately from the preferences, and always — including when
+    // both answers are no. "Asked and declined" is a fact worth having.
+    await saveConsent(pushOk, emailOk);
     setSaving(false);
     router.replace('/home');
   };
@@ -168,6 +176,46 @@ export default function OnboardingScreen() {
         )}
 
         {step === 6 && (
+          <>
+            <Text style={styles.title}>May we get in touch?</Text>
+            <Text style={styles.lead}>
+              Both are off unless you turn them on, and neither is needed to use SpoonDrop.
+            </Text>
+
+            <View style={styles.consentCard}>
+              <View style={styles.consentHead}>
+                <Text style={styles.consentIcon}>🔔</Text>
+                <Text style={styles.consentTitle}>Notifications on your phone</Text>
+                <Switch
+                  value={pushOk}
+                  onValueChange={setPushOk}
+                  trackColor={{ true: COLORS.orange, false: '#DDD3C4' }}
+                />
+              </View>
+              <Text style={styles.consentText}>{PUSH_NOTE}</Text>
+            </View>
+
+            <View style={styles.consentCard}>
+              <View style={styles.consentHead}>
+                <Text style={styles.consentIcon}>✉️</Text>
+                <Text style={styles.consentTitle}>Email about what's new</Text>
+                <Switch
+                  value={emailOk}
+                  onValueChange={setEmailOk}
+                  trackColor={{ true: COLORS.orange, false: '#DDD3C4' }}
+                />
+              </View>
+              <Text style={styles.consentText}>{MARKETING_EMAIL_NOTE}</Text>
+            </View>
+
+            <Text style={styles.legal}>
+              SpoonDrop, and the address printed at the bottom of every email we send.
+              Changing your mind takes one tap in Profile → Preferences.
+            </Text>
+          </>
+        )}
+
+        {step === 7 && (
           <View style={styles.welcome}>
             <View style={styles.doneMark}>
               <Ionicons name="checkmark" size={44} color={COLORS.orange} />
@@ -220,6 +268,15 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.cream },
+  consentCard: {
+    backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 14,
+    borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  consentHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  consentIcon: { fontSize: 20 },
+  consentTitle: { flex: 1, fontFamily: FONTS.semibold, fontSize: 15, color: COLORS.navy },
+  consentText: { fontSize: 12.5, color: COLORS.warmGray, lineHeight: 18, marginTop: 10 },
+  legal: { fontSize: 11.5, color: COLORS.warmGray, lineHeight: 17, marginTop: 4 },
   progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 24, paddingTop: HEADER_TOP },
   seg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#E7DFD1' },
   segOn: { backgroundColor: COLORS.orange },

@@ -15,6 +15,7 @@ import {
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { useAuth, canUploadRecipes } from '../lib/auth';
+import { landAfterAuth } from '../lib/nav';
 
 export default function InfluencerLoginScreen() {
   const { refresh } = useAuth();
@@ -23,10 +24,11 @@ export default function InfluencerLoginScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // After promotion, creators land in their Studio.
-  const landAfterAuth = async () => {
+  // After promotion, creators land in their Studio — unless they have not been
+  // through onboarding yet, which lib/nav decides for every way in.
+  const land = async () => {
     const role = await refresh();
-    router.replace(canUploadRecipes(role) ? '/creator' : '/home');
+    await landAfterAuth(role);
   };
 
   const [mode, setMode] = useState<'password' | 'code'>('password');
@@ -69,7 +71,7 @@ export default function InfluencerLoginScreen() {
         Alert.alert('Success', 'Check your email for verification link!');
         return;
       }
-      await landAfterAuth();
+      await land();
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -110,7 +112,7 @@ export default function InfluencerLoginScreen() {
     }
     if (data.user) await promoteToCreator(data.user.id);
     setLoading(false);
-    await landAfterAuth();
+    await land();
   };
 
   return (
