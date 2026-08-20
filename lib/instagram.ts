@@ -127,7 +127,16 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
   if (!res.ok) {
     if (isQuotaError(res.error)) return { success: false, error: QUOTA_MESSAGE };
     if (res.error === 'rapidapi-429') {
-      return { success: false, error: 'Rate limit reached. Please try again later.' };
+      return {
+        success: false,
+        error:
+          'Instagram lookups have hit their cap for now — that is our subscription to the ' +
+          'service that reads posts, not your allowance. A screenshot of the post works and ' +
+          'comes out of a different allowance.',
+      };
+    }
+    if (res.error === 'no-key') {
+      return { success: false, error: 'Instagram lookups are not configured. Use a screenshot instead.' };
     }
     return { success: false, error: `API error: ${res.error}` };
   }
@@ -199,7 +208,8 @@ export async function fetchInstagramWithFallback(url: string): Promise<Instagram
   }
   console.warn('RapidAPI failed:', rapidResult.error);
 
-  // Fallback to oEmbed
+  // Fallback to oEmbed. Instagram blocks it more often than not — it answers
+  // with an HTML page — so it is a long shot rather than a safety net.
   console.log('Trying oEmbed fallback...');
   const oembedResult = await fetchInstagramContent(url);
   if (oembedResult.success) {
@@ -207,11 +217,12 @@ export async function fetchInstagramWithFallback(url: string): Promise<Instagram
     return oembedResult;
   }
 
-  // Both failed
-  return { 
-    success: false, 
-    error: 'Could not fetch Instagram post. Try uploading a screenshot instead.' 
-  };
+  // Both failed. Report what the first leg said rather than replacing it with
+  // a general apology: "the lookup service is at its cap" and "this post is
+  // private" are different problems, and only one of them is worth retrying.
+  // Swallowing that detail is what made this look like a broken feature
+  // instead of an exhausted subscription.
+  return rapidResult;
 }
 
 // Build content string for AI extraction

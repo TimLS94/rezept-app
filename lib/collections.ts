@@ -47,6 +47,21 @@ export const COLLECTION_ICONS = [
 
 const SEEDED_KEY = 'collections_seeded_v1';
 
+/**
+ * Turn a Postgres complaint into something a person can act on.
+ *
+ * A missing table comes back as "Could not find the table 'public.collections'
+ * in the schema cache", which reads as a crash. It has exactly one cause and
+ * one fix, so it should say so.
+ */
+function explain(error: { message?: string; code?: string } | null): string {
+  const message = error?.message ?? 'Something went wrong.';
+  if (error?.code === 'PGRST205' || /Could not find the table/i.test(message)) {
+    return 'Collections need a database update that has not been applied yet (collections.sql).';
+  }
+  return message;
+}
+
 function sortKey(c: Collection): string {
   return `${String(c.position).padStart(6, '0')}-${c.name.toLowerCase()}`;
 }
@@ -117,8 +132,11 @@ export async function ensureDefaultCollections(existing: Collection[]): Promise<
       position: i,
     })),
   );
-  await AsyncStorage.setItem(SEEDED_KEY, '1').catch(() => {});
+  // Only remember having done this if it worked. Marking a failed attempt as
+  // done would leave the tab permanently empty on this device with no way
+  // back — the presets would never be offered again.
   if (error) return existing;
+  await AsyncStorage.setItem(SEEDED_KEY, '1').catch(() => {});
 
   return fetchCollections();
 }
@@ -133,7 +151,7 @@ export async function createCollection(name: string, icon: string): Promise<{ id
     .select('id')
     .single();
 
-  if (error || !data) return { error: error?.message || 'could-not-create' };
+  if (error || !data) return { error: explain(error) };
   return { id: data.id };
 }
 
@@ -142,14 +160,14 @@ export async function renameCollection(id: string, name: string, icon: string): 
     .from('collections')
     .update({ name: name.trim(), icon })
     .eq('id', id);
-  return error ? { error: error.message } : {};
+  return error ? { error: explain(error) } : {};
 }
 
 export async function deleteCollection(id: string): Promise<{ error?: string }> {
   // Memberships go with it through the cascade; the recipes themselves are
   // untouched, which is the whole point of a collection being a grouping.
   const { error } = await supabase.from('collections').delete().eq('id', id);
-  return error ? { error: error.message } : {};
+  return error ? { error: explain(error) } : {};
 }
 
 export async function fetchCollection(id: string): Promise<Collection | null> {
@@ -180,7 +198,7 @@ export async function addToCollection(
     .from('collection_recipes')
     .upsert({ collection_id: collectionId, recipe_id: recipeId, source },
             { onConflict: 'collection_id,recipe_id' });
-  return error ? { error: error.message } : {};
+  return error ? { error: explain(error) } : {};
 }
 
 export async function removeFromCollection(collectionId: string, recipeId: string): Promise<{ error?: string }> {
