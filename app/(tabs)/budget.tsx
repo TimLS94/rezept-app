@@ -27,6 +27,8 @@ import { HEADER_TOP } from '../../lib/layout';
 // A week of meals from whatever the pool offers. Fewer than seven recipes means
 // a shorter week rather than the same meal repeated — planning Monday's dinner
 // again on Wednesday is not a plan.
+const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 const buildPlan = (pool: Recipe[]): PlannedMeal[] =>
   pool.slice(0, 7).map((recipe, i) => ({ id: `m${i}-${Date.now()}`, recipe }));
 
@@ -264,6 +266,33 @@ export default function BudgetScreen() {
           <TouchableOpacity style={styles.weekArrow} onPress={() => goToWeek(1)}>
             <Text style={styles.weekArrowText}>›</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* The week as seven days rather than a date range. "Aug 17 – Aug 23"
+            tells you which week; this tells you where you are in it, which is
+            the thing you actually look for. Each day carries how many meals
+            are on it, so gaps are visible without scrolling. */}
+        <View style={styles.dayStrip}>
+          {WEEKDAY_SHORT.map((label, i) => {
+            const date = addDays(weekStart, i);
+            const isToday = date.toDateString() === new Date().toDateString();
+            const count = mealPlan.filter((m, idx) => (m.day ?? idx % 7) === i).length;
+            return (
+              <View key={i} style={[styles.dayCell, isToday && styles.dayCellToday]}>
+                <Text style={[styles.dayName, isToday && styles.dayNameToday]}>{label}</Text>
+                <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>{date.getDate()}</Text>
+                <View style={styles.dayDots}>
+                  {count > 0 ? (
+                    Array.from({ length: Math.min(count, 3) }, (_, d) => (
+                      <View key={d} style={[styles.dot, isToday && styles.dotToday]} />
+                    ))
+                  ) : (
+                    <View style={styles.dotEmpty} />
+                  )}
+                </View>
+              </View>
+            );
+          })}
         </View>
 
         {/* Budget Overview — roadmap V2, hidden behind the budget feature flag */}
@@ -597,6 +626,23 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
   },
+  dayStrip: {
+    flexDirection: 'row', marginHorizontal: 16, marginBottom: 14, gap: 4,
+  },
+  dayCell: {
+    flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 12,
+    backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  dayCellToday: { backgroundColor: '#0D2B63', borderColor: '#0D2B63' },
+  dayName: { fontSize: 10, color: '#8A8A8A', fontWeight: '600' },
+  dayNameToday: { color: 'rgba(255,255,255,0.75)' },
+  dayNum: { fontSize: 16, fontWeight: '800', color: '#0D2B63', marginTop: 2 },
+  dayNumToday: { color: '#FFF' },
+  dayDots: { flexDirection: 'row', gap: 2, height: 6, marginTop: 4, alignItems: 'center' },
+  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#F2701E' },
+  dotToday: { backgroundColor: '#FFB27A' },
+  dotEmpty: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'transparent' },
+
   fromCookbookButton: {
     backgroundColor: '#0D2B63',
     marginHorizontal: 20,

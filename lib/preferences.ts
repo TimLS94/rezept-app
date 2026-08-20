@@ -6,6 +6,7 @@
 // question must read as "not answered", never as "answered no".
 import { supabase } from './supabase';
 import { fetchMyProfile } from './profile';
+import { DIETARY_TAGS } from '../data/recipes';
 
 export type Preferences = {
   household?: '1-2' | '3-4' | '5-6' | '6+';
@@ -55,15 +56,14 @@ export const HOUSEHOLD = [
   { id: '6+', label: '6+ people' },
 ] as const;
 
-export const DIETS = [
-  { id: 'vegetarian', label: 'Vegetarian', icon: '🌿' },
-  { id: 'vegan', label: 'Vegan', icon: '🌱' },
-  { id: 'pescatarian', label: 'Pescatarian', icon: '🐟' },
-  { id: 'gluten-free', label: 'Gluten-Free', icon: '🌾' },
-  { id: 'dairy-free', label: 'Dairy-Free', icon: '🥛' },
-  { id: 'low-carb', label: 'Low Carb', icon: '🥑' },
-  { id: 'nut-free', label: 'Nut-Free', icon: '🥜' },
-] as const;
+// Derived from the recipe tags, never listed separately.
+//
+// The two lists had drifted: onboarding offered Pescatarian, Low Carb and
+// Nut-Free — which no recipe can carry, so choosing them filtered nothing —
+// while Healthy and High Protein, which recipes do carry, were missing. A
+// preference nothing can satisfy is a dead filter, and the only way that stops
+// happening again is to have one list.
+export const DIETS = DIETARY_TAGS;
 
 export const AVOID = [
   { id: 'peanuts', label: 'Peanuts', icon: '🥜' },

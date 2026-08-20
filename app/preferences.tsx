@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import { COLORS, FONTS } from '../lib/theme';
 import { HEADER_TOP } from '../lib/layout';
 import { goBackOr } from '../lib/nav';
+import FamilyMembers from '../components/FamilyMembers';
 import {
   Preferences, loadPreferences, savePreferences,
   HOUSEHOLD, DIETS, AVOID, TIME_BUDGET, CUISINES,
@@ -90,6 +91,9 @@ export default function PreferencesScreen() {
             trackColor={{ true: COLORS.green, false: '#DDD' }}
           />
         </View>
+
+        <Text style={styles.label}>Who is at the table</Text>
+        <FamilyMembers />
 
         <Text style={styles.label}>Dietary preferences</Text>
         <Chips group="diets" options={DIETS} />
