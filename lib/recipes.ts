@@ -226,6 +226,7 @@ export async function removeRecipeFromCookbook(recipeId: string): Promise<{ ok: 
 // ── Cookbook Edits ─────────────────────────────────────────────────────────
 // Save local edits to a creator recipe in the cookbook
 export type CookbookEdits = {
+  nutrition?: Recipe['nutrition'];
   title?: string;
   description?: string;
   prepTime?: number;

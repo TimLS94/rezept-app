@@ -287,7 +287,13 @@ export default function RecipeEditor({ value, onChange }: Props) {
 
         <View style={styles.row}>
           <NumField label="Calories" value={value.calories}
-            onChange={n => { set({ calories: n }); setNutrition({ calories: n, estimated: false }); }} />
+            onChange={n =>
+              onChange({
+                ...value,
+                calories: n,
+                nutrition: { ...(value.nutrition ?? {}), calories: n, estimated: false },
+              })
+            } />
           <NumField label="Protein (g)" value={value.nutrition?.protein ?? 0}
             onChange={n => setNutrition({ protein: n, estimated: false })} />
           <NumField label="Carbs (g)" value={value.nutrition?.carbs ?? 0}

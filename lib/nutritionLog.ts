@@ -69,9 +69,12 @@ export async function fetchLoggedMeals(from: Date, to: Date): Promise<LoggedMeal
 
   const ids = [...new Set(entries.map(e => e.recipe_id).filter(Boolean))];
 
-  const [creator, mine] = await Promise.all([
+  const [creator, mine, edits] = await Promise.all([
     supabase.from('recipes').select('id, nutrition, calories').in('id', ids),
     supabase.from('my_recipes').select('id, nutrition, calories').in('id', ids),
+    // Your own edits to a creator's recipe live here as a patch over theirs.
+    supabase.from('cookbook_edits').select('recipe_id, edits')
+      .eq('user_id', user.id).in('recipe_id', ids),
   ]);
 
   const table = new Map<string, Nutrition>();
@@ -82,6 +85,13 @@ export async function fetchLoggedMeals(from: Date, to: Date): Promise<LoggedMeal
     if (n.calories == null && row.calories) n.calories = row.calories;
     if (n.calories != null || n.protein != null) table.set(row.id, n);
   }
+  // Your edits win over the creator's original: if you filled the figures in
+  // yourself, those are the ones you meant to count.
+  for (const row of (edits.data ?? []) as any[]) {
+    const n = row.edits?.nutrition;
+    if (n && (n.calories != null || n.protein != null)) table.set(row.recipe_id, n);
+  }
+
   // Seed recipes carry calories in the bundle and nothing else.
   for (const id of ids) {
     if (table.has(id)) continue;
