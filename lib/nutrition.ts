@@ -38,9 +38,18 @@ export async function estimateNutrition(
     return { ok: false, error: isQuotaError(res.error) ? 'quota' : res.error };
   }
 
+  const raw = (res.data.text ?? '').trim();
+  if (!raw) {
+    return { ok: false, error: res.data.finishReason === 'MAX_TOKENS' ? 'truncated' : 'empty' };
+  }
+
   try {
-    const text = (res.data.text ?? '').replace(/```json\n?|\n?```/g, '').trim();
-    const parsed = JSON.parse(text);
+    // Take the first {...} in the reply rather than requiring the whole thing
+    // to be JSON: the model sometimes prefixes a sentence, and failing on that
+    // throws away a perfectly good answer.
+    const match = raw.replace(/```json\n?|\n?```/g, '').match(/\{[\s\S]*\}/);
+    if (!match) return { ok: false, error: 'no-json' };
+    const parsed = JSON.parse(match[0]);
     const int = (v: unknown) => {
       const n = Math.round(Number(v));
       return Number.isFinite(n) && n >= 0 ? n : undefined;

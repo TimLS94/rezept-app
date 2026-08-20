@@ -73,6 +73,8 @@ export default function FamilyMembers() {
 
   useEffect(() => { load(); }, []);
 
+  const startEdit = (m: Member) => setDraft({ ...m });
+
   const save = async () => {
     if (!draft?.name.trim()) {
       Alert.alert('Name needed', 'Give this person a name so you can tell the portions apart.');
@@ -92,14 +94,22 @@ export default function FamilyMembers() {
       dietary_restrictions: [],
     };
 
-    const { data, error } = await supabase.from('family_members').insert(row).select().single();
+    // An existing person is updated in place; a new one is inserted. The id
+    // on the draft is what tells them apart.
+    const { data, error } = draft.id
+      ? await supabase.from('family_members').update(row).eq('id', draft.id).select().single()
+      : await supabase.from('family_members').insert(row).select().single();
     setAdding(false);
 
     if (error || !data) {
       Alert.alert('Could not save', error?.message ?? 'Please try again.');
       return;
     }
-    setMembers(prev => [...prev, { ...draft, id: data.id }]);
+    setMembers(prev =>
+      draft.id
+        ? prev.map(m => (m.id === draft.id ? { ...draft } : m))
+        : [...prev, { ...draft, id: data.id }],
+    );
     setDraft(null);
     // Portion scaling caches the household size; without this the next recipe
     // still uses the old number.
@@ -125,7 +135,7 @@ export default function FamilyMembers() {
   return (
     <View>
       {members.map(m => (
-        <View key={m.id} style={styles.row}>
+        <TouchableOpacity key={m.id} style={styles.row} onPress={() => startEdit(m)} activeOpacity={0.75}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{m.name.charAt(0).toUpperCase() || '?'}</Text>
           </View>
@@ -139,7 +149,7 @@ export default function FamilyMembers() {
           <TouchableOpacity onPress={() => remove(m)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="close" size={18} color={COLORS.warmGray} />
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       ))}
 
       {draft ? (
@@ -204,7 +214,7 @@ export default function FamilyMembers() {
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.confirm} onPress={save} disabled={adding}>
-              <Text style={styles.confirmText}>{adding ? '…' : 'Add'}</Text>
+              <Text style={styles.confirmText}>{adding ? '…' : draft.id ? 'Save' : 'Add'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -236,7 +246,7 @@ export default function FamilyMembers() {
       )}
 
       <Text style={styles.note}>
-        Shopping lists and recipe amounts scale from this list. The portion figure is a
+        Tap someone to change their details. Shopping lists and recipe amounts scale from this list. The portion figure is a
         suggestion from age and weight — change it to whatever your household actually eats.
       </Text>
     </View>

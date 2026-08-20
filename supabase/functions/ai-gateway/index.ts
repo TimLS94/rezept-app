@@ -292,7 +292,10 @@ async function runOp(op: string, body: Record<string, any>) {
         .filter(Boolean)
         .join('\n');
 
-      const r = await gemini([{ text: `${NUTRITION_PROMPT}\n\nServings: ${servings}\n\nIngredients:\n${list}` }], 600);
+      // 2000, not 600: Gemini 2.5 charges its reasoning against the same
+      // budget, so a short ceiling gets spent thinking and the JSON comes back
+      // truncated. The fridge scan hit this exact wall at 1000.
+      const r = await gemini([{ text: `${NUTRITION_PROMPT}\n\nServings: ${servings}\n\nIngredients:\n${list}` }], 2000);
       return r.ok ? json(r) : json(r, 502);
     }
 

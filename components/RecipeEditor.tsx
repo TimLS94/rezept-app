@@ -71,7 +71,9 @@ export default function RecipeEditor({ value, onChange }: Props) {
           ? 'Add the ingredients first — the estimate is worked out from them.'
           : r.error === 'quota'
             ? "You've used today's AI allowance. It resets tomorrow."
-            : 'The estimate came back unreadable. Please try again.',
+            : r.error === 'truncated'
+              ? 'That ingredient list was too long to work through in one go. Try it with fewer items.'
+              : `The estimate failed (${r.error}). Please try again.`,
       );
       return;
     }
@@ -172,7 +174,6 @@ export default function RecipeEditor({ value, onChange }: Props) {
           <NumField label="Prep (min)" value={value.prepTime} onChange={(n) => set({ prepTime: n })} />
           <NumField label="Cook (min)" value={value.cookTime} onChange={(n) => set({ cookTime: n })} />
           <NumField label="Servings" value={value.servings} onChange={(n) => set({ servings: n })} />
-          <NumField label="Calories" value={value.calories} onChange={(n) => set({ calories: n })} />
         </View>
       </View>
 
@@ -285,6 +286,8 @@ export default function RecipeEditor({ value, onChange }: Props) {
         </View>
 
         <View style={styles.row}>
+          <NumField label="Calories" value={value.calories}
+            onChange={n => { set({ calories: n }); setNutrition({ calories: n, estimated: false }); }} />
           <NumField label="Protein (g)" value={value.nutrition?.protein ?? 0}
             onChange={n => setNutrition({ protein: n, estimated: false })} />
           <NumField label="Carbs (g)" value={value.nutrition?.carbs ?? 0}
