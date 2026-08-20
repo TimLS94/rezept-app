@@ -21,6 +21,8 @@ import { fetchMyRecipes, myRecipeToRecipe } from '../../lib/myRecipes';
 import { fetchCookbookCreatorRecipes } from '../../lib/recipes';
 import { loadScan, matchRecipes } from '../../lib/fridge';
 import { fetchPopularThisWeek, isPopular, Popularity } from '../../lib/popular';
+import { loadPreferences, Preferences } from '../../lib/preferences';
+import { matchRecipe, warningText, Match } from '../../lib/matching';
 import { COLORS, FONTS } from '../../lib/theme';
 import { HEADER_TOP } from '../../lib/layout';
 
@@ -54,17 +56,22 @@ export default function HomeScreen() {
   const [cursor, setCursor] = useState(0);
   // recipe id → share of its ingredients your last fridge scan covered.
   const [coverage, setCoverage] = useState<Record<string, number>>({});
-  // recipe id → how many ingredients you would still have to buy. A percentage
-  // answers "how close am I"; this answers "what does it cost me to say yes",
-  // which is the question someone standing in their kitchen is actually asking.
-  const [toBuy, setToBuy] = useState<Record<string, number>>({});
+  // recipe id → the ingredients you would still have to buy, by name. A
+  // percentage answers "how close am I"; this answers "what does it cost me
+  // to say yes", which is the question someone standing in their kitchen is
+  // actually asking — and naming the three items answers it properly.
+  const [toBuy, setToBuy] = useState<Record<string, string[]>>({});
   // recipe id → how many people cooked it in the last seven days.
   const [popular, setPopular] = useState<Record<string, Popularity>>({});
+  // What the user told us during onboarding, for the fit score.
+  const [prefs, setPrefs] = useState<Preferences | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
+        loadPreferences().then(({ prefs }) => active && setPrefs(prefs)).catch(() => {});
+
         const profile = await fetchMyProfile();
         if (active && profile) {
           setName((profile.full_name || '').split(' ')[0]);
@@ -94,22 +101,41 @@ export default function HomeScreen() {
         const shuffledPool = shuffled(usable);
         const hot = shuffledPool.filter(r => isPopular(trending[r.id]));
         const rest = shuffledPool.filter(r => !isPopular(trending[r.id]));
-        setPicks([...hot, ...rest].slice(0, 8));
+        setPicks([...hot, ...rest].slice(0, 12));
 
         // A real number or none at all.
         const scan = await loadScan();
         if (active && scan?.items.length) {
           const matched = matchRecipes(usable, scan.items);
           setCoverage(Object.fromEntries(matched.map(m => [m.recipe.id, m.coverage])));
-          setToBuy(Object.fromEntries(matched.map(m => [m.recipe.id, m.missing.length])));
+          setToBuy(Object.fromEntries(matched.map(m => [m.recipe.id, m.missing.map(i => i.name)])));
         }
       })();
       return () => { active = false; };
     }, [])
   );
 
-  const hero = picks[cursor % (picks.length || 1)];
-  const others = picks.filter((_, i) => i !== cursor % (picks.length || 1)).slice(0, 6);
+  // Fit reorders what popularity already ordered, and an allergen conflict
+  // sinks a recipe rather than removing it — you may well be cooking for
+  // yourself tonight, and a cookbook that quietly hides things leaves you
+  // wondering what happened to them.
+  const ranked = prefs
+    ? [...picks].sort((a, b) => {
+        const ma = matchRecipe(a, { prefs });
+        const mb = matchRecipe(b, { prefs });
+        const safe = (m: Match | null) => (m?.warnings.length ? 0 : 1);
+        return (
+          safe(mb) - safe(ma) ||
+          Number(isPopular(popular[b.id])) - Number(isPopular(popular[a.id])) ||
+          (mb?.score ?? 0) - (ma?.score ?? 0)
+        );
+      })
+    : picks;
+
+  const hero = ranked[cursor % (ranked.length || 1)];
+  const others = ranked.filter((_, i) => i !== cursor % (ranked.length || 1)).slice(0, 6);
+  const heroMatch = hero && prefs ? matchRecipe(hero, { prefs }) : null;
+  const heroWarning = warningText(heroMatch?.warnings ?? []);
 
   const matchOf = (r: Recipe) =>
     coverage[r.id] != null ? Math.round(coverage[r.id] * 100) : null;
@@ -117,14 +143,27 @@ export default function HomeScreen() {
   const perServing = (r: Recipe) =>
     r.cost > 0 && r.servings > 0 ? `$${(r.cost / r.servings).toFixed(2)} per serving` : null;
 
-  /** How many ingredients are still missing, or null when nothing was scanned. */
-  const missingOf = (r: Recipe) => (toBuy[r.id] != null ? toBuy[r.id] : null);
+  /** What is still missing, or null when the scan had nothing to say about it. */
+  const missingOf = (r: Recipe) => toBuy[r.id] ?? null;
 
   const shoppingLine = (r: Recipe) => {
-    const n = missingOf(r);
-    if (n == null) return null;
-    return n === 0 ? 'nothing to buy' : `${n} to buy`;
+    const missing = missingOf(r);
+    if (missing == null) return null;
+    return missing.length === 0 ? 'nothing to buy' : `${missing.length} to buy`;
   };
+
+  /** The same, but naming names — worth the room on the big card. */
+  const shoppingDetail = (r: Recipe) => {
+    const missing = missingOf(r);
+    if (!missing?.length) return null;
+    const named = missing.slice(0, 3).join(', ');
+    return missing.length > 3 ? `${named} +${missing.length - 3} more` : named;
+  };
+
+  // Only scored against answers the user actually gave. No preferences, no
+  // badge — a fit score for a profile nobody filled in is decoration.
+  const matchFor = (r: Recipe): Match | null =>
+    prefs ? matchRecipe(r, { prefs }) : null;
 
   /** What kind of dish this is, in words. Categories and dietary tags overlap
    *  ("healthy" is in both), so they are merged and capped — three labels read
@@ -156,10 +195,15 @@ export default function HomeScreen() {
           {greeting()}{name ? `, ${name}` : ''} 👋
         </Text>
         <Text style={styles.headline}>What's for dinner?</Text>
+        {/* Say what the suggestion is actually based on, and only claim the
+            parts that are true right now. */}
         <Text style={styles.sub}>
-          {Object.keys(coverage).length
-            ? 'Based on your cookbook and what your last scan found.'
-            : 'Picked from your cookbook and the creators you follow.'}
+          {[
+            'From your cookbook',
+            prefs && Object.keys(prefs).length ? 'what you told us you like' : null,
+            Object.keys(coverage).length ? 'and what your last scan found' : null,
+          ].filter(Boolean).join(', ').replace(', and', ' and')}
+          .
         </Text>
 
         {hero ? (
@@ -202,6 +246,25 @@ export default function HomeScreen() {
                   </View>
                 )}
                 <Text style={styles.heroTitle} numberOfLines={2}>{hero.title}</Text>
+
+                {/* What we know about the fit, and what it would cost — both
+                    only when there is something real behind them. */}
+                {heroMatch && (
+                  <Text style={styles.heroFit}>
+                    <Text style={styles.heroFitScore}>{heroMatch.score}% for you</Text>
+                    {heroMatch.reasons.length ? ` · ${heroMatch.reasons.join(' · ')}` : ''}
+                  </Text>
+                )}
+                {shoppingDetail(hero) && (
+                  <Text style={styles.heroShop}>🛒 Still need: {shoppingDetail(hero)}</Text>
+                )}
+                {heroWarning && (
+                  <View style={styles.warnRow}>
+                    <Ionicons name="alert-circle" size={13} color="#FFD9C7" />
+                    <Text style={styles.warnText}>{heroWarning}</Text>
+                  </View>
+                )}
+
                 {/* Time is on the badge above; repeating it here spent a line
                     on something already answered. */}
                 <Text style={styles.heroMeta}>
@@ -292,11 +355,18 @@ export default function HomeScreen() {
                   <View style={styles.ideaFoot}>
                     <Text style={styles.ideaTitle} numberOfLines={2}>{r.title}</Text>
                     <Text style={styles.ideaSub} numberOfLines={1}>
-                      {[
-                        isPopular(popular[r.id]) ? '🔥 popular' : null,
-                        shoppingLine(r),
-                        chipsFor(r)[0],
-                      ].filter(Boolean).join('  ·  ')}
+                      {(() => {
+                        const m = matchFor(r);
+                        return [
+                          // An allergen is the one thing that has to be
+                          // readable before anything else on the card.
+                          m?.warnings.length ? `⚠︎ ${m.warnings[0]}` : null,
+                          isPopular(popular[r.id]) ? '🔥 popular' : null,
+                          m && !m.warnings.length ? `${m.score}% for you` : null,
+                          shoppingLine(r),
+                          chipsFor(r)[0],
+                        ].filter(Boolean).join('  ·  ');
+                      })()}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -348,6 +418,11 @@ const styles = StyleSheet.create({
   heroFoot: { padding: 16 },
   heroTitle: { fontFamily: FONTS.display, fontSize: 24, color: '#FFF' },
   heroMeta: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 6 },
+  heroFit: { color: 'rgba(255,255,255,0.92)', fontSize: 12.5, marginTop: 8 },
+  heroFitScore: { fontWeight: '800' },
+  heroShop: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 4 },
+  warnRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  warnText: { color: '#FFD9C7', fontSize: 11.5, fontWeight: '700' },
   hotChip: {
     alignSelf: 'flex-start', backgroundColor: COLORS.orange,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, marginBottom: 8,
