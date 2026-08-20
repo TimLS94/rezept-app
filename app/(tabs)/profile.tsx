@@ -584,6 +584,9 @@ export default function ProfileScreen() {
           <NavRow icon="people-outline" title="Family & Preferences"
             sub="Household, kids, dietary needs, allergies, time, cuisines"
             onPress={() => router.push('/preferences')} />
+          <NavRow icon="nutrition-outline" title="Nutrition"
+            sub="What you ate today and this week"
+            onPress={() => router.push('/profile/nutrition-log')} />
           <NavRow icon="fitness-outline" title="Nutrition Goals"
             sub="Calories, macros, what you're aiming for"
             onPress={() => router.push('/profile/nutrition')} last />
