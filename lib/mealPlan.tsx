@@ -12,6 +12,9 @@ export type PlannedMeal = {
    *  board derives one from the position so an old plan still reads as a
    *  week rather than a single overloaded Monday. */
   day?: number;
+  /** The cook_log row this meal produced when it was ticked off, so unticking
+   *  can take it back out again. */
+  logId?: string;
 };
 
 export type PlansByWeek = Record<string, PlannedMeal[]>;

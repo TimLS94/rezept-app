@@ -15,6 +15,7 @@ import { Recipe, DietaryTag, DIETARY_TAGS } from '../../data/recipes';
 import { addRecipesToShoppingList, describeAdd } from '../../lib/shopping';
 import { FEATURES } from '../../lib/features';
 import { useMealPlan, PlannedMeal } from '../../lib/mealPlan';
+import { logCook, removeCookLog } from '../../lib/cookStats';
 import { fetchMyRecipes, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes';
 import { fetchCookbookCreatorRecipes, CookbookCreatorRecipe } from '../../lib/recipes';
 import { buildRecipePool, filterByDietary, shuffled, withIngredients } from '../../lib/planner';
@@ -176,8 +177,30 @@ export default function BudgetScreen() {
     setPlan(plan => plan.map(m => (m.id === id ? { ...m, recipe: pick, done: false } : m)));
   };
 
-  const toggleDone = (id: string) => {
-    setPlan(plan => plan.map(m => (m.id === id ? { ...m, done: !m.done } : m)));
+  // Ticking a meal off in the planner is the same statement as finishing it in
+  // cook mode: "I made this". It used to be neither recorded nor counted, so
+  // the same act produced completely different results depending on which
+  // screen you used — no entry in your history, no streak, nothing for
+  // nutrition to add up.
+  //
+  // Creator earnings are safe from this: cook_dedupe counts one cook per user
+  // per recipe per day, so ticking here and cooking properly is still one.
+  const toggleDone = async (id: string) => {
+    const meal = mealPlan.find(m => m.id === id);
+    if (!meal) return;
+    const nowDone = !meal.done;
+
+    setPlan(plan => plan.map(m => (m.id === id ? { ...m, done: nowDone } : m)));
+
+    if (nowDone) {
+      const logId = await logCook(meal.recipe);
+      if (logId) setPlan(plan => plan.map(m => (m.id === id ? { ...m, logId } : m)));
+    } else if (meal.logId) {
+      // Unticking means it did not happen after all, so the record goes too —
+      // otherwise a mis-tap would silently inflate the history for good.
+      await removeCookLog(meal.logId);
+      setPlan(plan => plan.map(m => (m.id === id ? { ...m, logId: undefined } : m)));
+    }
   };
 
   const removeMeal = (id: string) => {

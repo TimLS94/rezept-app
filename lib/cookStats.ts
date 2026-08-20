@@ -67,3 +67,8 @@ export async function logCook(recipe: Recipe): Promise<string | null> {
 export async function saveCookRating(id: string, rating: number): Promise<void> {
   await supabase.from('cook_log').update({ rating }).eq('id', id);
 }
+
+/** Undo a logged cook — used when a planner tick is taken back. */
+export async function removeCookLog(id: string): Promise<void> {
+  await supabase.from('cook_log').delete().eq('id', id);
+}
