@@ -13,7 +13,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { RECIPES, Recipe } from '../../data/recipes';
+import { RECIPES, Recipe, DIETARY_TAGS } from '../../data/recipes';
 import { useAuth } from '../../lib/auth';
 import { fetchMyProfile } from '../../lib/profile';
 import { buildRecipePool, shuffled } from '../../lib/planner';
@@ -34,6 +34,10 @@ function greeting(): string {
   return 'Good evening';
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  quick: 'Quick', kids: 'Kid-friendly', healthy: 'Healthy', budget: 'Budget',
+};
+
 const QUICK_ACTIONS: { icon: IoniconName; label: string; route: string }[] = [
   { icon: 'scan-outline', label: 'Scan Fridge', route: '/fridge' },
   { icon: 'calendar-outline', label: 'Meal Planner', route: '/budget' },
@@ -49,6 +53,10 @@ export default function HomeScreen() {
   const [cursor, setCursor] = useState(0);
   // recipe id → share of its ingredients your last fridge scan covered.
   const [coverage, setCoverage] = useState<Record<string, number>>({});
+  // recipe id → how many ingredients you would still have to buy. A percentage
+  // answers "how close am I"; this answers "what does it cost me to say yes",
+  // which is the question someone standing in their kitchen is actually asking.
+  const [toBuy, setToBuy] = useState<Record<string, number>>({});
 
   useFocusEffect(
     useCallback(() => {
@@ -78,6 +86,7 @@ export default function HomeScreen() {
         if (active && scan?.items.length) {
           const matched = matchRecipes(usable, scan.items);
           setCoverage(Object.fromEntries(matched.map(m => [m.recipe.id, m.coverage])));
+          setToBuy(Object.fromEntries(matched.map(m => [m.recipe.id, m.missing.length])));
         }
       })();
       return () => { active = false; };
@@ -92,6 +101,26 @@ export default function HomeScreen() {
 
   const perServing = (r: Recipe) =>
     r.cost > 0 && r.servings > 0 ? `$${(r.cost / r.servings).toFixed(2)} per serving` : null;
+
+  /** How many ingredients are still missing, or null when nothing was scanned. */
+  const missingOf = (r: Recipe) => (toBuy[r.id] != null ? toBuy[r.id] : null);
+
+  const shoppingLine = (r: Recipe) => {
+    const n = missingOf(r);
+    if (n == null) return null;
+    return n === 0 ? 'nothing to buy' : `${n} to buy`;
+  };
+
+  /** What kind of dish this is, in words. Categories and dietary tags overlap
+   *  ("healthy" is in both), so they are merged and capped — three labels read
+   *  as a description, six read as noise. */
+  const chipsFor = (r: Recipe): string[] => {
+    const labels = [
+      ...r.categories.map(c => CATEGORY_LABELS[c] ?? c),
+      ...r.dietary.map(d => DIETARY_TAGS.find(t => t.id === d)?.label ?? d),
+    ];
+    return [...new Set(labels)].slice(0, 3);
+  };
 
   return (
     <View style={styles.container}>
@@ -129,11 +158,16 @@ export default function HomeScreen() {
               <View style={styles.heroShade} />
 
               <View style={styles.badgeRow}>
-                {matchOf(hero) != null && (
+                {matchOf(hero) != null ? (
                   <View style={styles.matchBadge}>
                     <Ionicons name="checkmark-circle" size={13} color="#FFF" />
-                    <Text style={styles.matchText}>{matchOf(hero)}% in your fridge</Text>
+                    <Text style={styles.matchText}>
+                      {matchOf(hero)}% in your fridge
+                      {shoppingLine(hero) ? ` · ${shoppingLine(hero)}` : ''}
+                    </Text>
                   </View>
+                ) : (
+                  <View />
                 )}
                 <View style={styles.timeBadge}>
                   <Ionicons name="time-outline" size={13} color={COLORS.navy} />
@@ -143,13 +177,24 @@ export default function HomeScreen() {
 
               <View style={styles.heroFoot}>
                 <Text style={styles.heroTitle} numberOfLines={2}>{hero.title}</Text>
+                {/* Time is on the badge above; repeating it here spent a line
+                    on something already answered. */}
                 <Text style={styles.heroMeta}>
                   {[
-                    `${hero.prepTime + hero.cookTime} min`,
                     hero.difficulty,
+                    `${hero.servings} servings`,
                     perServing(hero),
                   ].filter(Boolean).join('  ·  ')}
                 </Text>
+                {chipsFor(hero).length > 0 && (
+                  <View style={styles.chipRow}>
+                    {chipsFor(hero).map(c => (
+                      <View key={c} style={styles.chip}>
+                        <Text style={styles.chipText}>{c}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             </TouchableOpacity>
 
@@ -208,16 +253,23 @@ export default function HomeScreen() {
                   <Image source={{ uri: r.image }} style={styles.ideaImage} contentFit="cover" />
                   <View style={styles.ideaShade} />
                   <View style={styles.ideaBadges}>
-                    {matchOf(r) != null && (
+                    {matchOf(r) != null ? (
                       <View style={styles.ideaMatch}>
                         <Text style={styles.ideaMatchText}>{matchOf(r)}%</Text>
                       </View>
+                    ) : (
+                      <View />
                     )}
                     <View style={styles.ideaTime}>
                       <Text style={styles.ideaTimeText}>{r.prepTime + r.cookTime} min</Text>
                     </View>
                   </View>
-                  <Text style={styles.ideaTitle} numberOfLines={2}>{r.title}</Text>
+                  <View style={styles.ideaFoot}>
+                    <Text style={styles.ideaTitle} numberOfLines={2}>{r.title}</Text>
+                    <Text style={styles.ideaSub} numberOfLines={1}>
+                      {[shoppingLine(r), chipsFor(r)[0]].filter(Boolean).join('  ·  ')}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -267,6 +319,13 @@ const styles = StyleSheet.create({
   heroFoot: { padding: 16 },
   heroTitle: { fontFamily: FONTS.display, fontSize: 24, color: '#FFF' },
   heroMeta: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 6 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  chip: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 11,
+  },
+  chipText: { color: '#FFF', fontSize: 11, fontWeight: '600' },
 
   actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   makeBtn: { flex: 1.6, backgroundColor: COLORS.orange, paddingVertical: 16, borderRadius: 14, alignItems: 'center' },
@@ -305,5 +364,7 @@ const styles = StyleSheet.create({
   ideaMatchText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
   ideaTime: { backgroundColor: 'rgba(255,255,255,0.92)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10 },
   ideaTimeText: { color: COLORS.navy, fontSize: 10, fontWeight: '700' },
-  ideaTitle: { color: '#FFF', fontSize: 13, fontWeight: '700', padding: 9 },
+  ideaFoot: { padding: 9, gap: 2 },
+  ideaTitle: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+  ideaSub: { color: 'rgba(255,255,255,0.85)', fontSize: 10.5, fontWeight: '600' },
 });
