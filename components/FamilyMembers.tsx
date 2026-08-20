@@ -19,6 +19,9 @@ export type Member = {
   age: string;
   gender: 'male' | 'female';
   weight: string;
+  /** Portions of an adult serving. Estimated from age and weight, then
+   *  editable — a calculation cannot know that your teenager eats double. */
+  portion: string;
 };
 
 // Roughly how much of an adult portion someone eats, from age and weight.
@@ -33,6 +36,14 @@ export function portionFor(m: { age: string; gender: string; weight: string }): 
   return Math.round(((bmr * 1.5) / 2000) * 100) / 100;
 }
 
+const QUICK_ADD = [
+  { label: '👶 Baby', name: 'Baby', age: '1', gender: 'male' as const, weight: '22' },
+  { label: '🧒 Child', name: 'Child', age: '8', gender: 'male' as const, weight: '55' },
+  { label: '👦 Teen', name: 'Teen', age: '15', gender: 'male' as const, weight: '130' },
+  { label: '👩 Woman', name: 'Woman', age: '35', gender: 'female' as const, weight: '140' },
+  { label: '👨 Man', name: 'Man', age: '35', gender: 'male' as const, weight: '180' },
+];
+
 export default function FamilyMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +55,7 @@ export default function FamilyMembers() {
     if (!user) { setLoading(false); return; }
     const { data } = await supabase
       .from('family_members')
-      .select('id, name, age, gender, weight')
+      .select('id, name, age, gender, weight, portion_multiplier')
       .eq('profile_id', user.id)
       .order('created_at', { ascending: true });
     setMembers(
@@ -54,6 +65,7 @@ export default function FamilyMembers() {
         age: d.age?.toString() ?? '',
         gender: (d.gender as 'male' | 'female') ?? 'male',
         weight: d.weight?.toString() ?? '',
+        portion: (d.portion_multiplier ?? 1).toString(),
       })),
     );
     setLoading(false);
@@ -76,7 +88,7 @@ export default function FamilyMembers() {
       age: parseInt(draft.age) || null,
       gender: draft.gender,
       weight: parseFloat(draft.weight) || null,
-      portion_multiplier: portionFor(draft),
+      portion_multiplier: parseFloat(draft.portion) || portionFor(draft),
       dietary_restrictions: [],
     };
 
@@ -120,7 +132,7 @@ export default function FamilyMembers() {
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{m.name}</Text>
             <Text style={styles.detail}>
-              {[m.age && `${m.age} yrs`, m.weight && `${m.weight} lb`, `${portionFor(m)}× portion`]
+              {[m.age && `${m.age} yrs`, m.weight && `${m.weight} lb`, `${m.portion}× portion`]
                 .filter(Boolean).join('  ·  ')}
             </Text>
           </View>
@@ -144,7 +156,10 @@ export default function FamilyMembers() {
             <TextInput
               style={[styles.input, styles.small]}
               value={draft.age}
-              onChangeText={t => setDraft({ ...draft, age: t.replace(/[^0-9]/g, '') })}
+              onChangeText={t => {
+                const next = { ...draft, age: t.replace(/[^0-9]/g, '') };
+                setDraft({ ...next, portion: portionFor(next).toString() });
+              }}
               placeholder="Age"
               placeholderTextColor="#BBB"
               keyboardType="number-pad"
@@ -152,8 +167,21 @@ export default function FamilyMembers() {
             <TextInput
               style={[styles.input, styles.small]}
               value={draft.weight}
-              onChangeText={t => setDraft({ ...draft, weight: t.replace(/[^0-9.]/g, '') })}
+              onChangeText={t => {
+                const next = { ...draft, weight: t.replace(/[^0-9.]/g, '') };
+                setDraft({ ...next, portion: portionFor(next).toString() });
+              }}
               placeholder="Weight (lb)"
+              placeholderTextColor="#BBB"
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <View style={styles.formRow}>
+            <TextInput
+              style={[styles.input, styles.small]}
+              value={draft.portion}
+              onChangeText={t => setDraft({ ...draft, portion: t.replace(/[^0-9.]/g, '') })}
+              placeholder="Portions (1 = adult)"
               placeholderTextColor="#BBB"
               keyboardType="decimal-pad"
             />
@@ -183,16 +211,33 @@ export default function FamilyMembers() {
       ) : (
         <TouchableOpacity
           style={styles.add}
-          onPress={() => setDraft({ id: '', name: '', age: '', gender: 'male', weight: '' })}
+          onPress={() => setDraft({ id: '', name: '', age: '', gender: 'male', weight: '', portion: '1' })}
         >
           <Ionicons name="add" size={17} color={COLORS.orange} />
           <Text style={styles.addText}>Add someone</Text>
         </TouchableOpacity>
       )}
 
+      {!draft && (
+        <View style={styles.quick}>
+          <Text style={styles.quickLabel}>Quick add</Text>
+          <View style={styles.quickRow}>
+            {QUICK_ADD.map(q => (
+              <TouchableOpacity
+                key={q.label}
+                style={styles.quickBtn}
+                onPress={() => setDraft({ id: '', ...q, portion: portionFor(q).toString() })}
+              >
+                <Text style={styles.quickText}>{q.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
       <Text style={styles.note}>
-        Portions scale from these people when you add any; the household size above is used
-        when you have not.
+        Shopping lists and recipe amounts scale from this list. The portion figure is a
+        suggestion from age and weight — change it to whatever your household actually eats.
       </Text>
     </View>
   );
@@ -241,5 +286,13 @@ const styles = StyleSheet.create({
   confirm: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: COLORS.orange, alignItems: 'center' },
   confirmText: { color: '#FFF', fontWeight: '700' },
 
+  quick: { marginTop: 14 },
+  quickLabel: { fontSize: 12, color: COLORS.warmGray, fontWeight: '600', marginBottom: 8 },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickBtn: {
+    paddingVertical: 9, paddingHorizontal: 13, borderRadius: 20,
+    backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  quickText: { fontSize: 13, color: COLORS.navy, fontWeight: '600' },
   note: { fontSize: 12, color: COLORS.warmGray, lineHeight: 18, marginTop: 12 },
 });

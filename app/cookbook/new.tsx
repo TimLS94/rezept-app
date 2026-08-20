@@ -62,7 +62,7 @@ export default function NewRecipeScreen() {
     const result = await saveMyRecipe({
       title: draft.title.trim(),
       description: draft.description.trim(),
-      image: '',
+      image: draft.image ?? '',
       prepTime: draft.prepTime,
       cookTime: draft.cookTime,
       servings: draft.servings,

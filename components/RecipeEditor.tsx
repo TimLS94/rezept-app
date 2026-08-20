@@ -1,4 +1,7 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
+import { pickAndUploadImage } from '../lib/storage';
+import { Nutrition, estimateNutrition, ESTIMATE_NOTE } from '../lib/nutrition';
 import { Ingredient, DIETARY_TAGS, DietaryTag } from '../data/recipes';
 
 // A single editable shape shared by the import review step and the "edit saved
@@ -16,6 +19,8 @@ export type EditableRecipe = {
   steps: string[];
   /** Seconds per step, index-aligned with `steps`. Null = no timer. */
   stepTimers?: (number | null)[];
+  nutrition?: Nutrition;
+  image?: string;
   sourceUrl?: string;
 };
 
@@ -36,6 +41,49 @@ const toNum = (t: string) => {
 };
 
 export default function RecipeEditor({ value, onChange }: Props) {
+  const [estimating, setEstimating] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const pickPhoto = async () => {
+    if (uploading) return;
+    setUploading(true);
+    const url = await pickAndUploadImage('recipes');
+    setUploading(false);
+    // A null means the picker was cancelled or the upload failed, and
+    // pickAndUploadImage has already said which. Clearing the existing photo
+    // on a cancelled pick would be its own small disaster.
+    if (url) onChange({ ...value, image: url });
+  };
+
+  const setNutrition = (patch: Partial<Nutrition>) =>
+    onChange({ ...value, nutrition: { ...(value.nutrition ?? {}), ...patch } });
+
+  const estimate = async () => {
+    if (estimating) return;
+    setEstimating(true);
+    const r = await estimateNutrition(value.ingredients as any, value.servings);
+    setEstimating(false);
+
+    if (!r.ok) {
+      Alert.alert(
+        'Could not estimate',
+        r.error === 'no-ingredients'
+          ? 'Add the ingredients first — the estimate is worked out from them.'
+          : r.error === 'quota'
+            ? "You've used today's AI allowance. It resets tomorrow."
+            : 'The estimate came back unreadable. Please try again.',
+      );
+      return;
+    }
+    // Calories live in their own field and are filled in too, so the two
+    // cannot disagree about the same recipe.
+    onChange({
+      ...value,
+      calories: r.nutrition.calories ?? value.calories,
+      nutrition: r.nutrition,
+    });
+  };
+
   const set = (patch: Partial<EditableRecipe>) => onChange({ ...value, ...patch });
 
   const updateIngredient = (i: number, patch: Partial<Ingredient>) => {
@@ -70,6 +118,33 @@ export default function RecipeEditor({ value, onChange }: Props) {
 
   return (
     <View>
+      {/* Photo. The editor never had one, so a recipe you wrote yourself
+          could not have a picture — it showed the plate-and-cutlery
+          placeholder everywhere, for good. */}
+      <View style={styles.card}>
+        <Text style={styles.label}>Photo</Text>
+        {value.image ? (
+          <View>
+            <Image source={{ uri: value.image }} style={styles.photo} />
+            <View style={styles.photoActions}>
+              <TouchableOpacity onPress={pickPhoto} disabled={uploading}>
+                <Text style={styles.photoAction}>{uploading ? 'Uploading…' : 'Replace'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => set({ image: '' })}>
+                <Text style={styles.photoRemove}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.photoEmpty} onPress={pickPhoto} disabled={uploading}>
+            <Text style={styles.photoEmptyIcon}>{uploading ? '⏳' : '📷'}</Text>
+            <Text style={styles.photoEmptyText}>
+              {uploading ? 'Uploading…' : 'Add a photo'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* Title & description */}
       <View style={styles.card}>
         <Text style={styles.label}>Title</Text>
@@ -196,6 +271,33 @@ export default function RecipeEditor({ value, onChange }: Props) {
         <TouchableOpacity onPress={addIngredient} style={styles.addBtn}>
           <Text style={styles.addTxt}>+ Add ingredient</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Nutrition */}
+      <View style={styles.card}>
+        <View style={styles.nutriHead}>
+          <Text style={styles.sectionTitle}>Nutrition (per serving)</Text>
+          <TouchableOpacity onPress={estimate} disabled={estimating}>
+            <Text style={styles.estimateLink}>
+              {estimating ? 'Estimating…' : '✨ Estimate'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.row}>
+          <NumField label="Protein (g)" value={value.nutrition?.protein ?? 0}
+            onChange={n => setNutrition({ protein: n, estimated: false })} />
+          <NumField label="Carbs (g)" value={value.nutrition?.carbs ?? 0}
+            onChange={n => setNutrition({ carbs: n, estimated: false })} />
+          <NumField label="Fat (g)" value={value.nutrition?.fat ?? 0}
+            onChange={n => setNutrition({ fat: n, estimated: false })} />
+        </View>
+
+        {/* Only while the figures are the model's. Editing any of them clears
+            the flag, because from that point a person stands behind them. */}
+        {value.nutrition?.estimated && (
+          <Text style={styles.estimateNote}>⚠︎ {ESTIMATE_NOTE}</Text>
+        )}
       </View>
 
       {/* Steps */}
@@ -346,5 +448,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 4,
   },
+  photo: { width: '100%', height: 170, borderRadius: 12, backgroundColor: '#F0EDE7' },
+  photoActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  photoAction: { color: '#F2701E', fontWeight: '700', fontSize: 14 },
+  photoRemove: { color: '#8A8A8A', fontWeight: '600', fontSize: 14 },
+  photoEmpty: {
+    height: 130, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: '#E4DACA', backgroundColor: '#FAF8F4',
+  },
+  photoEmptyIcon: { fontSize: 30 },
+  photoEmptyText: { fontSize: 14, color: '#8A8A8A', fontWeight: '600' },
+  nutriHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  estimateLink: { fontSize: 13, color: '#F2701E', fontWeight: '700' },
+  estimateNote: { fontSize: 12, color: '#8A4B1E', lineHeight: 17, marginTop: 10 },
+  row: { flexDirection: 'row', gap: 10 },
   addTxt: { color: '#F2701E', fontSize: 14, fontWeight: '600' },
 });

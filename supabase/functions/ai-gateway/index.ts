@@ -123,6 +123,18 @@ Rules:
 Return ONLY a JSON array of strings, no markdown fences and no extra text.
 Example: ["egg", "milk", "cheddar", "spinach", "chicken breast"]`;
 
+const NUTRITION_PROMPT = `You are estimating the nutrition of one serving of a recipe from its ingredient list.
+
+Return ONLY this JSON, no markdown:
+{"calories": <int>, "protein": <grams int>, "carbs": <grams int>, "fat": <grams int>}
+
+Rules:
+- Per SERVING, not for the whole recipe. Divide by the serving count given.
+- Use standard reference values for each ingredient.
+- Ignore anything listed "to taste" and negligible amounts of salt, pepper and water.
+- If an amount is missing, assume a normal household quantity for that ingredient.
+- Round to whole numbers. Never return a range, a null or an explanation.`;
+
 // ── Gemini ────────────────────────────────────────────────────────────────
 async function gemini(parts: unknown[], maxOutputTokens: number) {
   const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
@@ -267,6 +279,21 @@ async function runOp(op: string, body: Record<string, any>) {
       if (!res.ok) return json({ error: `groq-${res.status}` }, 502);
       const data = await res.json();
       return json({ ok: true, text: data.text ?? '' });
+    }
+
+    case 'estimate-nutrition': {
+      const ingredients = Array.isArray(body.ingredients) ? body.ingredients.slice(0, 60) : [];
+      const servings = Math.max(1, Number(body.servings) || 1);
+      if (!ingredients.length) return json({ error: 'no-ingredients' }, 400);
+      if (!GEMINI_API_KEY) return json({ error: 'no-key' }, 503);
+
+      const list = ingredients
+        .map((i: any) => `${i?.amount ?? ''} ${i?.unit ?? ''} ${i?.name ?? ''}`.trim())
+        .filter(Boolean)
+        .join('\n');
+
+      const r = await gemini([{ text: `${NUTRITION_PROMPT}\n\nServings: ${servings}\n\nIngredients:\n${list}` }], 600);
+      return r.ok ? json(r) : json(r, 502);
     }
 
     default:

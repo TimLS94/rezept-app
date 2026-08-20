@@ -14,7 +14,8 @@ export type GatewayOp =
   | 'recipe-from-images'
   | 'fridge-items'
   | 'instagram-post'
-  | 'transcribe-video';
+  | 'transcribe-video'
+  | 'estimate-nutrition';
 
 /** The gateway's answer for a Gemini call: the raw text plus why it stopped. */
 export type GeminiReply = { text: string; finishReason: string | null };

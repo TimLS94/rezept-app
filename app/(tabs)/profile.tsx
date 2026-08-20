@@ -571,62 +571,9 @@ export default function ProfileScreen() {
               </View>
             )}
 
-            {/* Family Members */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Family Members</Text>
-                <TouchableOpacity style={styles.addButton} onPress={() => setShowAddMember(true)}>
-                  <Text style={styles.addButtonText}>+ Add</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Quick Add */}
-              <View style={styles.quickAddContainer}>
-                <Text style={styles.quickAddLabel}>Quick Add:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {QUICK_ADD_OPTIONS.map((option) => (
-                    <TouchableOpacity
-                      key={option.label}
-                      style={styles.quickAddButton}
-                      onPress={() => quickAddMember(option)}
-                      disabled={saving}
-                    >
-                      <Text style={styles.quickAddButtonText}>{option.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
-              {/* Members List */}
-              {familyMembers.map((member) => (
-                <TouchableOpacity 
-                  key={member.id} 
-                  style={styles.memberCard}
-                  onPress={() => editMember(member)}
-                >
-                  <View style={styles.memberAvatar}>
-                    <Text style={styles.memberAvatarText}>
-                      {member.gender === 'male' ? '👨' : '👩'}
-                    </Text>
-                  </View>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>{member.name}</Text>
-                    <Text style={styles.memberDetails}>
-                      {member.age} yrs • {member.weight ? `${member.weight} lbs` : 'No weight'} • {member.gender}
-                    </Text>
-                    <Text style={styles.memberPortion}>
-                      Portion: {(calculateBasePortion(member) * member.portionMultiplier).toFixed(2)}x
-                      {member.portionMultiplier !== 1.0 && (
-                        <Text style={styles.learned}> (learned: {member.portionMultiplier > 1 ? '+' : ''}{((member.portionMultiplier - 1) * 100).toFixed(0)}%)</Text>
-                      )}
-                    </Text>
-                  </View>
-                  <TouchableOpacity onPress={() => removeMember(member.id)} style={styles.removeButton}>
-                    <Text style={styles.removeButtonText}>×</Text>
-                  </TouchableOpacity>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {/* The family list used to be here as well as in
+                Family & Preferences. Two copies of the same editor meant two
+                places to add someone and one of them always looked stale. */}
           </>
         )}
 

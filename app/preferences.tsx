@@ -12,7 +12,7 @@ import { goBackOr } from '../lib/nav';
 import FamilyMembers from '../components/FamilyMembers';
 import {
   Preferences, loadPreferences, savePreferences,
-  HOUSEHOLD, DIETS, AVOID, TIME_BUDGET, CUISINES,
+  DIETS, AVOID, TIME_BUDGET, CUISINES,
 } from '../lib/preferences';
 
 export default function PreferencesScreen() {
@@ -73,26 +73,11 @@ export default function PreferencesScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        {/* The band selector and the kids toggle used to sit here. Both were
+            saying, less precisely, what the list below says exactly — and
+            having both on one screen meant two answers to the same question
+            that could disagree. The list wins: it knows who eats how much. */}
         <Text style={styles.label}>Who you cook for</Text>
-        {HOUSEHOLD.map(o => (
-          <TouchableOpacity
-            key={o.id}
-            style={[styles.row, prefs.household === o.id && styles.rowOn]}
-            onPress={() => setPrefs(p => ({ ...p, household: o.id }))}
-          >
-            <Text style={[styles.rowText, prefs.household === o.id && styles.rowTextOn]}>{o.label}</Text>
-          </TouchableOpacity>
-        ))}
-        <View style={styles.switchRow}>
-          <Text style={styles.rowText}>I have kids</Text>
-          <Switch
-            value={!!prefs.hasKids}
-            onValueChange={v => setPrefs(p => ({ ...p, hasKids: v }))}
-            trackColor={{ true: COLORS.green, false: '#DDD' }}
-          />
-        </View>
-
-        <Text style={styles.label}>Who is at the table</Text>
         <FamilyMembers />
 
         <Text style={styles.label}>Dietary preferences</Text>
