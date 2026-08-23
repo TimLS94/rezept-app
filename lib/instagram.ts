@@ -1,4 +1,5 @@
-import { callGateway, isQuotaError, QUOTA_MESSAGE, whenAgain } from './aiGateway';
+import { callGateway, isQuotaError, QUOTA_MESSAGE } from './aiGateway';
+import { technicalError } from './errorCodes';
 // Instagram content extraction service
 // Uses RapidAPI Instagram Scraper for reliable extraction
 // Fallback to oEmbed API (often blocked)
@@ -126,32 +127,29 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
   const res = await callGateway<{ data: any }>('instagram-post', { shortcode });
   if (!res.ok) {
     if (isQuotaError(res.error)) return { success: false, error: QUOTA_MESSAGE };
-    // "quota" is the plan's monthly allowance being gone; a bare 429 is too
-    // many calls at once. One is worth waiting minutes for, the other is not
-    // worth retrying at all, and telling a user to try again on the first is
-    // sending them back to the same wall.
-    const [code, resetIn] = res.error.split(':');
+    // Three distinct failures on our side, three codes. The user is told the
+    // same thing each time — it is broken, it is ours, here is what to quote
+    // — because the difference between an exhausted plan and a burst limit
+    // changes what *we* do, not what they can do.
+    //
+    // The screenshot suggestion stays: it is the one thing that genuinely
+    // helps, it works right now, and it comes out of a different allowance.
+    const [code] = res.error.split(':');
+    const useAScreenshot = 'A screenshot of the post still works — pick Gallery or Camera above.';
+
     if (code === 'rapidapi-quota') {
-      return {
-        success: false,
-        error:
-          'Instagram lookups are used up for this billing period — that is our subscription ' +
-          `to the service that reads posts, not your allowance. It comes back ${whenAgain(Number(resetIn))}. ` +
-          'A screenshot of the post works now, and comes out of a different allowance.',
-      };
+      return { success: false, error: technicalError('T-0001', useAScreenshot) };
     }
     if (code === 'rapidapi-429') {
-      return {
-        success: false,
-        error:
-          'Too many Instagram lookups at once. Give it a minute, or use a screenshot of ' +
-          'the post — that comes out of a different allowance.',
-      };
+      return { success: false, error: technicalError('T-0002', useAScreenshot) };
     }
-    if (res.error === 'no-key') {
-      return { success: false, error: 'Instagram lookups are not configured. Use a screenshot instead.' };
+    if (code === 'no-key') {
+      return { success: false, error: technicalError('T-0003', useAScreenshot) };
     }
-    return { success: false, error: `API error: ${res.error}` };
+    // Anything else. The raw code is worth having, but in the log rather than
+    // in front of someone trying to save a recipe.
+    console.warn('Instagram lookup failed:', res.error);
+    return { success: false, error: technicalError('T-0004', useAScreenshot) };
   }
 
   const data = res.data.data;

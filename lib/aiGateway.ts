@@ -63,14 +63,6 @@ async function readErrorBody(error: any): Promise<string | null> {
   }
 }
 
-/** "in about 5 hours" / "tomorrow", from seconds. */
-export function whenAgain(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return 'shortly';
-  const hours = seconds / 3600;
-  if (hours < 1) return `in about ${Math.max(1, Math.round(seconds / 60))} minutes`;
-  if (hours < 36) return `in about ${Math.round(hours)} hours`;
-  return `in about ${Math.round(hours / 24)} days`;
-}
 
 /** True when the failure was the daily cap rather than a real fault. */
 export function isQuotaError(error: string): boolean {
