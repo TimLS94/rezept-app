@@ -30,6 +30,36 @@ const GEMINI_URL =
 // us a HEAD request rather than a full transfer.
 const TRANSCRIBE_LIMIT = 25 * 1024 * 1024;
 
+// Gemini takes a video inline, but the whole request has to stay under 20MB
+// and base64 adds a third. 14MB of MP4 is the most that fits, which covers a
+// normal reel comfortably and rules out the occasional four-minute one.
+const VIDEO_INLINE_LIMIT = 14 * 1024 * 1024;
+
+/**
+ * Base64 in fixed chunks.
+ *
+ * String.fromCharCode(...bytes) on a 14MB array spreads fourteen million
+ * arguments onto the stack and takes the isolate down with it.
+ */
+function toBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+/** Instagram's own CDN, and nothing else. */
+function isInstagramCdn(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return /(^|\.)cdninstagram\.com$|(^|\.)fbcdn\.net$/.test(host);
+  } catch {
+    return false;
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -277,6 +307,56 @@ async function runOp(op: string, body: Record<string, any>) {
         return json({ error: `rapidapi-${res.status}` }, 502);
       }
       return json({ ok: true, data: await res.json() });
+    }
+
+    // The reel itself, watched and listened to in one call.
+    //
+    // Transcription only ever heard the audio, which misses the case people
+    // actually post: the steps written on screen while the voice says
+    // something else entirely. Gemini samples the frames and reads that text,
+    // and hears the narration at the same time — so this replaces the
+    // caption-then-audio chain rather than adding to it.
+    //
+    // Pulling frames out ourselves would need ffmpeg, which is not available
+    // in this runtime, or a native module in the app, which would end the
+    // over-the-air path. Handing the file to a model that already understands
+    // video avoids both.
+    case 'recipe-from-video': {
+      const videoUrl = String(body.videoUrl ?? '');
+      if (!isInstagramCdn(videoUrl)) return json({ error: 'host-not-allowed' }, 400);
+      if (!GEMINI_API_KEY) return json({ error: 'no-key' }, 503);
+
+      const head = await fetch(videoUrl, { method: 'HEAD' });
+      const size = Number(head.headers.get('content-length') ?? 0);
+      if (size > VIDEO_INLINE_LIMIT) return json({ error: 'too-large' }, 413);
+
+      const video = await fetch(videoUrl);
+      if (!video.ok) return json({ error: 'download-failed' }, 502);
+
+      const bytes = new Uint8Array(await video.arrayBuffer());
+      if (bytes.length > VIDEO_INLINE_LIMIT) return json({ error: 'too-large' }, 413);
+
+      const caption = String(body.caption ?? '').slice(0, 4000);
+      const r = await gemini(
+        [
+          {
+            text:
+              `${RECIPE_EXTRACTION_PROMPT}\n\n` +
+              'Extract the recipe from this reel using everything in it together. ' +
+              'Read the text shown on screen — ingredient lists and steps are often ' +
+              'written there rather than spoken — listen to the narration, and combine ' +
+              'both with the caption below. Each of the three may hold only part of the ' +
+              'recipe: take ingredients from wherever they appear and steps from wherever ' +
+              'they appear, and merge them into one complete recipe rather than reporting ' +
+              'only what a single source contained.' +
+              (caption ? `\n\nThe post's caption:\n${caption}` : ''),
+          },
+          { inline_data: { mime_type: 'video/mp4', data: toBase64(bytes) } },
+        ],
+        2000,
+      );
+      if (!r.ok) return json({ error: r.error }, 502);
+      return json(r);
     }
 
     case 'transcribe-video': {

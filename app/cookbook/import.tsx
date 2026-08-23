@@ -18,7 +18,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth, canImportToCookbook } from '../../lib/auth';
 import {
-  extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideoAudio, ExtractedRecipe,
+  extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideo, ExtractedRecipe,
 } from '../../lib/openai';
 import { saveMyRecipe } from '../../lib/myRecipes';
 import {
@@ -66,9 +66,9 @@ export default function ImportRecipeScreen() {
   const { isGuest, role, isPremium, refresh } = useAuth();
   // One per bucket. Instagram is scarcer than the rest, so showing a single
   // number would misstate whichever mode the user is not looking at.
-  // Transcribing a reel takes noticeably longer than reading a caption, so
-  // the waiting screen says which one is happening.
-  const [transcribing, setTranscribing] = useState(false);
+  // Watching a reel takes noticeably longer than reading a caption, so the
+  // waiting screen says which one is happening.
+  const [watching, setWatching] = useState(false);
   const [quotas, setQuotas] = useState<Record<'instagram' | 'other', ImportQuota | null>>({
     instagram: null,
     other: null,
@@ -225,37 +225,44 @@ export default function ImportRecipeScreen() {
       }
       if (ig.content.thumbnailUrl) setThumbnailUrl(ig.content.thumbnailUrl);
 
-      // Two things can carry the recipe, and this path only ever used one of
-      // them. A reel usually says the whole thing out loud while the caption
-      // is three lines and a hashtag — so when the caption yields nothing,
-      // the spoken audio gets transcribed and tried as well.
+      // Everything at once, not one source until something sticks.
       //
-      // What still cannot be read is text burned into the video image.
-      // Reading that needs frames pulled out of the file, which needs a
-      // native module this app deliberately does not have; the final message
-      // says so rather than implying we looked.
+      // A reel spreads its recipe across three places: the caption, the text
+      // on screen, and what the person says. Taking them in turn and stopping
+      // at the first that "worked" is how you get half a recipe — a caption
+      // listing ingredients passes the not-empty check, and the steps spoken
+      // thirty seconds in never get looked at. So when there is a video, the
+      // video and the caption go up together in one call and the model reads
+      // all three.
+      //
+      // The caption-only path is what is left when there is no video to
+      // watch, and the fallback for when the video is too long to send.
       const caption = ig.content.caption?.trim() ?? '';
       const videoUrl = ig.content.videoUrl;
 
-      let aiResult = caption
-        ? await extractRecipeWithAI(buildExtractionContent(ig.content))
-        : { success: false as const, error: '' };
+      let aiResult: Awaited<ReturnType<typeof extractRecipeWithAI>>;
 
-      if (!aiResult.success && videoUrl) {
-        setTranscribing(true);
-        aiResult = await extractRecipeFromVideoAudio(videoUrl, caption || undefined);
-        setTranscribing(false);
+      if (videoUrl) {
+        setWatching(true);
+        aiResult = await extractRecipeFromVideo(videoUrl, caption || undefined);
+        setWatching(false);
+
+        // A reel we could not fetch or that was too long still has its
+        // caption, and a caption is better than an apology.
+        if (!aiResult.success && caption) {
+          aiResult = await extractRecipeWithAI(buildExtractionContent(ig.content));
+        }
+      } else {
+        aiResult = caption
+          ? await extractRecipeWithAI(buildExtractionContent(ig.content))
+          : { success: false as const, error: '' };
       }
 
       if (!aiResult.success) {
         setError(
           !caption && !videoUrl
-            ? 'Nothing came back from that post — no caption and no video to listen to. A screenshot of the recipe works.'
-            : videoUrl
-              ? 'We read the caption and listened to the video, and could not put a recipe together. ' +
-                'If the steps are written on screen in the video rather than spoken, a screenshot of ' +
-                'that frame is the way in.'
-              : aiResult.error,
+            ? 'Nothing came back from that post — no caption, and no video to watch. A screenshot of the recipe works.'
+            : aiResult.error,
         );
         setStep('input');
         return;
@@ -714,11 +721,11 @@ Steps:
           <View style={styles.loadingSection}>
             <ActivityIndicator size="large" color="#F2701E" />
             <Text style={styles.loadingTitle}>
-              {transcribing ? 'Listening to the video…' : 'Extracting Recipe...'}
+              {watching ? 'Watching the video…' : 'Extracting Recipe...'}
             </Text>
             <Text style={styles.loadingText}>
-              {transcribing
-                ? 'The caption had no recipe in it, so we are transcribing what is said in the reel. This takes a little longer.'
+              {watching
+                ? 'Reading the caption, the text on screen and what is said in the reel — all together. This takes a little longer than a caption alone.'
                 : 'AI is analyzing the post. This may take a few seconds.'}
             </Text>
             {thumbnailUrl ? (

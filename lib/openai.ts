@@ -125,6 +125,48 @@ export async function transcribeVideoWithGroq(videoUrl: string): Promise<string 
   return res.data.text?.trim() || null;
 }
 
+/**
+ * The reel itself: frames and narration together.
+ *
+ * Transcription only ever heard the audio, which misses what people actually
+ * post — the ingredients and steps written on screen while the voice talks
+ * around them. This hands the video to a model that reads both.
+ *
+ * Pulling frames out on the phone would need a native module, and pulling
+ * them out on the server would need ffmpeg, which the gateway's runtime does
+ * not have. Neither is necessary if the model can watch the video.
+ */
+export async function extractRecipeFromVideo(
+  videoUrl: string,
+  caption?: string,
+): Promise<ExtractionResult> {
+  const res = await callGateway<GeminiReply>('recipe-from-video', { videoUrl, caption });
+
+  if (!res.ok) {
+    if (isQuotaError(res.error)) return { success: false, error: QUOTA_MESSAGE };
+    if (res.error === 'too-large') {
+      return {
+        success: false,
+        error: 'That reel is too long for us to watch in one go. A screenshot of the recipe works.',
+      };
+    }
+    console.warn('Video extraction failed:', res.error);
+    return { success: false, error: 'Could not read that video. A screenshot of the recipe works.' };
+  }
+
+  const recipe = parseRecipeJson(res.data.text ?? '');
+  if (isEmptyRecipe(recipe)) {
+    return {
+      success: false,
+      error:
+        res.data.finishReason === 'MAX_TOKENS'
+          ? 'That reel had more in it than we could work through in one go. Try a screenshot of the recipe.'
+          : NO_RECIPE_ERROR,
+    };
+  }
+  return { success: true, recipe };
+}
+
 export async function extractRecipeFromVideoAudio(
   videoUrl: string,
   caption?: string,

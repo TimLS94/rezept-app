@@ -15,6 +15,7 @@ export type GatewayOp =
   | 'fridge-items'
   | 'instagram-post'
   | 'transcribe-video'
+  | 'recipe-from-video'
   | 'estimate-nutrition';
 
 /** The gateway's answer for a Gemini call: the raw text plus why it stopped. */
