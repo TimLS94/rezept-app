@@ -154,10 +154,33 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
 
   const data = res.data.data;
 
-  
-  // Check for API error response
-  if (data.error || data.status === 'error') {
-    return { success: false, error: data.message || 'API returned an error' };
+  // The scraper answers 200 with the failure in the body, and it puts the
+  // explanation in `error` — not in `message`, which is what this read. So
+  // every one of these came out as the bare string "API returned an error",
+  // carrying none of what the service actually said and telling the user
+  // nothing they could act on.
+  const apiMessage =
+    typeof data?.error === 'string' ? data.error
+    : typeof data?.message === 'string' ? data.message
+    : null;
+
+  if (apiMessage || data?.status === 'error') {
+    console.warn('Instagram lookup returned:', apiMessage);
+
+    // A post that cannot be read is not our failure and does not want a
+    // support code — it wants the one sentence that explains it.
+    if (/not found|does not exist|private|unavailable|deleted/i.test(apiMessage ?? '')) {
+      return {
+        success: false,
+        error:
+          "That post could not be read. It may be private, deleted, or from an account that " +
+          "blocks link previews. A screenshot of it works — pick Gallery or Camera above.",
+      };
+    }
+    return {
+      success: false,
+      error: technicalError('T-0005', 'A screenshot of the post still works — pick Gallery or Camera above.'),
+    };
   }
   
   // Extract data from Instagram Scraper Stable API response

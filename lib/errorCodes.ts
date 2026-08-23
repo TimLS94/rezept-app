@@ -25,10 +25,14 @@
 //           goes to the console; if this one turns up in support mail it wants
 //           a look rather than a table entry.
 //
+//   T-0005  Instagram lookup — the scraper answered, but with an error of its
+//           own that is not "post not found". Often means the service is being
+//           blocked by Instagram. The text it sent goes to the console.
+//
 // Keep the numbering stable. A code that changes meaning between releases is
 // worse than no code, because the support reply will be confidently wrong.
 
-export type SupportCode = 'T-0001' | 'T-0002' | 'T-0003' | 'T-0004';
+export type SupportCode = 'T-0001' | 'T-0002' | 'T-0003' | 'T-0004' | 'T-0005';
 
 const SUPPORT_EMAIL = 'support@spoondrop.app';
 
