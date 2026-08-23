@@ -52,10 +52,24 @@ export async function callGateway<T = any>(
 async function readErrorBody(error: any): Promise<string | null> {
   try {
     const body = await error?.context?.json?.();
-    return body?.error ? String(body.error) : null;
+    if (!body?.error) return null;
+    // Some errors carry a "when" with them. Passing it through the error
+    // string keeps the value type unchanged while letting a caller that
+    // cares — the Instagram one does — say when instead of "for now".
+    const code = String(body.error);
+    return body.reset_in ? `${code}:${Math.round(Number(body.reset_in))}` : code;
   } catch {
     return null;
   }
+}
+
+/** "in about 5 hours" / "tomorrow", from seconds. */
+export function whenAgain(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return 'shortly';
+  const hours = seconds / 3600;
+  if (hours < 1) return `in about ${Math.max(1, Math.round(seconds / 60))} minutes`;
+  if (hours < 36) return `in about ${Math.round(hours)} hours`;
+  return `in about ${Math.round(hours / 24)} days`;
 }
 
 /** True when the failure was the daily cap rather than a real fault. */

@@ -244,7 +244,28 @@ async function runOp(op: string, body: Record<string, any>) {
         `https://${RAPIDAPI_HOST}/get_media_data_v2.php?media_code=${shortcode}`,
         { headers: { 'X-RapidAPI-Key': RAPIDAPI_KEY, 'X-RapidAPI-Host': RAPIDAPI_HOST } },
       );
-      if (!res.ok) return json({ error: `rapidapi-${res.status}` }, res.status === 429 ? 429 : 502);
+      if (!res.ok) {
+        // A 429 from RapidAPI means two very different things: the plan's
+        // monthly allowance is gone (wait for the billing period, or upgrade),
+        // or too many calls arrived at once (wait a minute). Collapsing both
+        // into one code made an exhausted subscription look like a blip
+        // someone should retry, which is how it stayed unnoticed.
+        const remaining = res.headers.get('x-ratelimit-requests-remaining');
+        const resetIn = Number(res.headers.get('x-ratelimit-requests-reset') ?? 0);
+        const body = await res.text().catch(() => '');
+        const monthly = /MONTHLY quota/i.test(body) || remaining === '0';
+
+        if (res.status === 429) {
+          return json({
+            error: monthly ? 'rapidapi-quota' : 'rapidapi-429',
+            // Seconds until the allowance returns, so the app can say when
+            // rather than "for now".
+            reset_in: Number.isFinite(resetIn) ? resetIn : null,
+            limit: res.headers.get('x-ratelimit-requests-limit'),
+          }, 429);
+        }
+        return json({ error: `rapidapi-${res.status}` }, 502);
+      }
       return json({ ok: true, data: await res.json() });
     }
 

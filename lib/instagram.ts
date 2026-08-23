@@ -1,4 +1,4 @@
-import { callGateway, isQuotaError, QUOTA_MESSAGE } from './aiGateway';
+import { callGateway, isQuotaError, QUOTA_MESSAGE, whenAgain } from './aiGateway';
 // Instagram content extraction service
 // Uses RapidAPI Instagram Scraper for reliable extraction
 // Fallback to oEmbed API (often blocked)
@@ -126,13 +126,26 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
   const res = await callGateway<{ data: any }>('instagram-post', { shortcode });
   if (!res.ok) {
     if (isQuotaError(res.error)) return { success: false, error: QUOTA_MESSAGE };
-    if (res.error === 'rapidapi-429') {
+    // "quota" is the plan's monthly allowance being gone; a bare 429 is too
+    // many calls at once. One is worth waiting minutes for, the other is not
+    // worth retrying at all, and telling a user to try again on the first is
+    // sending them back to the same wall.
+    const [code, resetIn] = res.error.split(':');
+    if (code === 'rapidapi-quota') {
       return {
         success: false,
         error:
-          'Instagram lookups have hit their cap for now — that is our subscription to the ' +
-          'service that reads posts, not your allowance. A screenshot of the post works and ' +
-          'comes out of a different allowance.',
+          'Instagram lookups are used up for this billing period — that is our subscription ' +
+          `to the service that reads posts, not your allowance. It comes back ${whenAgain(Number(resetIn))}. ` +
+          'A screenshot of the post works now, and comes out of a different allowance.',
+      };
+    }
+    if (code === 'rapidapi-429') {
+      return {
+        success: false,
+        error:
+          'Too many Instagram lookups at once. Give it a minute, or use a screenshot of ' +
+          'the post — that comes out of a different allowance.',
       };
     }
     if (res.error === 'no-key') {
