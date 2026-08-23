@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { supabase, getCurrentUser } from '../lib/supabase';
 import { pickAndUploadImage } from '../lib/storage';
 import { runtimeLabel } from '../lib/version';
+import * as Updates from 'expo-updates';
 import { useAuth, canUploadRecipes } from '../lib/auth';
 import { restorePurchases, grantPlatformEntitlement, revokePlatformEntitlement } from '../lib/purchases';
 import Paywall from '../components/Paywall';
@@ -31,6 +32,36 @@ export default function SettingsScreen() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  /**
+   * Fetch the newest bundle now, and restart into it.
+   *
+   * The automatic path checks at launch and applies at the *next* launch, so
+   * a fix is two cold starts away and nothing on screen says whether it has
+   * arrived. This collapses that into one tap and one honest answer.
+   */
+  const checkForUpdate = async () => {
+    if (checking) return;
+    setChecking(true);
+    try {
+      const result = await Updates.checkForUpdateAsync();
+      if (!result.isAvailable) {
+        setChecking(false);
+        Alert.alert('Up to date', 'You are already running the newest version.');
+        return;
+      }
+      await Updates.fetchUpdateAsync();
+      // reloadAsync does not return — the app restarts into the new bundle.
+      await Updates.reloadAsync();
+    } catch (e: any) {
+      setChecking(false);
+      Alert.alert(
+        'Could not check',
+        e?.message ?? 'The update server could not be reached. Try again on a better connection.',
+      );
+    }
+  };
 
   // IAP subscriptions can only be cancelled in the store, so we deep-link there.
   const manageSubscription = () => {
@@ -422,6 +453,19 @@ export default function SettingsScreen() {
         {/* Version */}
         <View style={styles.versionContainer}>
           <Text style={styles.versionText}>SpoonDrop {runtimeLabel()}</Text>
+          {/* Updates normally arrive on their own: the app checks at launch
+              and applies what it found at the *next* launch, so a fix is two
+              cold starts away and there is no way to tell whether it has
+              landed. During a beta that is a lot of guessing about whether a
+              bug is still a bug or just an old bundle. This does both halves
+              at once. */}
+          {Updates.isEnabled && (
+            <TouchableOpacity onPress={checkForUpdate} disabled={checking}>
+              <Text style={styles.updateLink}>
+                {checking ? 'Checking…' : 'Check for updates'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={{ height: 40 }} />
@@ -470,4 +514,5 @@ const styles = StyleSheet.create({
   restoreLinkText: { fontSize: 14, color: '#0D2B63', fontWeight: '600' },
   versionContainer: { alignItems: 'center', marginTop: 24 },
   versionText: { fontSize: 13, color: '#AAA' },
+  updateLink: { fontSize: 13, color: '#F2701E', fontWeight: '600', marginTop: 8 },
 });
