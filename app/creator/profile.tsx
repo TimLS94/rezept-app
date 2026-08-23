@@ -204,6 +204,14 @@ export default function EditCreatorProfileScreen() {
 
           {profile.subscriptionEnabled && (
             <>
+              {/* Why these five and not a box to type in. Without saying it,
+                  a fixed list reads as us deciding what a creator's work is
+                  worth — which is the opposite of what it is. */}
+              <Text style={styles.tierWhy}>
+                Prices come as set steps because that is how the App Store and Play Store
+                bill: each one is a product registered with them in advance. A typed amount
+                has no product behind it and the purchase would fail at the till.
+              </Text>
               <View style={styles.tierRow}>
                 {CREATOR_SUB_TIERS.map(t => (
                   <TouchableOpacity
@@ -229,6 +237,7 @@ export default function EditCreatorProfileScreen() {
           <Text style={styles.priceTitle}>Default price per recipe</Text>
           <Text style={styles.priceSub}>
             Used when you mark a recipe premium. You can override it on any individual recipe.
+            The same set steps apply — see above.
           </Text>
           <View style={styles.tierRow}>
             {RECIPE_PRICE_TIERS.map(t => (
@@ -355,6 +364,7 @@ const styles = StyleSheet.create({
   toggleOn: { backgroundColor: '#F2701E' },
   toggleText: { fontSize: 13, fontWeight: '700', color: '#6F6F6F' },
   toggleTextOn: { color: '#FFF' },
+  tierWhy: { fontSize: 12.5, color: '#8A8378', lineHeight: 18, marginBottom: 12 },
   tierRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   tier: {
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18,
