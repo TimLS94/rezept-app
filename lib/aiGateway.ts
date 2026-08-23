@@ -56,8 +56,10 @@ async function readErrorBody(error: any): Promise<string | null> {
     // Some errors carry a "when" with them. Passing it through the error
     // string keeps the value type unchanged while letting a caller that
     // cares — the Instagram one does — say when instead of "for now".
+    // `reason` qualifies the code without replacing it, so a build that only
+    // knows the code still lands on a sensible message.
     const code = String(body.error);
-    return body.reset_in ? `${code}:${Math.round(Number(body.reset_in))}` : code;
+    return body.reason ? `${code}:${String(body.reason)}` : code;
   } catch {
     return null;
   }

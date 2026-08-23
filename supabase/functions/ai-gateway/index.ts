@@ -256,10 +256,20 @@ async function runOp(op: string, body: Record<string, any>) {
         const monthly = /MONTHLY quota/i.test(body) || remaining === '0';
 
         if (res.status === 429) {
+          // The code stays 'rapidapi-429' whatever the reason, and the reason
+          // rides alongside it.
+          //
+          // The gateway updates the instant it is deployed; the app reaches
+          // phones as an over-the-air update that only applies on the next
+          // cold start. So for a while every version that ever shipped is out
+          // there talking to today's gateway. Inventing a new error code
+          // broke exactly that: older builds had no branch for
+          // 'rapidapi-quota' and fell through to printing it raw at the user.
+          // A new field is invisible to a client that does not read it; a new
+          // value in a field it switches on is not.
           return json({
-            error: monthly ? 'rapidapi-quota' : 'rapidapi-429',
-            // Seconds until the allowance returns, so the app can say when
-            // rather than "for now".
+            error: 'rapidapi-429',
+            reason: monthly ? 'quota' : 'burst',
             reset_in: Number.isFinite(resetIn) ? resetIn : null,
             limit: res.headers.get('x-ratelimit-requests-limit'),
           }, 429);

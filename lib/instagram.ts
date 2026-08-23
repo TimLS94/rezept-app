@@ -134,14 +134,14 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
     //
     // The screenshot suggestion stays: it is the one thing that genuinely
     // helps, it works right now, and it comes out of a different allowance.
-    const [code] = res.error.split(':');
+    const [code, reason] = res.error.split(':');
     const useAScreenshot = 'A screenshot of the post still works — pick Gallery or Camera above.';
 
-    if (code === 'rapidapi-quota') {
-      return { success: false, error: technicalError('T-0001', useAScreenshot) };
-    }
     if (code === 'rapidapi-429') {
-      return { success: false, error: technicalError('T-0002', useAScreenshot) };
+      return {
+        success: false,
+        error: technicalError(reason === 'quota' ? 'T-0001' : 'T-0002', useAScreenshot),
+      };
     }
     if (code === 'no-key') {
       return { success: false, error: technicalError('T-0003', useAScreenshot) };
