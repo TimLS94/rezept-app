@@ -185,7 +185,17 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
   
   // Extract data from Instagram Scraper Stable API response
   const mediaData = data.data || data;
-  const caption = mediaData.caption?.text || mediaData.caption || mediaData.title || '';
+  // The caption arrives under whichever name this endpoint felt like today,
+  // and Instagram's own GraphQL shape buries it two levels down. Reading only
+  // `caption.text` meant a post whose caption was in `edge_media_to_caption`
+  // came through as no caption at all — and the app then told the user their
+  // caption was empty when it plainly was not.
+  const caption: string =
+    (typeof mediaData.caption === 'string' ? mediaData.caption : mediaData.caption?.text) ||
+    mediaData.caption_text ||
+    mediaData.edge_media_to_caption?.edges?.[0]?.node?.text ||
+    mediaData.title ||
+    '';
   const username = mediaData.user?.username || mediaData.owner?.username || '';
   const thumbnailUrl = mediaData.display_url || 
                        mediaData.thumbnail_url || 

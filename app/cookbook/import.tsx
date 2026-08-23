@@ -17,7 +17,9 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth, canImportToCookbook } from '../../lib/auth';
-import { extractRecipeWithAI, extractRecipeFromImages, ExtractedRecipe } from '../../lib/openai';
+import {
+  extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideoAudio, ExtractedRecipe,
+} from '../../lib/openai';
 import { saveMyRecipe } from '../../lib/myRecipes';
 import {
   fetchInstagramWithFallback, isValidInstagramUrl, buildExtractionContent,
@@ -64,6 +66,9 @@ export default function ImportRecipeScreen() {
   const { isGuest, role, isPremium, refresh } = useAuth();
   // One per bucket. Instagram is scarcer than the rest, so showing a single
   // number would misstate whichever mode the user is not looking at.
+  // Transcribing a reel takes noticeably longer than reading a caption, so
+  // the waiting screen says which one is happening.
+  const [transcribing, setTranscribing] = useState(false);
   const [quotas, setQuotas] = useState<Record<'instagram' | 'other', ImportQuota | null>>({
     instagram: null,
     other: null,
@@ -220,19 +225,38 @@ export default function ImportRecipeScreen() {
       }
       if (ig.content.thumbnailUrl) setThumbnailUrl(ig.content.thumbnailUrl);
 
-      // The caption is what we can read. A post that keeps its recipe in the
-      // video and out of the caption has nothing for us to extract, and
-      // saying so beats returning an empty recipe.
-      const content = buildExtractionContent(ig.content);
-      if (!content.trim()) {
-        setError('That post has no recipe in its caption. Try a screenshot of it instead.');
-        setStep('input');
-        return;
+      // Two things can carry the recipe, and this path only ever used one of
+      // them. A reel usually says the whole thing out loud while the caption
+      // is three lines and a hashtag — so when the caption yields nothing,
+      // the spoken audio gets transcribed and tried as well.
+      //
+      // What still cannot be read is text burned into the video image.
+      // Reading that needs frames pulled out of the file, which needs a
+      // native module this app deliberately does not have; the final message
+      // says so rather than implying we looked.
+      const caption = ig.content.caption?.trim() ?? '';
+      const videoUrl = ig.content.videoUrl;
+
+      let aiResult = caption
+        ? await extractRecipeWithAI(buildExtractionContent(ig.content))
+        : { success: false as const, error: '' };
+
+      if (!aiResult.success && videoUrl) {
+        setTranscribing(true);
+        aiResult = await extractRecipeFromVideoAudio(videoUrl, caption || undefined);
+        setTranscribing(false);
       }
 
-      const aiResult = await extractRecipeWithAI(content);
       if (!aiResult.success) {
-        setError(aiResult.error);
+        setError(
+          !caption && !videoUrl
+            ? 'Nothing came back from that post — no caption and no video to listen to. A screenshot of the recipe works.'
+            : videoUrl
+              ? 'We read the caption and listened to the video, and could not put a recipe together. ' +
+                'If the steps are written on screen in the video rather than spoken, a screenshot of ' +
+                'that frame is the way in.'
+              : aiResult.error,
+        );
         setStep('input');
         return;
       }
@@ -689,9 +713,13 @@ Steps:
         {step === 'extracting' && (
           <View style={styles.loadingSection}>
             <ActivityIndicator size="large" color="#F2701E" />
-            <Text style={styles.loadingTitle}>Extracting Recipe...</Text>
+            <Text style={styles.loadingTitle}>
+              {transcribing ? 'Listening to the video…' : 'Extracting Recipe...'}
+            </Text>
             <Text style={styles.loadingText}>
-              AI is analyzing the post. This may take a few seconds.
+              {transcribing
+                ? 'The caption had no recipe in it, so we are transcribing what is said in the reel. This takes a little longer.'
+                : 'AI is analyzing the post. This may take a few seconds.'}
             </Text>
             {thumbnailUrl ? (
               <Image source={{ uri: thumbnailUrl }} style={styles.thumbnail} />

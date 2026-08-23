@@ -53,8 +53,13 @@ function isEmptyRecipe(recipe: ExtractedRecipe | undefined | null): boolean {
   return noIngredients && noSteps;
 }
 
+// Says only what was actually checked. The old wording claimed "the caption
+// was empty and the video had nothing readable" from a code path that had
+// looked at neither — it saw one model answer come back blank. Telling
+// someone their caption is empty while they are looking at a caption full of
+// ingredients is how a working feature loses its credibility.
 const NO_RECIPE_ERROR =
-  'No recipe found in this post. The caption was empty and the video had nothing readable — try importing a screenshot of the recipe instead.';
+  "The model could not find a recipe in what it was given. A screenshot of the recipe works well — pick Gallery or Camera above.";
 
 // Google Gemini (FREE - 15 RPM)
 
