@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as Clipboard from 'expo-clipboard';
 import {
   View,
@@ -67,8 +67,11 @@ export default function ImportRecipeScreen() {
   // One per bucket. Instagram is scarcer than the rest, so showing a single
   // number would misstate whichever mode the user is not looking at.
   // Watching a reel takes noticeably longer than reading a caption, so the
-  // waiting screen says which one is happening.
+  // waiting screen says which one is happening — and, because it can run to
+  // minutes, how long it has been going and how to stop it.
   const [watching, setWatching] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const cancelRef = useRef<AbortController | null>(null);
   const [quotas, setQuotas] = useState<Record<'instagram' | 'other', ImportQuota | null>>({
     instagram: null,
     other: null,
@@ -77,6 +80,15 @@ export default function ImportRecipeScreen() {
   const params = useLocalSearchParams<{ sharedUrl?: string; sharedText?: string }>();
   
   const [step, setStep] = useState<Step>('input');
+
+  // Counts from the moment extraction starts, so a long wait is a number the
+  // user can judge rather than an indefinite spinner.
+  useEffect(() => {
+    if (step !== 'extracting') { setElapsed(0); return; }
+    const started = Date.now();
+    const id = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [step]);
   const [inputMode, setInputMode] = useState<InputMode>('screenshot'); // Default to screenshot
   const [url, setUrl] = useState('');
   const [manualText, setManualText] = useState('');
@@ -244,8 +256,19 @@ export default function ImportRecipeScreen() {
 
       if (videoUrl) {
         setWatching(true);
-        aiResult = await extractRecipeFromVideo(videoUrl, caption || undefined);
+        cancelRef.current = new AbortController();
+        aiResult = await extractRecipeFromVideo(
+          videoUrl, caption || undefined, cancelRef.current.signal,
+        );
         setWatching(false);
+
+        // Stopped on purpose. Nothing to report and nothing to fall back to —
+        // an error box after someone pressed Cancel reads as a failure they
+        // caused.
+        if (!aiResult.success && aiResult.error === 'cancelled') {
+          setStep('input');
+          return;
+        }
 
         // A reel we could not fetch or that was too long still has its
         // caption, and a caption is better than an apology.
@@ -725,9 +748,27 @@ Steps:
             </Text>
             <Text style={styles.loadingText}>
               {watching
-                ? 'Reading the caption, the text on screen and what is said in the reel — all together. This takes a little longer than a caption alone.'
+                ? 'Reading the caption, the text on screen and what is said in the reel — all together. A long reel can take a couple of minutes.'
                 : 'AI is analyzing the post. This may take a few seconds.'}
             </Text>
+
+            {/* Elapsed rather than a progress bar. One request goes out and
+                one answer comes back, so any percentage here would be
+                invented — and an invented bar that sticks at 80% is worse
+                than a number the user can judge for themselves. */}
+            <Text style={styles.elapsed}>
+              {elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`}
+              {watching && elapsed > 90 ? ' · nearly at the limit' : ''}
+            </Text>
+
+            {watching && (
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => cancelRef.current?.abort()}
+              >
+                <Text style={styles.cancelText}>Stop and use a screenshot instead</Text>
+              </TouchableOpacity>
+            )}
             {thumbnailUrl ? (
               <Image source={{ uri: thumbnailUrl }} style={styles.thumbnail} />
             ) : null}
@@ -815,6 +856,9 @@ const styles = StyleSheet.create({
   field: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
   helpText: { fontSize: 12.5, color: '#8A8378', lineHeight: 18, marginTop: 8 },
+  elapsed: { fontSize: 13, color: '#8A8378', fontWeight: '700', marginTop: 14 },
+  cancelBtn: { marginTop: 18, paddingVertical: 12, paddingHorizontal: 18 },
+  cancelText: { fontSize: 14, color: '#F2701E', fontWeight: '600' },
   quotaBar: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#FFF3E9', borderRadius: 12,

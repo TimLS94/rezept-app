@@ -351,7 +351,18 @@ async function runOp(op: string, body: Record<string, any>) {
               'only what a single source contained.' +
               (caption ? `\n\nThe post's caption:\n${caption}` : ''),
           },
-          { inline_data: { mime_type: 'video/mp4', data: toBase64(bytes) } },
+          {
+            inline_data: { mime_type: 'video/mp4', data: toBase64(bytes) },
+            // Half a frame a second, and only the first two minutes.
+            //
+            // Default sampling is one frame per second for the whole file,
+            // and every frame is tokens the model has to look at — which is
+            // where the minutes went. Text written on screen in a recipe reel
+            // stays up for several seconds, so half rate loses nothing and
+            // roughly halves the work. Two minutes because a reel that has
+            // not shown its recipe by then is not going to.
+            video_metadata: { fps: 0.5, end_offset: '120s' },
+          },
         ],
         2000,
       );

@@ -2,7 +2,7 @@
 // Supports: Google Gemini (free), Groq (free), OpenAI (paid)
 // Priority: Gemini → Groq → OpenAI
 
-import { callGateway, isQuotaError, QUOTA_MESSAGE, type GeminiReply } from './aiGateway';
+import { callGateway, isQuotaError, isCancelled, QUOTA_MESSAGE, type GeminiReply } from './aiGateway';
 
 
 export type ExtractedRecipe = {
@@ -139,11 +139,21 @@ export async function transcribeVideoWithGroq(videoUrl: string): Promise<string 
 export async function extractRecipeFromVideo(
   videoUrl: string,
   caption?: string,
+  signal?: AbortSignal,
 ): Promise<ExtractionResult> {
-  const res = await callGateway<GeminiReply>('recipe-from-video', { videoUrl, caption });
+  const res = await callGateway<GeminiReply>('recipe-from-video', { videoUrl, caption }, signal);
 
   if (!res.ok) {
+    if (isCancelled(res.error)) return { success: false, error: 'cancelled' };
     if (isQuotaError(res.error)) return { success: false, error: QUOTA_MESSAGE };
+    if (res.error === 'timeout') {
+      return {
+        success: false,
+        error:
+          'Watching that reel took longer than we allow for it. Long videos are the usual ' +
+          'reason. A screenshot of the recipe works and is instant.',
+      };
+    }
     if (res.error === 'too-large') {
       return {
         success: false,

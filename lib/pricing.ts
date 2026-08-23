@@ -70,6 +70,28 @@ export const findRecipeTier = (cents: number | null | undefined) =>
 export const findCreatorSubTier = (cents: number | null | undefined) =>
   CREATOR_SUB_TIERS.find(t => t.cents === cents) ?? null;
 
+/**
+ * The tier a typed amount will actually be sold at.
+ *
+ * Creators want to name their own price, and the honest answer is that they
+ * cannot: a purchase goes through a store product registered in advance, and
+ * "$3.47" is not one of them. What we can do is let them type whatever they
+ * think it is worth and tell them plainly which tier it becomes — rather than
+ * offering a free-text box that quietly fails at the till, or five buttons
+ * with no explanation of why there are only five.
+ *
+ * Ties go to the higher tier: a creator who typed a number between two of
+ * them was reaching upward, and rounding their price down for them is not
+ * ours to do.
+ */
+export function nearestTier(cents: number, tiers: PriceTier[]): PriceTier {
+  return tiers.reduce((best, t) => {
+    const d = Math.abs(t.cents - cents);
+    const bestD = Math.abs(best.cents - cents);
+    return d < bestD || (d === bestD && t.cents > best.cents) ? t : best;
+  }, tiers[0]);
+}
+
 // What the creator keeps, after the store fee and the platform's 25%. Shown in
 // the pricing UI so a creator picking a tier sees the actual take-home rather
 // than the sticker price — the store cut is the bigger deduction and is easy to
