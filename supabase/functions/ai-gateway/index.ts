@@ -171,6 +171,20 @@ Rules:
 - Round to whole numbers. Never return a range, a null or an explanation.`;
 
 // ── Gemini ────────────────────────────────────────────────────────────────
+// What a full recipe costs to write out, with room to spare.
+//
+// 2000 was not enough and the failure was silent in the worst way: Gemini 2.5
+// counts its own thinking against this budget, so a detailed recipe — fifteen
+// ingredients, ten steps — ran out mid-JSON and came back as finishReason
+// MAX_TOKENS with an unparseable half object. Which reads, downstream, as "no
+// recipe found in this post" for a post whose caption contains the entire
+// recipe. This app has now been bitten by exactly this three times: the fridge
+// scan at 1000, the nutrition estimate at 600, and this.
+//
+// Output tokens are only billed as used, so a ceiling this high costs nothing
+// on the recipes that do fit.
+const RECIPE_OUTPUT_TOKENS = 8000;
+
 async function gemini(parts: unknown[], maxOutputTokens: number) {
   const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
     method: 'POST',
@@ -214,7 +228,7 @@ async function runOp(op: string, body: Record<string, any>) {
       if (GEMINI_API_KEY) {
         const r = await gemini(
           [{ text: `${RECIPE_EXTRACTION_PROMPT}\n\nExtract a recipe from this content:\n\n${content}` }],
-          2000,
+          RECIPE_OUTPUT_TOKENS,
         );
         if (r.ok && r.text.trim()) return json(r);
       }
@@ -233,7 +247,7 @@ async function runOp(op: string, body: Record<string, any>) {
               { role: 'user', content: `Extract a recipe from this content:\n\n${content}` },
             ],
             temperature: 0.3,
-            max_tokens: 2000,
+            max_tokens: RECIPE_OUTPUT_TOKENS,
           }),
         });
         if (res.ok) {
@@ -382,7 +396,7 @@ async function runOp(op: string, body: Record<string, any>) {
             video_metadata: { fps: 0.5, end_offset: '120s' },
           },
         ],
-        2000,
+        RECIPE_OUTPUT_TOKENS,
       );
       const geminiMs = Date.now() - t2;
       console.log('recipe-from-video timings', {
