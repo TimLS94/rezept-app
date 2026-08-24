@@ -217,7 +217,26 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
   
   if (mediaData.is_video || mediaData.video_url || mediaData.video_versions) {
     mediaType = 'video';
-    videoUrl = mediaData.video_url || mediaData.video_versions?.[0]?.url;
+    // The smallest rendition that is still legible, not the first one.
+    //
+    // Instagram ships a reel at several resolutions and video_versions[0] is
+    // the largest — around 10MB for eighteen seconds. That file has to be
+    // downloaded into the gateway, base64'd (a third bigger again) and
+    // uploaded to the model, and measurement says the upload is essentially
+    // all of the wait: 28KB took 3 seconds, 10MB took 50. The model reads the
+    // same 3,300 tokens either way.
+    //
+    // 480px wide is plenty to read text burned into a video, so the smallest
+    // rendition at least that wide wins. Falling back to the largest is fine
+    // — better a slow import than none.
+    const versions: any[] = Array.isArray(mediaData.video_versions) ? mediaData.video_versions : [];
+    const legible = versions
+      .filter(v => v?.url && (Number(v.width) || 0) >= 480)
+      .sort((a, b) => (Number(a.width) || 0) - (Number(b.width) || 0));
+    videoUrl =
+      legible[0]?.url ||
+      versions[0]?.url ||
+      mediaData.video_url;
   }
   else if (mediaData.carousel_media || mediaData.edge_sidecar_to_children) {
     mediaType = 'carousel';
