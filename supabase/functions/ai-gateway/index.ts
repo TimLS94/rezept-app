@@ -43,11 +43,16 @@ const VIDEO_INLINE_LIMIT = 14 * 1024 * 1024;
  */
 function toBase64(bytes: Uint8Array): string {
   const CHUNK = 0x8000;
-  let binary = '';
+  // Collected and joined once. Appending to a string in a loop rebuilds it
+  // every time, so a fourteen-megabyte file was being copied four hundred
+  // times on its way to a nineteen-megabyte string — quadratic work for
+  // something that should be linear, and a plausible share of the minutes
+  // this call was taking.
+  const parts: string[] = [];
   for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    parts.push(String.fromCharCode(...bytes.subarray(i, i + CHUNK)));
   }
-  return btoa(binary);
+  return btoa(parts.join(''));
 }
 
 /** Instagram's own CDN, and nothing else. */
