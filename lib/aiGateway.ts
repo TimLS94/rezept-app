@@ -53,14 +53,44 @@ export async function callGateway<T = any>(
 ): Promise<GatewayResult<T>> {
   const controller = new AbortController();
   const limit = TIMEOUT_MS[op] ?? DEFAULT_TIMEOUT_MS;
-  const timer = setTimeout(() => controller.abort(), limit);
-  externalSignal?.addEventListener('abort', () => controller.abort());
+
+  // Two mechanisms, on purpose.
+  //
+  // The signal is the polite one: it asks the request to stop, and when the
+  // platform honours it the connection actually closes. React Native's fetch
+  // does not always — the abort lands, the promise never settles, and the
+  // screen waits forever for a request nobody is listening to any more.
+  //
+  // So the race is the one that matters. It stops *waiting*, which is the
+  // only thing the user experiences. The request may carry on in the
+  // background and its answer is then discarded; a wasted call is a cheap
+  // price for a screen that always responds.
+  let settle: (r: GatewayResult<T>) => void = () => {};
+  const escape = new Promise<GatewayResult<T>>(resolve => { settle = resolve; });
+
+  const stop = (reason: 'timeout' | 'cancelled') => {
+    try { controller.abort(); } catch { /* best effort */ }
+    settle({ ok: false, error: reason });
+  };
+
+  const timer = setTimeout(() => stop('timeout'), limit);
+  if (externalSignal) {
+    if (externalSignal.aborted) stop('cancelled');
+    else externalSignal.addEventListener('abort', () => stop('cancelled'));
+  }
 
   try {
-    const { data, error } = await supabase.functions.invoke('ai-gateway', {
-      body: { op, ...payload },
-      signal: controller.signal,
-    });
+    const invocation = supabase.functions
+      .invoke('ai-gateway', { body: { op, ...payload }, signal: controller.signal })
+      .then(r => ({ kind: 'answered' as const, r }));
+
+    const raced = await Promise.race([
+      invocation,
+      escape.then(r => ({ kind: 'gave-up' as const, r })),
+    ]);
+    if (raced.kind === 'gave-up') return raced.r;
+
+    const { data, error } = raced.r;
 
     if (error) {
       // invoke() reports any non-2xx as an error, so the useful detail —

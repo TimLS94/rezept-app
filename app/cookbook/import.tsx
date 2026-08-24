@@ -75,6 +75,11 @@ export default function ImportRecipeScreen() {
   // The reel's own length, so the wait can be estimated from something real.
   const [videoSeconds, setVideoSeconds] = useState<number | undefined>();
   const cancelRef = useRef<AbortController | null>(null);
+  // Every import run gets a number. Cancelling bumps it, so an answer that
+  // arrives afterwards belongs to a run nobody is waiting for and is dropped
+  // — without this, a cancelled request could still navigate the user into a
+  // review screen they had already walked away from.
+  const runRef = useRef(0);
   const [quotas, setQuotas] = useState<Record<'instagram' | 'other', ImportQuota | null>>({
     instagram: null,
     other: null,
@@ -231,6 +236,7 @@ export default function ImportRecipeScreen() {
       }
 
       setStep('extracting');
+      const run = ++runRef.current;
 
       // A ceiling over the whole operation, not just each call inside it.
       // Per-call deadlines add up — fetch the post, watch the reel, fall back
@@ -241,6 +247,7 @@ export default function ImportRecipeScreen() {
 
       const ig = await fetchInstagramWithFallback(link);
       clearTimeout(overall);
+      if (runRef.current !== run) return;
       if (!ig.success) {
         setError(ig.error);
         setStep('input');
@@ -272,6 +279,7 @@ export default function ImportRecipeScreen() {
           videoUrl, caption || undefined, cancelRef.current.signal,
         );
         setWatching(false);
+        if (runRef.current !== run) return;
 
         // Stopped on purpose. Nothing to report and nothing to fall back to —
         // an error box after someone pressed Cancel reads as a failure they
@@ -775,7 +783,15 @@ Steps:
                 </Text>
                 <TouchableOpacity
                   style={styles.cancelBtn}
-                  onPress={() => cancelRef.current?.abort()}
+                  onPress={() => {
+                    // Leave immediately. Asking the request to stop is worth
+                    // doing, but a button that waits for the network to agree
+                    // before it does anything is a button that does nothing.
+                    runRef.current += 1;
+                    cancelRef.current?.abort();
+                    setWatching(false);
+                    setStep('input');
+                  }}
                 >
                   <Text style={styles.cancelText}>Stop and use a screenshot instead</Text>
                 </TouchableOpacity>
