@@ -16,10 +16,21 @@ import { supabase } from './supabase';
 
 const SITE = 'https://spoondrop.app';
 
-// The app's own scheme, which works today. The https address above is the
-// nicer link and is what universal links will use, but spoondrop.app does not
-// resolve yet — sending it on its own would be sending a dead link.
-const APP_SCHEME = 'spoondrop://';
+// Where a shared link points.
+//
+// It used to be `spoondrop://s/<token>`, and a custom scheme is not a link as
+// far as WhatsApp, iMessage or Mail are concerned: they linkify http and https
+// and leave everything else as grey text. The recipient got an unclickable
+// string and no preview — a preview being something a web page provides, and
+// there being no web page.
+//
+// So the link is an https page now (a small edge function) that carries the
+// recipe's photo and title as Open Graph tags for the chat app's preview
+// card, and opens the app when the app is installed. When spoondrop.app
+// exists this becomes https://spoondrop.app/s/<token> and a universal link;
+// app/+native-intent.ts already routes that form, so the switch needs no new
+// native build.
+const SHARE_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL ?? ''}/functions/v1/share`;
 
 /**
  * A link that opens this recipe inside SpoonDrop.
@@ -37,7 +48,7 @@ export async function createShareLink(
     p_recipe_id: recipe.id,
   });
   if (error || !data?.ok || !data.token) return null;
-  return `${APP_SCHEME}s/${data.token}`;
+  return `${SHARE_BASE}/${data.token}`;
 }
 
 function formatAmount(amount: number, unit: string): string {

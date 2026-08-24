@@ -14,8 +14,12 @@
 --   is handing over a copy on purpose, and that copy is what gets imported.
 --
 -- The token is the capability. Anyone holding it can read the share, which is
--- what "send this to a friend" means; it is 16 random hex characters, so it
+-- what "send this to a friend" means; it is 32 random hex characters, so it
 -- cannot be guessed or walked.
+--
+-- Safe to re-run over the first version: this replaces the function that
+-- reached for gen_random_bytes, which is in pgcrypto and so invisible to a
+-- function pinned to search_path = public.
 --
 -- Idempotent. Run in the Supabase SQL Editor.
 -- ============================================================================
@@ -83,8 +87,17 @@ begin
     v_payload := null;
   end if;
 
+  -- gen_random_bytes lives in pgcrypto, which sits in the `extensions` schema
+  -- and is therefore invisible to a function pinned to `search_path = public`
+  -- — this failed with "function gen_random_bytes(integer) does not exist"
+  -- for every share anyone ever made, silently, because the app treats a
+  -- failed share as "no link available" and quietly sends plain text instead.
+  --
+  -- gen_random_uuid() is core Postgres and needs no extension. Stripped of
+  -- its dashes it is 32 hex characters: more unguessable than the 16 it
+  -- replaces, and it cannot go missing.
   insert into public.recipe_shares (token, user_id, kind, recipe_id, payload)
-  values (encode(gen_random_bytes(8), 'hex'), auth.uid(), p_kind, p_recipe_id, v_payload)
+  values (replace(gen_random_uuid()::text, '-', ''), auth.uid(), p_kind, p_recipe_id, v_payload)
   on conflict (user_id, kind, recipe_id) do update
     -- Re-sharing refreshes the snapshot: the link a friend already has should
     -- give them the recipe as it is now, not as it was in March.
