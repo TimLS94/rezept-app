@@ -105,16 +105,44 @@ export async function logOutPurchases(): Promise<void> {
   await P.logOut().catch(() => {});
 }
 
-// The current offering's first package (Phase 1: one app-wide premium sub).
-export async function getPremiumPackage(): Promise<any | null> {
+export type PremiumPlan = 'monthly' | 'annual';
+
+/**
+ * Both plans from the current offering, by RevenueCat's standard identifiers.
+ *
+ * The paywall used to take availablePackages[0] and offer whatever that
+ * happened to be — which meant one plan existed as far as the user was
+ * concerned, and which one depended on the order the dashboard returned them
+ * in. A subscription screen that does not let someone choose monthly or
+ * yearly is not a subscription screen.
+ *
+ * Falls back to matching on the package type, because an offering configured
+ * by hand does not always use the $rc_ identifiers.
+ */
+export async function getPremiumPackages(): Promise<Partial<Record<PremiumPlan, any>>> {
   const P = loadSDK();
-  if (!P || !configured) return null;
+  if (!P || !configured) return {};
   try {
     const offerings = await P.getOfferings();
-    return offerings?.current?.availablePackages?.[0] ?? null;
+    const packages: any[] = offerings?.current?.availablePackages ?? [];
+
+    const find = (rcId: string, type: string) =>
+      packages.find(p => p?.identifier === rcId) ??
+      packages.find(p => p?.packageType === type);
+
+    return {
+      monthly: find('$rc_monthly', 'MONTHLY'),
+      annual: find('$rc_annual', 'ANNUAL'),
+    };
   } catch {
-    return null;
+    return {};
   }
+}
+
+/** Kept for callers that only need something to price. */
+export async function getPremiumPackage(): Promise<any | null> {
+  const { annual, monthly } = await getPremiumPackages();
+  return annual ?? monthly ?? null;
 }
 
 // Human-readable price string for the paywall (e.g. "$9.99"), or null.
@@ -123,13 +151,25 @@ export async function getPremiumPriceString(): Promise<string | null> {
   return pkg?.product?.priceString ?? null;
 }
 
+/** The store's own localized strings, so the paywall never has to guess. */
+export async function getPremiumPriceStrings(): Promise<Partial<Record<PremiumPlan, string>>> {
+  const { monthly, annual } = await getPremiumPackages();
+  return {
+    monthly: monthly?.product?.priceString,
+    annual: annual?.product?.priceString,
+  };
+}
+
 export type PurchaseResult = 'success' | 'cancelled' | 'unavailable' | 'error';
 
-export async function purchasePremium(): Promise<PurchaseResult> {
+export async function purchasePremium(plan: PremiumPlan = 'annual'): Promise<PurchaseResult> {
   const P = loadSDK();
   if (!P || !configured) return 'unavailable';
   try {
-    const pkg = await getPremiumPackage();
+    const packages = await getPremiumPackages();
+    // The chosen plan, or the other one if the offering only has one. Buying
+    // silently the wrong term would be worse than saying it is unavailable.
+    const pkg = packages[plan] ?? packages[plan === 'annual' ? 'monthly' : 'annual'];
     if (!pkg) return 'unavailable';
     const { customerInfo } = await P.purchasePackage(pkg);
     return customerInfo?.entitlements?.active?.[ENTITLEMENT_ID] ? 'success' : 'error';

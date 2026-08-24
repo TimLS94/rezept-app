@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
-import { getPremiumPriceString, purchasePremium, restorePurchases, syncEntitlements, grantPlatformEntitlement, purchasesAvailable } from '../lib/purchases';
+import {
+  getPremiumPriceStrings, purchasePremium, restorePurchases, syncEntitlements,
+  grantPlatformEntitlement, purchasesAvailable, type PremiumPlan,
+} from '../lib/purchases';
 import {
   PREMIUM_INCLUDES, PREMIUM_EXCLUDES, PREMIUM_YEARLY_INTRO_CENTS,
-  PREMIUM_MONTHLY_INTRO_CENTS, PREMIUM_MONTHLY_CENTS,
+  PREMIUM_MONTHLY_INTRO_CENTS, PREMIUM_MONTHLY_CENTS, PREMIUM_YEARLY_CENTS,
   FOUNDING_OFFER_OPEN, FOUNDING_HEADLINE, FOUNDING_SUB, renewalNote, usd,
 } from '../lib/pricing';
 import { useAuth } from '../lib/auth';
@@ -17,14 +20,25 @@ type Props = {
   creatorName?: string;      // optional: whose premium recipe triggered the paywall
 };
 
-// Shown until the store returns the real localized price.
-// Shown until the store returns the real localized price. The launch offer is
-// what someone is actually charged first, so that is the number that stands
-// in — quoting the standard price here would overstate it.
-const FALLBACK_PRICE = usd(PREMIUM_YEARLY_INTRO_CENTS);
+// Shown until the store returns the real localized prices. The launch offer is
+// what someone is actually charged first, so that is the number that stands in
+// — quoting the standard price here would overstate it.
+const FALLBACK: Record<PremiumPlan, string> = {
+  annual: usd(PREMIUM_YEARLY_INTRO_CENTS),
+  monthly: usd(PREMIUM_MONTHLY_INTRO_CENTS),
+};
+
+// What the yearly plan saves against paying monthly, from the numbers rather
+// than from a marketing round number — if the prices change, so does this.
+const SAVING_PERCENT = Math.round(
+  (1 - PREMIUM_YEARLY_INTRO_CENTS / (PREMIUM_MONTHLY_INTRO_CENTS * 12)) * 100,
+);
 
 export default function Paywall({ visible, onClose, onSubscribed, creatorName }: Props) {
-  const [price, setPrice] = useState<string>(FALLBACK_PRICE);
+  const [prices, setPrices] = useState<Record<PremiumPlan, string>>(FALLBACK);
+  // Yearly first: it is the better deal and the one most people want, and a
+  // screen that pre-selects nothing makes everyone do work to say so.
+  const [plan, setPlan] = useState<PremiumPlan>('annual');
   const [busy, setBusy] = useState(false);
   // Reloading the auth context is the paywall's own job. Leaving it to each
   // caller's onSubscribed meant a screen that forgot it (fridge.tsx did) would
@@ -34,7 +48,12 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
 
   useEffect(() => {
     if (!visible) return;
-    getPremiumPriceString().then(p => { if (p) setPrice(p); });
+    getPremiumPriceStrings().then(p =>
+      setPrices(prev => ({
+        annual: p.annual ?? prev.annual,
+        monthly: p.monthly ?? prev.monthly,
+      })),
+    );
   }, [visible]);
 
   const handleResult = (result: string, successMsg: string) => {
@@ -83,7 +102,7 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
 
   const subscribe = async () => {
     setBusy(true);
-    const r = await purchasePremium();
+    const r = await purchasePremium(plan);
     if (r === 'success') { await afterPurchase('Premium features are now unlocked.'); return; }
     setBusy(false);
     handleResult(r, 'Premium features are now unlocked.');
@@ -162,20 +181,45 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
             </View>
           )}
 
-          <Text style={styles.price}>{price}<Text style={styles.priceUnit}> first year</Text></Text>
+          {/* Both terms, both selectable. Whichever is chosen is what the
+              button buys and what the line underneath describes, so the price
+              on screen and the price charged can never disagree. */}
+          <View style={styles.plans}>
+            <PlanCard
+              selected={plan === 'annual'}
+              onPress={() => setPlan('annual')}
+              title="Yearly"
+              price={prices.annual}
+              unit="first year"
+              badge={SAVING_PERCENT > 0 ? `Save ${SAVING_PERCENT}%` : undefined}
+              after={`then ${usd(PREMIUM_YEARLY_CENTS)}/year`}
+            />
+            <PlanCard
+              selected={plan === 'monthly'}
+              onPress={() => setPlan('monthly')}
+              title="Monthly"
+              price={prices.monthly}
+              unit="a month"
+              after={`then ${usd(PREMIUM_MONTHLY_CENTS)}/month`}
+            />
+          </View>
 
           {/* What it costs afterwards, in the same breath as what it costs
               now. A launch price shown on its own is the thing both the app
               stores and the FTC treat as deceptive, and it is how someone
               finds out what they signed up for from a bank statement. */}
-          <Text style={styles.renewal}>{renewalNote('year')}</Text>
-          <Text style={styles.renewalAlt}>
-            Or {usd(PREMIUM_MONTHLY_INTRO_CENTS)} a month for the first year,
-            then {usd(PREMIUM_MONTHLY_CENTS)} a month.
-          </Text>
+          <Text style={styles.renewal}>{renewalNote(plan === 'annual' ? 'year' : 'month')}</Text>
 
           <TouchableOpacity style={styles.cta} onPress={subscribe} disabled={busy} activeOpacity={0.9}>
-            {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.ctaText}>Subscribe now</Text>}
+            {busy ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              // Names the term being bought. "Subscribe now" next to two
+              // prices leaves the user to remember which one they tapped.
+              <Text style={styles.ctaText}>
+                Start {plan === 'annual' ? 'yearly' : 'monthly'} · {prices[plan]}
+              </Text>
+            )}
           </TouchableOpacity>
 
           {__DEV__ && !purchasesAvailable() && (
@@ -195,6 +239,37 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
         </View>
       </View>
     </Modal>
+  );
+}
+
+/** One selectable term. Kept dumb: the paywall owns which one is chosen. */
+function PlanCard({
+  selected, onPress, title, price, unit, after, badge,
+}: {
+  selected: boolean;
+  onPress: () => void;
+  title: string;
+  price: string;
+  unit: string;
+  after: string;
+  badge?: string;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.plan, selected && styles.planOn]}
+      onPress={onPress}
+      activeOpacity={0.9}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
+    >
+      {badge ? (
+        <View style={styles.planBadge}><Text style={styles.planBadgeText}>{badge}</Text></View>
+      ) : null}
+      <Text style={[styles.planTitle, selected && styles.planTitleOn]}>{title}</Text>
+      <Text style={styles.planPrice}>{price}</Text>
+      <Text style={styles.planUnit}>{unit}</Text>
+      <Text style={styles.planAfter}>{after}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -223,6 +298,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cream, borderRadius: 12, padding: 12, marginTop: 18,
   },
   exclusionText: { flex: 1, fontFamily: FONTS.body, fontSize: 12, color: COLORS.warmGray, lineHeight: 17 },
+  plans: { flexDirection: 'row', gap: 10, alignSelf: 'stretch', marginTop: 18 },
+  plan: {
+    flex: 1, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 12,
+    borderWidth: 1.5, borderColor: '#EFE7DC', backgroundColor: '#FFF',
+    alignItems: 'center',
+  },
+  planOn: { borderColor: COLORS.orange, backgroundColor: '#FFF7F0' },
+  planTitle: { fontFamily: FONTS.semibold, fontSize: 13, color: COLORS.warmGray },
+  planTitleOn: { color: COLORS.orange },
+  planPrice: { fontFamily: FONTS.display, fontSize: 24, color: COLORS.navy, marginTop: 6 },
+  planUnit: { fontSize: 11.5, color: COLORS.warmGray, marginTop: 1 },
+  planAfter: { fontSize: 11, color: COLORS.warmGray, marginTop: 6, textAlign: 'center' },
+  planBadge: {
+    position: 'absolute', top: -9, backgroundColor: COLORS.green,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9,
+  },
+  planBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
+
   founding: {
     alignSelf: 'stretch', backgroundColor: '#FFF3E9', borderRadius: 14,
     paddingVertical: 12, paddingHorizontal: 16, marginTop: 22,
