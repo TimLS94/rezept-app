@@ -12,6 +12,9 @@ export type InstagramContent = {
   thumbnailUrl?: string;
   videoUrl?: string;
   username?: string;
+  /** Seconds, when the post says. Lets the wait be estimated rather than
+   *  counted upwards at someone. */
+  durationSeconds?: number;
 };
 
 export type InstagramResult =
@@ -46,12 +49,19 @@ export async function fetchInstagramContent(url: string): Promise<InstagramResul
     // Use Instagram's oEmbed endpoint (public, no auth needed)
     const oembedUrl = `https://api.instagram.com/oembed/?url=${encodeURIComponent(url)}`;
     
+    // Ten seconds, because this one had no limit at all. Instagram does not
+    // refuse oEmbed so much as ignore it, and a fetch nobody cancelled is a
+    // wait nobody can end — minutes of "loading" with the phone doing
+    // nothing. It is a long-shot fallback; a long shot gets ten seconds.
+    const oembedController = new AbortController();
+    const oembedTimer = setTimeout(() => oembedController.abort(), 10_000);
     const response = await fetch(oembedUrl, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (compatible; SpoonDrop/1.0)',
       },
-    });
+      signal: oembedController.signal,
+    }).finally(() => clearTimeout(oembedTimer));
     
     // Check if we got HTML instead of JSON (Instagram blocking)
     const contentType = response.headers.get('content-type') || '';
@@ -208,9 +218,13 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
   if (mediaData.is_video || mediaData.video_url || mediaData.video_versions) {
     mediaType = 'video';
     videoUrl = mediaData.video_url || mediaData.video_versions?.[0]?.url;
-  } else if (mediaData.carousel_media || mediaData.edge_sidecar_to_children) {
+  }
+  else if (mediaData.carousel_media || mediaData.edge_sidecar_to_children) {
     mediaType = 'carousel';
   }
+
+  const durationSeconds =
+    Number(mediaData.video_duration ?? mediaData.duration ?? mediaData.video_duration_s) || undefined;
 
   if (!caption && !thumbnailUrl) {
     return { success: false, error: 'Could not extract content from post.' };
@@ -231,6 +245,7 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
       thumbnailUrl,
       videoUrl,
       username,
+      durationSeconds,
     },
   };
 }

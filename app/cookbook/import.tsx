@@ -33,6 +33,7 @@ import { DietaryTag, Ingredient } from '../../data/recipes';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
 import { HEADER_TOP } from '../../lib/layout';
 import { goBackOr } from '../../lib/nav';
+import CookingProgress, { estimateSeconds } from '../../components/CookingProgress';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
 // Import modes: an Instagram link, a screenshot from the gallery, a camera
@@ -71,6 +72,8 @@ export default function ImportRecipeScreen() {
   // minutes, how long it has been going and how to stop it.
   const [watching, setWatching] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  // The reel's own length, so the wait can be estimated from something real.
+  const [videoSeconds, setVideoSeconds] = useState<number | undefined>();
   const cancelRef = useRef<AbortController | null>(null);
   const [quotas, setQuotas] = useState<Record<'instagram' | 'other', ImportQuota | null>>({
     instagram: null,
@@ -229,7 +232,15 @@ export default function ImportRecipeScreen() {
 
       setStep('extracting');
 
+      // A ceiling over the whole operation, not just each call inside it.
+      // Per-call deadlines add up — fetch the post, watch the reel, fall back
+      // to the caption — and three limits in a row is still a wait long
+      // enough to abandon. This is the one the user actually experiences.
+      cancelRef.current = new AbortController();
+      const overall = setTimeout(() => cancelRef.current?.abort(), 240_000);
+
       const ig = await fetchInstagramWithFallback(link);
+      clearTimeout(overall);
       if (!ig.success) {
         setError(ig.error);
         setStep('input');
@@ -255,8 +266,8 @@ export default function ImportRecipeScreen() {
       let aiResult: Awaited<ReturnType<typeof extractRecipeWithAI>>;
 
       if (videoUrl) {
+        setVideoSeconds(ig.content.durationSeconds);
         setWatching(true);
-        cancelRef.current = new AbortController();
         aiResult = await extractRecipeFromVideo(
           videoUrl, caption || undefined, cancelRef.current.signal,
         );
@@ -752,23 +763,24 @@ Steps:
                 : 'AI is analyzing the post. This may take a few seconds.'}
             </Text>
 
-            {/* Elapsed rather than a progress bar. One request goes out and
-                one answer comes back, so any percentage here would be
-                invented — and an invented bar that sticks at 80% is worse
-                than a number the user can judge for themselves. */}
-            <Text style={styles.elapsed}>
-              {elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`}
-              {watching && elapsed > 90 ? ' · nearly at the limit' : ''}
-            </Text>
-
-            {watching && (
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => cancelRef.current?.abort()}
-              >
-                <Text style={styles.cancelText}>Stop and use a screenshot instead</Text>
-              </TouchableOpacity>
-            )}
+            {/* Watching a reel is the only wait long enough to need pacing.
+                A bar for a two-second caption read would be theatre. */}
+            {watching ? (
+              <>
+                <CookingProgress seconds={estimateSeconds(videoSeconds)} />
+                <Text style={styles.elapsed}>
+                  {elapsed < 60
+                    ? `${elapsed}s so far`
+                    : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')} so far`}
+                </Text>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => cancelRef.current?.abort()}
+                >
+                  <Text style={styles.cancelText}>Stop and use a screenshot instead</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
             {thumbnailUrl ? (
               <Image source={{ uri: thumbnailUrl }} style={styles.thumbnail} />
             ) : null}

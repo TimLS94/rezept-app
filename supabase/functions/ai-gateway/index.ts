@@ -326,15 +326,28 @@ async function runOp(op: string, body: Record<string, any>) {
       if (!isInstagramCdn(videoUrl)) return json({ error: 'host-not-allowed' }, 400);
       if (!GEMINI_API_KEY) return json({ error: 'no-key' }, 503);
 
+      // Timed, because "it takes minutes" is not something to guess about.
+      // Three things can be slow here and they want different fixes: pulling
+      // the file off Instagram's CDN, encoding it, and the model watching it.
+      const t0 = Date.now();
+
       const head = await fetch(videoUrl, { method: 'HEAD' });
       const size = Number(head.headers.get('content-length') ?? 0);
-      if (size > VIDEO_INLINE_LIMIT) return json({ error: 'too-large' }, 413);
+      if (size > VIDEO_INLINE_LIMIT) return json({ error: 'too-large', size }, 413);
 
       const video = await fetch(videoUrl);
       if (!video.ok) return json({ error: 'download-failed' }, 502);
 
       const bytes = new Uint8Array(await video.arrayBuffer());
-      if (bytes.length > VIDEO_INLINE_LIMIT) return json({ error: 'too-large' }, 413);
+      if (bytes.length > VIDEO_INLINE_LIMIT) {
+        return json({ error: 'too-large', size: bytes.length }, 413);
+      }
+      const downloadMs = Date.now() - t0;
+
+      const t1 = Date.now();
+      const encoded = toBase64(bytes);
+      const encodeMs = Date.now() - t1;
+      const t2 = Date.now();
 
       const caption = String(body.caption ?? '').slice(0, 4000);
       const r = await gemini(
@@ -352,7 +365,7 @@ async function runOp(op: string, body: Record<string, any>) {
               (caption ? `\n\nThe post's caption:\n${caption}` : ''),
           },
           {
-            inline_data: { mime_type: 'video/mp4', data: toBase64(bytes) },
+            inline_data: { mime_type: 'video/mp4', data: encoded },
             // Half a frame a second, and only the first two minutes.
             //
             // Default sampling is one frame per second for the whole file,
@@ -366,8 +379,15 @@ async function runOp(op: string, body: Record<string, any>) {
         ],
         2000,
       );
-      if (!r.ok) return json({ error: r.error }, 502);
-      return json(r);
+      const geminiMs = Date.now() - t2;
+      console.log('recipe-from-video timings', {
+        bytes: bytes.length, downloadMs, encodeMs, geminiMs,
+      });
+
+      if (!r.ok) return json({ error: r.error, downloadMs, encodeMs, geminiMs }, 502);
+      // The timings ride along so the app can log where a slow import went,
+      // rather than everyone guessing from the outside.
+      return json({ ...r, timings: { bytes: bytes.length, downloadMs, encodeMs, geminiMs } });
     }
 
     case 'transcribe-video': {
