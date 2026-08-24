@@ -3,7 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Ale
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
 import { getPremiumPriceString, purchasePremium, restorePurchases, syncEntitlements, grantPlatformEntitlement, purchasesAvailable } from '../lib/purchases';
-import { PREMIUM_INCLUDES, PREMIUM_EXCLUDES, PREMIUM_MONTHLY_CENTS, usd } from '../lib/pricing';
+import {
+  PREMIUM_INCLUDES, PREMIUM_EXCLUDES, PREMIUM_YEARLY_INTRO_CENTS,
+  PREMIUM_MONTHLY_INTRO_CENTS, PREMIUM_MONTHLY_CENTS,
+  FOUNDING_OFFER_OPEN, FOUNDING_HEADLINE, FOUNDING_SUB, renewalNote, usd,
+} from '../lib/pricing';
 import { useAuth } from '../lib/auth';
 
 type Props = {
@@ -14,7 +18,10 @@ type Props = {
 };
 
 // Shown until the store returns the real localized price.
-const FALLBACK_PRICE = usd(PREMIUM_MONTHLY_CENTS);
+// Shown until the store returns the real localized price. The launch offer is
+// what someone is actually charged first, so that is the number that stands
+// in — quoting the standard price here would overstate it.
+const FALLBACK_PRICE = usd(PREMIUM_YEARLY_INTRO_CENTS);
 
 export default function Paywall({ visible, onClose, onSubscribed, creatorName }: Props) {
   const [price, setPrice] = useState<string>(FALLBACK_PRICE);
@@ -148,7 +155,24 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
             <Text style={styles.exclusionText}>{PREMIUM_EXCLUDES}</Text>
           </View>
 
-          <Text style={styles.price}>{price}<Text style={styles.priceUnit}> / month</Text></Text>
+          {FOUNDING_OFFER_OPEN && (
+            <View style={styles.founding}>
+              <Text style={styles.foundingTitle}>{FOUNDING_HEADLINE}</Text>
+              <Text style={styles.foundingSub}>{FOUNDING_SUB}</Text>
+            </View>
+          )}
+
+          <Text style={styles.price}>{price}<Text style={styles.priceUnit}> first year</Text></Text>
+
+          {/* What it costs afterwards, in the same breath as what it costs
+              now. A launch price shown on its own is the thing both the app
+              stores and the FTC treat as deceptive, and it is how someone
+              finds out what they signed up for from a bank statement. */}
+          <Text style={styles.renewal}>{renewalNote('year')}</Text>
+          <Text style={styles.renewalAlt}>
+            Or {usd(PREMIUM_MONTHLY_INTRO_CENTS)} a month for the first year,
+            then {usd(PREMIUM_MONTHLY_CENTS)} a month.
+          </Text>
 
           <TouchableOpacity style={styles.cta} onPress={subscribe} disabled={busy} activeOpacity={0.9}>
             {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.ctaText}>Subscribe now</Text>}
@@ -199,7 +223,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cream, borderRadius: 12, padding: 12, marginTop: 18,
   },
   exclusionText: { flex: 1, fontFamily: FONTS.body, fontSize: 12, color: COLORS.warmGray, lineHeight: 17 },
-  price: { fontFamily: FONTS.display, fontSize: 34, color: COLORS.navy, marginTop: 24 },
+  founding: {
+    alignSelf: 'stretch', backgroundColor: '#FFF3E9', borderRadius: 14,
+    paddingVertical: 12, paddingHorizontal: 16, marginTop: 22,
+    borderWidth: 1, borderColor: '#F5D9C2',
+  },
+  foundingTitle: { fontFamily: FONTS.semibold, fontSize: 14, color: '#8A4B1E', textAlign: 'center' },
+  foundingSub: { fontSize: 12.5, color: '#8A4B1E', textAlign: 'center', marginTop: 3 },
+  renewal: { fontSize: 12.5, color: COLORS.warmGray, textAlign: 'center', marginTop: 8, lineHeight: 18, paddingHorizontal: 8 },
+  renewalAlt: { fontSize: 12.5, color: COLORS.warmGray, textAlign: 'center', marginTop: 6, lineHeight: 18 },
+  price: { fontFamily: FONTS.display, fontSize: 34, color: COLORS.navy, marginTop: 14 },
   priceUnit: { fontFamily: FONTS.medium, fontSize: 15, color: COLORS.warmGray },
   cta: { alignSelf: 'stretch', backgroundColor: COLORS.orange, borderRadius: RADIUS.md, paddingVertical: 17, alignItems: 'center', marginTop: 18 },
   ctaText: { fontFamily: FONTS.bold, fontSize: 16, color: '#FFF', letterSpacing: 0.5 },

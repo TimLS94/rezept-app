@@ -21,8 +21,50 @@
 // The single source of truth for what Premium includes. The paywall, the
 // settings screen and the explainer all render from this list, so the promise
 // can't drift between screens.
-export const PREMIUM_MONTHLY_CENTS = 499;
-export const PREMIUM_YEARLY_CENTS = 3999;
+// ── Founding Family pricing ────────────────────────────────────────────────
+// The launch offer and the price it becomes. Both numbers matter equally:
+// showing the first without the second is the thing regulators and app stores
+// both treat as deceptive, and it is how a subscriber finds out what they
+// signed up for by looking at a bank statement.
+//
+// This is an INTRODUCTORY OFFER on one product, not a second cheaper product.
+// The difference decides whether anyone ever moves to the standard price:
+//
+//   App Store Connect → the subscription → Introductory Offers
+//     Yearly:  pay up front, 1 year, $29.99   (standard $59.99/year)
+//     Monthly: pay as you go, 12 periods, $2.99/month (standard $5.99/month)
+//
+// Sold as two separate products instead, a founding subscriber would renew at
+// the launch price forever, because nothing would ever move them.
+//
+// "First 10,000 families" is not something the stores can count. Apple has no
+// global cap on an introductory offer, so the cap is ours to enforce: switch
+// the RevenueCat offering when the count is reached. Until that switch happens
+// the offer is simply open — which is honest, as long as no screen claims a
+// number of remaining places that nothing is actually counting.
+export const PREMIUM_MONTHLY_CENTS = 599;        // standard
+export const PREMIUM_YEARLY_CENTS = 5999;        // standard
+export const PREMIUM_MONTHLY_INTRO_CENTS = 299;  // first year
+export const PREMIUM_YEARLY_INTRO_CENTS = 2999;  // first year
+
+/** True while the launch offer is the one being presented. */
+export const FOUNDING_OFFER_OPEN = true;
+
+export const FOUNDING_HEADLINE = 'Founding Family pricing';
+export const FOUNDING_SUB = 'Join the first 10,000 SpoonDrop families.';
+
+/**
+ * The renewal sentence, which has to appear wherever a price does.
+ *
+ * Apple's guideline 3.1.2 and the FTC's rule on negative-option billing want
+ * the same thing said plainly before anyone pays: what it costs now, what it
+ * costs after, how often it renews, and that it can be cancelled.
+ */
+export function renewalNote(period: 'month' | 'year'): string {
+  return period === 'year'
+    ? `${usd(PREMIUM_YEARLY_INTRO_CENTS)} for the first year, then ${usd(PREMIUM_YEARLY_CENTS)} a year. Renews automatically, cancel any time.`
+    : `${usd(PREMIUM_MONTHLY_INTRO_CENTS)} a month for the first year, then ${usd(PREMIUM_MONTHLY_CENTS)} a month. Renews automatically, cancel any time.`;
+}
 
 export const PREMIUM_INCLUDES = [
   { icon: '🧊', title: 'Fridge Scan', text: 'Photograph your fridge and get recipes you can cook now — 3 scans a week.' },
