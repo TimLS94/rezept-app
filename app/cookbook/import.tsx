@@ -220,6 +220,23 @@ export default function ImportRecipeScreen() {
   };
 
   const handleImport = async () => {
+    try {
+      await runImport();
+    } catch (e: any) {
+      // Nothing in here had a catch, so one unexpected throw — a model
+      // answering with prose instead of JSON was enough — left the screen on
+      // 'extracting' with no timeout, no message and no way back. Whatever
+      // else goes wrong, the user gets the screen back and a sentence.
+      console.warn('Import failed:', e);
+      setError(
+        'Something went wrong while reading that recipe. A screenshot works — pick Gallery or Camera above.',
+      );
+      setStep('input');
+      setWatching(false);
+    }
+  };
+
+  const runImport = async () => {
     setError('');
     if (outOfImports()) return;
 

@@ -33,21 +33,38 @@ export type ExtractionResult =
   | { success: false; error: string };
 
 
-// Parse JSON from AI response (handles markdown code blocks)
-function parseRecipeJson(text: string): ExtractedRecipe {
-  let jsonStr = text;
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+// Parse JSON from AI response (handles markdown code blocks).
+//
+// Returns null instead of throwing. A model that answers with an apology, a
+// half-finished object or nothing at all is an ordinary outcome, not an
+// exception — and this threw straight through three call sites into a screen
+// with no try/catch anywhere, which left the import spinning forever. An
+// unparseable answer means the same as an empty recipe, and is handled the
+// same way.
+function parseRecipeJson(text: string): ExtractedRecipe | null {
+  let jsonStr = text ?? '';
+  const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) {
     jsonStr = jsonMatch[1];
   }
-  return JSON.parse(jsonStr.trim()) as ExtractedRecipe;
+  // Some answers wrap the object in a sentence. Take the outermost braces.
+  const start = jsonStr.indexOf('{');
+  const end = jsonStr.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+
+  try {
+    return JSON.parse(jsonStr.slice(start, end + 1)) as ExtractedRecipe;
+  } catch {
+    console.warn('Recipe JSON did not parse:', jsonStr.slice(0, 200));
+    return null;
+  }
 }
 
 // When the model gets no usable content it politely returns an empty template
 // (e.g. title "No Recipe Provided", 0 ingredients, 0 steps). That must count as
 // a FAILURE, not a successful extraction — otherwise we save blank recipes.
 function isEmptyRecipe(recipe: ExtractedRecipe | undefined | null): boolean {
-  if (!recipe) return true;
+  if (!recipe) return true;   // also covers "the answer would not parse"
   const noIngredients = !Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0;
   const noSteps = !Array.isArray(recipe.steps) || recipe.steps.length === 0;
   return noIngredients && noSteps;
@@ -84,7 +101,7 @@ export async function extractRecipeWithAI(content: string): Promise<ExtractionRe
   const recipe = parseRecipeJson(res.data.text ?? '');
   // A model answered but found nothing usable in the content. That is a
   // different message from "the service is down", and the user can act on it.
-  if (isEmptyRecipe(recipe)) return { success: false, error: NO_RECIPE_ERROR };
+  if (!recipe || isEmptyRecipe(recipe)) return { success: false, error: NO_RECIPE_ERROR };
   return { success: true, recipe };
 }
 
@@ -165,7 +182,7 @@ export async function extractRecipeFromVideo(
   }
 
   const recipe = parseRecipeJson(res.data.text ?? '');
-  if (isEmptyRecipe(recipe)) {
+  if (!recipe || isEmptyRecipe(recipe)) {
     return {
       success: false,
       error:
@@ -216,7 +233,7 @@ export async function extractRecipeFromImages(imagesBase64: string[]): Promise<E
   }
 
   const recipe = parseRecipeJson(res.data.text ?? '');
-  if (isEmptyRecipe(recipe)) {
+  if (!recipe || isEmptyRecipe(recipe)) {
     return {
       success: false,
       error:
