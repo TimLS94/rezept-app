@@ -42,7 +42,19 @@ type InputMode = 'link' | 'screenshot' | 'camera' | 'text';
 
 // A recipe's text can span several on-screen frames (ingredients + each step).
 // Vision de-dupes across images, so allow a comfortable number.
-const MAX_SCREENSHOTS = 10;
+//
+// Six, not ten, and at half quality rather than 0.8 — because these are held
+// in JavaScript memory as base64 strings, all of them at once, and then
+// copied again into the request body. A full-resolution iPhone photo is
+// several megabytes before base64 adds a third; ten of those is tens of
+// megabytes of string on a device that will kill the app rather than page it
+// out. That is the shape of a crash "for no reason".
+//
+// Nothing is lost by it. The model is reading text off a screenshot, and a
+// screenshot at 0.5 quality is still perfectly legible — the fridge scan has
+// worked at this setting all along.
+const MAX_SCREENSHOTS = 6;
+const IMAGE_QUALITY = 0.5;
 
 // Where an imported recipe goes, and why it is not a creator recipe.
 //
@@ -151,7 +163,7 @@ export default function ImportRecipeScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      quality: 0.8,
+      quality: IMAGE_QUALITY,
       base64: true,
     });
 
@@ -180,7 +192,7 @@ export default function ImportRecipeScreen() {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
+      quality: IMAGE_QUALITY,
       base64: true,
     });
 
@@ -356,6 +368,10 @@ export default function ImportRecipeScreen() {
       }
 
       await book(inputMode as ImportKind);
+      // The base64 has done its job. Holding several megabytes of string
+      // through the review step, the save and whatever comes next is how a
+      // later screen gets blamed for a crash this one caused.
+      setScreenshots([]);
       showReview(aiResult.recipe);
       return;
     }

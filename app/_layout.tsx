@@ -2,7 +2,7 @@ import { Stack, useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ShareIntentProvider } from 'expo-share-intent';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFonts, Anton_400Regular } from '@expo-google-fonts/anton';
 import {
   Poppins_400Regular,
@@ -13,6 +13,8 @@ import {
 import { AuthProvider, useAuth } from '../lib/auth';
 import { MealPlanProvider } from '../lib/mealPlan';
 import { FavoritesProvider } from '../lib/favorites';
+import ErrorBoundary from '../components/ErrorBoundary';
+import { installGlobalErrorHandlers } from '../lib/errorLog';
 import { COLORS } from '../lib/theme';
 import { applyGlobalFont } from '../lib/applyGlobalFont';
 import SplashDrop from '../components/SplashDrop';
@@ -53,11 +55,17 @@ export default function RootLayout() {
 
   // Ink, not cream, while the fonts load: it matches the intro that follows, so
   // there is no flash between the two.
+  // Installed before anything can throw. An exception during startup is the
+  // one most likely to be invisible otherwise — the app dies before any
+  // screen exists to report from.
+  useEffect(() => { installGlobalErrorHandlers(); }, []);
+
   if (!fontsLoaded) {
     return <View style={{ flex: 1, backgroundColor: COLORS.ink }} />;
   }
 
   return (
+    <ErrorBoundary>
     <ShareIntentProvider
       options={{
         resetOnBackground: true,
@@ -84,5 +92,6 @@ export default function RootLayout() {
         </AuthProvider>
       </SafeAreaProvider>
     </ShareIntentProvider>
+    </ErrorBoundary>
   );
 }
