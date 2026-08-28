@@ -13,6 +13,16 @@ import { loadPreferences } from './preferences';
  * and carried straight on into the app.
  */
 export async function landAfterAuth(role: Role | null): Promise<void> {
+  // Creators skip the questions entirely. Onboarding asks how many people you
+  // cook for, what you avoid and what you are aiming for — every answer feeds
+  // suggestions, portion scaling and the nutrition log, none of which a
+  // creator account can even reach: the consumer tabs are hidden for them.
+  // Asking anyway is a form to fill in for nobody.
+  if (canUploadRecipes(role)) {
+    router.replace('/creator');
+    return;
+  }
+
   // A failed lookup must not trap anyone in onboarding: assume it is done and
   // let them into the app. The questions are a convenience, not a gate.
   const onboarded = await loadPreferences()
@@ -23,7 +33,7 @@ export async function landAfterAuth(role: Role | null): Promise<void> {
     router.replace('/onboarding');
     return;
   }
-  router.replace(canUploadRecipes(role) ? '/creator' : '/home');
+  router.replace('/home');
 }
 
 /**

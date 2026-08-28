@@ -563,6 +563,12 @@ export default function ProfileScreen() {
         {/* Four counted numbers. Each is a real count — a stat that is nearly
             right is worse than none, because people check them against what
             they can see and one wrong figure makes the rest suspect. */}
+        {/* A creator's profile is about what they publish, not about what
+            they cooked. The consumer tabs are already hidden for them, so
+            these rows were links into parts of the app they cannot reach —
+            and "Meals Cooked: 0" on a creator profile is a number that
+            measures nothing. */}
+        {!isCreator && (
         <View style={styles.statsRow}>
           {[
             { n: stats.liked, label: 'Recipes Liked' },
@@ -576,7 +582,20 @@ export default function ProfileScreen() {
             </View>
           ))}
         </View>
+        )}
 
+        {isCreator && (
+          <View style={styles.navGroup}>
+            <NavRow icon="videocam-outline" title="Studio"
+              sub="Your recipes, subscribers and earnings"
+              onPress={() => router.push('/creator')} />
+            <NavRow icon="person-circle-outline" title="Creator profile"
+              sub="Name, bio, links, prices"
+              onPress={() => router.push('/creator/profile')} last />
+          </View>
+        )}
+
+        {!isCreator && (
         <View style={styles.navGroup}>
           {/* One row, not two: household, diet, allergies, time and cuisines
               are all the same screen and splitting them made the second row a
@@ -591,7 +610,9 @@ export default function ProfileScreen() {
             sub="Calories, macros, what you're aiming for"
             onPress={() => router.push('/profile/nutrition')} last />
         </View>
+        )}
 
+        {!isCreator && (
         <View style={styles.navGroup}>
           <NavRow icon="book-outline" title="My Cookbook"
             sub="Your recipes and the ones you saved"
@@ -603,14 +624,19 @@ export default function ProfileScreen() {
             sub="What you still need to buy"
             onPress={() => router.push('/shopping')} last />
         </View>
+        )}
 
         <View style={styles.navGroup}>
-          <NavRow icon="time-outline" title="Cooking History"
-            sub="Everything you have cooked"
-            onPress={() => router.push('/profile/history')} />
-          <NavRow icon="star-outline" title="Rewards & Progress"
-            sub="Badges and streaks"
-            onPress={() => router.push('/profile/rewards')} />
+          {!isCreator && (
+            <>
+              <NavRow icon="time-outline" title="Cooking History"
+                sub="Everything you have cooked"
+                onPress={() => router.push('/profile/history')} />
+              <NavRow icon="star-outline" title="Rewards & Progress"
+                sub="Badges and streaks"
+                onPress={() => router.push('/profile/rewards')} />
+            </>
+          )}
           <NavRow icon="help-circle-outline" title="Help & Support"
             sub="Common questions, get in touch"
             onPress={() => router.push('/help')} last />

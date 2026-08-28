@@ -14,13 +14,16 @@ export default function Index() {
   // have an account is asking them to fill in a form for nobody.
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   useEffect(() => {
-    if (loading || isGuest) { setOnboarded(true); return; }
+    // Guests are left alone, and so are creators — see lib/nav.ts. Marking it
+    // done rather than skipping the redirect keeps one meaning for the flag:
+    // "nothing left to ask".
+    if (loading || isGuest || canUploadRecipes(role)) { setOnboarded(true); return; }
     loadPreferences()
       .then(r => setOnboarded(r.onboarded))
       // A failed lookup must not trap anyone in onboarding, so assume it is
       // done and let them into the app.
       .catch(() => setOnboarded(true));
-  }, [loading, isGuest]);
+  }, [loading, isGuest, role]);
 
   if (loading || onboarded === null) {
     return (
