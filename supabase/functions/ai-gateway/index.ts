@@ -497,10 +497,57 @@ Deno.serve(async (req: Request) => {
     return json({ error: quota?.error ?? 'quota_exceeded', limit: quota?.limit }, 429);
   }
 
+  // Every call is recorded: which op, whether it worked, how long it took and
+  // what the error code was. The platform's own log is a stream you have to
+  // already be watching — it cannot be queried across days and cannot be
+  // joined to anything, so "Instagram imports started failing on Tuesday" is
+  // a question it cannot answer. A table can.
+  //
+  // Nothing from the request body is stored. No captions, no images, no
+  // recipe text: an operations table that accumulates user content is a
+  // liability that grows on its own, and counts plus error codes are enough
+  // to see a problem.
+  const started = Date.now();
+  let response: Response;
+  let failure: string | null = null;
+
   try {
-    return await runOp(op, body);
+    response = await runOp(op, body);
+    if (!response.ok) {
+      // Read the code without consuming the body the caller still needs.
+      failure = await response.clone().json()
+        .then((b: any) => String(b?.error ?? response.status))
+        .catch(() => String(response.status));
+    }
   } catch (e) {
     console.warn('ai-gateway failure', op, String(e).slice(0, 300));
-    return json({ error: 'gateway-failed' }, 500);
+    failure = 'gateway-failed';
+    response = json({ error: 'gateway-failed' }, 500);
   }
+
+  record(admin, {
+    op,
+    ok: failure === null,
+    error: failure,
+    duration_ms: Date.now() - started,
+    user_id: user.id,
+  });
+
+  return response;
 });
+
+/**
+ * Write one row about what just happened, and never let that get in the way.
+ *
+ * Fire and forget: the caller has their answer already, and a monitoring
+ * insert that delayed or broke a working request would be worse than no
+ * monitoring at all.
+ */
+function record(admin: any, row: Record<string, unknown>): void {
+  const write = admin.from('service_events').insert(row).then(
+    () => {},
+    (e: any) => console.warn('service_events insert failed', String(e).slice(0, 200)),
+  );
+  // Keeps the isolate alive until the insert lands, where supported.
+  (globalThis as any).EdgeRuntime?.waitUntil?.(write);
+}
