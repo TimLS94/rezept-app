@@ -229,7 +229,11 @@ export default function CookbookRecipeScreen() {
             <View style={styles.metaRow}>
               <Meta value={totalTime > 0 ? `${totalTime}` : '—'} label="min" />
               <Meta value={`${recipe.servings}`} label="servings" />
-              <Meta value={recipe.calories > 0 ? `${recipe.calories}` : '—'} label="cal" />
+              <Meta
+                value={recipe.nutrition?.estimated && recipe.calories > 0
+                  ? `~${recipe.calories}`
+                  : recipe.calories > 0 ? `${recipe.calories}` : '—'}
+                label="cal" />
               <Meta value={recipe.difficulty} label="level" />
             </View>
             {recipe.cost > 0 ? (

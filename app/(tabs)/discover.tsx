@@ -26,6 +26,7 @@ import { getSeenIds, addSeenId, clearSeenIds } from '../../lib/seen';
 import { addRecipesToShoppingList, describeAdd } from '../../lib/shopping';
 import { useAuth } from '../../lib/auth';
 import { HEADER_TOP } from '../../lib/layout';
+import { caloriesLabel } from '../../lib/nutrition';
 
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25;
@@ -349,8 +350,8 @@ export default function DiscoverScreen() {
                     <View style={styles.cardMeta}>
                       <Text style={styles.cardMetaText}>⏱ {recipe.prepTime + recipe.cookTime} min</Text>
                       <Text style={styles.cardMetaText}>📊 {recipe.difficulty}</Text>
-                      {recipe.calories > 0 && (
-                        <Text style={styles.cardMetaText}>🔥 {recipe.calories} cal</Text>
+                      {caloriesLabel(recipe) && (
+                        <Text style={styles.cardMetaText}>🔥 {caloriesLabel(recipe)}</Text>
                       )}
                       {recipe.cost > 0 && recipe.servings > 0 && (
                         <Text style={styles.cardMetaText}>

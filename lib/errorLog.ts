@@ -47,9 +47,13 @@ export async function reportError(
     recent.set(key, now);
 
     const { data: { user } } = await supabase.auth.getUser();
+    // Signed-in only, since the audit closed the anonymous write path: the
+    // anon key ships inside the app, so an endpoint that accepted it accepted
+    // the whole internet. A crash before login is lost, which is the price.
+    if (!user) return;
 
     await supabase.from('app_errors').insert({
-      user_id: user?.id ?? null,
+      user_id: user.id,
       kind,
       message,
       stack: String(err?.stack ?? '').slice(0, 4000) || null,

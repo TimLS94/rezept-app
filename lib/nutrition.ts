@@ -72,6 +72,27 @@ export async function estimateNutrition(
   }
 }
 
+/**
+ * A calorie figure with its provenance attached, short enough for a card.
+ *
+ * The detail screens label estimates properly — a badge and a sentence. The
+ * cards did not: "520 cal" on a swipe card or a cookbook tile reads as a
+ * measurement, and for an imported recipe it is a model's guess. US law does
+ * not require nutrition labelling here (the FDA rules cover packaged food and
+ * chains of twenty or more), but presenting a guess as a fact is exactly the
+ * kind of representation the FTC treats as deceptive — and it is dishonest to
+ * someone deciding what to eat.
+ *
+ * A tilde is the whole fix. It costs one character and it is understood.
+ */
+export function caloriesLabel(
+  recipe: { calories?: number; nutrition?: { calories?: number; estimated?: boolean } },
+): string | null {
+  const value = recipe.nutrition?.calories ?? (recipe.calories || undefined);
+  if (!value) return null;
+  return `${recipe.nutrition?.estimated ? '~' : ''}${Math.round(value)} cal`;
+}
+
 /** Shown wherever estimated figures are displayed. */
 export const ESTIMATE_NOTE =
   'Estimated from the ingredients — treat it as a guide, not a measurement.';

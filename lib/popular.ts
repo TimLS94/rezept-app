@@ -21,8 +21,19 @@ export type Popularity = { people: number; cooks: number };
  */
 export const POPULAR_MIN_PEOPLE = 2;
 
+// Home calls this every time it gains focus, which is every tab switch back.
+// The answer is a seven-day aggregate over everyone's cook log: it does not
+// change between one tab switch and the next, and asking again is a full
+// table read for a number that is already on screen.
+let cache: { at: number; data: Record<string, Popularity> } | null = null;
+const CACHE_MS = 10 * 60 * 1000;
+
 export async function fetchPopularThisWeek(): Promise<Record<string, Popularity>> {
+  if (cache && Date.now() - cache.at < CACHE_MS) return cache.data;
+
   const { data, error } = await supabase.rpc('popular_recipes_this_week', { p_limit: 12 });
+  // A failure is not cached: the next screen that asks should try again
+  // rather than inherit a shrug for ten minutes.
   if (error || !Array.isArray(data)) return {};
 
   const out: Record<string, Popularity> = {};
@@ -33,6 +44,7 @@ export async function fetchPopularThisWeek(): Promise<Record<string, Popularity>
       cooks: Number(row.cooks) || 0,
     };
   }
+  cache = { at: Date.now(), data: out };
   return out;
 }
 

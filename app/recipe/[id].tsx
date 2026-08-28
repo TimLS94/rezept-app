@@ -35,6 +35,7 @@ import { goBackOr } from '../../lib/nav';
 import NutritionStrip from '../../components/NutritionStrip';
 import { shareRecipe } from '../../lib/share';
 import { HEADER_TOP } from '../../lib/layout';
+import { caloriesLabel } from '../../lib/nutrition';
 
 type FamilyMember = {
   id: string;
@@ -459,7 +460,9 @@ export default function RecipeDetailScreen() {
             <Text style={styles.heroTitle}>{recipe.title}</Text>
             <View style={styles.heroMeta}>
               <Text style={styles.metaItem}>⏱ {totalTime(recipe)} min total</Text>
-              <Text style={styles.metaItem}>🔥 {recipe.calories} cal</Text>
+              {caloriesLabel(recipe) && (
+                <Text style={styles.metaItem}>🔥 {caloriesLabel(recipe)}</Text>
+              )}
               {FEATURES.budget && (
                 <Text style={styles.metaItem}>💰 ${recipe.cost.toFixed(2)}</Text>
               )}
