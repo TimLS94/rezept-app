@@ -17,7 +17,6 @@ import { supabase, getCurrentUser } from '../lib/supabase';
 import { pickAndUploadImage } from '../lib/storage';
 import { runtimeLabel } from '../lib/version';
 import * as Updates from 'expo-updates';
-import * as Clipboard from 'expo-clipboard';
 import { useAuth, canUploadRecipes } from '../lib/auth';
 import { restorePurchases, grantPlatformEntitlement, revokePlatformEntitlement } from '../lib/purchases';
 import Paywall from '../components/Paywall';
@@ -25,10 +24,6 @@ import { HEADER_TOP } from '../lib/layout';
 
 const DEFAULT_AVATAR =
   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
-
-// Built from the project URL rather than written out, so it cannot drift if
-// the project ever moves.
-const DASHBOARD_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL ?? ''}/functions/v1/admin`;
 
 export default function SettingsScreen() {
   const { isPremium, role, refresh } = useAuth();
@@ -39,33 +34,7 @@ export default function SettingsScreen() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [checking, setChecking] = useState(false);
 
-  /**
-   * Hand the admin their own access token, for the dashboard.
-   *
-   * The dashboard has no login of its own on purpose — it renders whatever
-   * the database will return for this token, and the database checks the
-   * admin role. So getting in means bringing a token, and the only sane place
-   * to get one is the app that already holds it.
-   *
-   * Admin-only, and the copy is the whole interaction: a token is a full
-   * login for an hour, so it is not displayed on a screen someone might be
-   * showing to somebody else.
-   */
-  const copyAdminToken = async () => {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) {
-      Alert.alert('Not signed in', 'Sign in again and try once more.');
-      return;
-    }
-    await Clipboard.setStringAsync(token);
-    Alert.alert(
-      'Token copied',
-      'Open the dashboard on a computer, paste it, and it will keep you signed in for an hour.\n\n' +
-        DASHBOARD_URL,
-      [{ text: 'Copy the address too', onPress: () => Clipboard.setStringAsync(DASHBOARD_URL) }, { text: 'Done' }],
-    );
-  };
+
 
   /**
    * Fetch the newest bundle now, and restart into it.
@@ -486,8 +455,8 @@ export default function SettingsScreen() {
         {role === 'admin' && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Admin</Text>
-            <TouchableOpacity style={styles.legalLink} onPress={copyAdminToken}>
-              <Text style={styles.legalLinkText}>Copy dashboard access token</Text>
+            <TouchableOpacity style={styles.legalLink} onPress={() => router.push('/admin')}>
+              <Text style={styles.legalLinkText}>Dashboard</Text>
               <Text style={styles.legalArrow}>›</Text>
             </TouchableOpacity>
           </View>

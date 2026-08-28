@@ -88,15 +88,19 @@ Deno.serve(async (req) => {
 });
 
 function html(body: string, status = 200) {
+  // A Headers object, not an object literal. The platform's gateway was
+  // replacing the plain-object form with text/plain, so the browser rendered
+  // the markup as source — the page was correct and unreadable at the same
+  // time.
   return new Response(body, {
     status,
-    headers: {
+    headers: new Headers({
       'Content-Type': 'text/html; charset=utf-8',
       // Never cached, anywhere. A stale dashboard is worse than none: it says
       // everything is fine using numbers from before it stopped being fine.
       'Cache-Control': 'no-store',
       'X-Robots-Tag': 'noindex',
-    },
+    }),
   });
 }
 
