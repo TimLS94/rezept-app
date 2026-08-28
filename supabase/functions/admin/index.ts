@@ -16,11 +16,52 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const esc = (s: unknown) =>
   String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+const COOKIE = 'sd_admin';
+
+/** The token, from the cookie a previous sign-in set. */
+function tokenFromCookie(req: Request): string {
+  const raw = req.headers.get('cookie') ?? '';
+  const hit = raw.split(';').map(c => c.trim()).find(c => c.startsWith(`${COOKIE}=`));
+  return hit ? decodeURIComponent(hit.slice(COOKIE.length + 1)) : '';
+}
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
-  const token = url.searchParams.get('token') ?? '';
   const hours = Math.max(1, Math.min(Number(url.searchParams.get('hours') ?? 24), 720));
 
+  // Signing out is one link, and it has to work even when everything else on
+  // the page is failing.
+  if (url.searchParams.get('out') === '1') {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: url.pathname,
+        'Set-Cookie': `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict`,
+      },
+    });
+  }
+
+  // The form posts the token; it never travels in a URL. A query string ends
+  // up in browser history, in bookmarks and in the logs of anything between
+  // here and there, and this token is a full login.
+  if (req.method === 'POST') {
+    const form = await req.formData().catch(() => null);
+    const posted = String(form?.get('token') ?? '').trim();
+    if (!posted) return html(loginPage('Paste a token first.'));
+    return new Response(null, {
+      status: 303,
+      headers: {
+        Location: url.pathname,
+        // HttpOnly: the page itself never needs to read it, so script on the
+        // page cannot either. An hour, because a Supabase access token does
+        // not outlive that anyway.
+        'Set-Cookie':
+          `${COOKIE}=${encodeURIComponent(posted)}; Path=/; Max-Age=3600; HttpOnly; Secure; SameSite=Strict`,
+      },
+    });
+  }
+
+  const token = tokenFromCookie(req);
   if (!token) return html(loginPage());
 
   const supabase = createClient(
@@ -43,7 +84,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  return html(dashboard(data, hours, token));
+  return html(dashboard(data, hours));
 });
 
 function html(body: string, status = 200) {
@@ -94,16 +135,17 @@ const SHELL = (title: string, body: string) => `<!doctype html>
  }
 </style></head><body><div class="wrap">${body}</div></body></html>`;
 
-function loginPage() {
+function loginPage(note?: string) {
   return SHELL('Dashboard', `
    <h1>SpoonDrop dashboard</h1>
    <p class="sub">Paste an admin access token. It is your own login — the database checks the role, not this page.</p>
-   <form method="get">
+   ${note ? `<p class="sub" style="color:#B0402A">${esc(note)}</p>` : ''}
+   <form method="post">
      <input name="token" placeholder="access token" autocomplete="off" autofocus>
      <button type="submit">Open</button>
    </form>
    <p class="sub" style="margin-top:22px">
-     Get one by signing in and reading the session, or from Supabase → Authentication.
+     In the app: Settings → Admin dashboard → Copy access token. It lasts an hour.
    </p>`);
 }
 
@@ -111,7 +153,7 @@ function message(title: string, detail: string) {
   return SHELL(title, `<h1>${esc(title)}</h1><p class="sub">${esc(detail)}</p>`);
 }
 
-function dashboard(d: any, hours: number, token: string) {
+function dashboard(d: any, hours: number) {
   const u = d.usage ?? {};
   const m = d.money ?? {};
   const money = (c: number) => `$${((c ?? 0) / 100).toFixed(2)}`;
@@ -134,8 +176,8 @@ function dashboard(d: any, hours: number, token: string) {
     <td class="mono">${esc(String(e.last_seen ?? '').slice(0, 16).replace('T', ' '))}</td></tr>`).join('');
 
   const range = [24, 72, 168, 720]
-    .map(h => `<a href="?token=${encodeURIComponent(token)}&hours=${h}">${h === 24 ? '24h' : h === 72 ? '3d' : h === 168 ? '7d' : '30d'}</a>`)
-    .join('');
+    .map(h => `<a href="?hours=${h}">${h === 24 ? '24h' : h === 72 ? '3d' : h === 168 ? '7d' : '30d'}</a>`)
+    .join('') + ' <a href="?out=1" style="color:#8A8378">sign out</a>';
 
   return SHELL('Dashboard', `
     <h1>SpoonDrop</h1>
