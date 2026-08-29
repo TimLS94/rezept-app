@@ -1,6 +1,10 @@
 -- ============================================================================
 -- Two findings from the audit, both about writing rather than reading.
 --
+-- Re-runnable, and worth re-running: the first version of this file added its
+-- policies without removing the permissive one already in place, so the
+-- storage half had no effect. See the note above the DO block.
+--
 -- ── 1. Anyone could write into anyone's folder ─────────────────────────────
 -- The app stores images at `<folder>/<user id>/<timestamp>.jpg`, which reads
 -- like a per-user space and was not one. A signed-in account could upload to
@@ -30,6 +34,32 @@ begin;
 -- ── Storage ────────────────────────────────────────────────────────────────
 -- The owner is the second path segment: recipes/<uid>/<file>. storage.foldername()
 -- splits the path, and [2] is that segment.
+--
+-- FIRST, remove what is already there — and this is the part the first version
+-- of this file got wrong. Postgres combines policies with OR: a permissive
+-- "any authenticated user may upload" policy created in the dashboard is not
+-- narrowed by adding a stricter one beside it, it simply keeps granting. The
+-- fix ran, the crash-table half took effect, and the storage half changed
+-- nothing at all, because the old policy was still saying yes.
+--
+-- So every policy on storage.objects is dropped and the four below are the
+-- complete set. Check what you are about to lose first:
+--
+--   select policyname, cmd, qual, with_check
+--   from pg_policies where schemaname = 'storage' and tablename = 'objects';
+--
+-- This project has one bucket. If you ever add another, its rules have to be
+-- written here too, because after this runs there is nothing else.
+do $$
+declare p record;
+begin
+  for p in select policyname from pg_policies
+           where schemaname = 'storage' and tablename = 'objects'
+  loop
+    execute format('drop policy if exists %I on storage.objects', p.policyname);
+  end loop;
+end $$;
+
 drop policy if exists "Public read of images" on storage.objects;
 create policy "Public read of images" on storage.objects
   for select using (bucket_id = 'images');
