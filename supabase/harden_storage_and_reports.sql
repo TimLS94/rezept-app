@@ -7,11 +7,16 @@
 --
 -- ── 1. Anyone could write into anyone's folder ─────────────────────────────
 -- The app stores images at `<folder>/<user id>/<timestamp>.jpg`, which reads
--- like a per-user space and was not one. A signed-in account could upload to
--- any path in the bucket, overwrite another user's recipe photo or avatar
--- (upsert is on), delete their files, and put arbitrary content on a public
--- URL under this project's domain. Confirmed by doing it: a write into
--- `recipes/00000000-…/probe.txt` succeeded, as did deleting it again.
+-- like a per-user space and was not one: a signed-in account could create a
+-- file at any path in the bucket, including inside another person's folder,
+-- and have it served publicly under this project's domain. Confirmed by doing
+-- it — a write to `recipes/00000000-…/probe.txt` returned 200.
+--
+-- What was NOT possible, contrary to the first draft of this comment:
+-- overwriting or deleting someone else's file. The pre-existing update and
+-- delete policies check `owner = auth.uid()`, which held. That was an
+-- inference from the successful write rather than something tested, and it
+-- was wrong.
 --
 -- Reading stays open. Recipe photos are meant to be public — that is how they
 -- appear in a share preview and in anyone's cookbook. It is writing that
@@ -35,30 +40,34 @@ begin;
 -- The owner is the second path segment: recipes/<uid>/<file>. storage.foldername()
 -- splits the path, and [2] is that segment.
 --
--- FIRST, remove what is already there — and this is the part the first version
--- of this file got wrong. Postgres combines policies with OR: a permissive
--- "any authenticated user may upload" policy created in the dashboard is not
--- narrowed by adding a stricter one beside it, it simply keeps granting. The
--- fix ran, the crash-table half took effect, and the storage half changed
--- nothing at all, because the old policy was still saying yes.
+-- FIRST, remove the policies that were already there — this is the part the
+-- first version of this file got wrong. Postgres combines policies with OR: a
+-- permissive "any authenticated user may upload" policy is not narrowed by
+-- adding a stricter one beside it. Both are consulted, the old one still says
+-- yes, and the write succeeds. The new policy was never wrong; it was simply
+-- never the deciding one.
 --
--- So every policy on storage.objects is dropped and the four below are the
--- complete set. Check what you are about to lose first:
+-- The names below came from reading the live catalogue rather than guessing:
 --
 --   select policyname, cmd, qual, with_check
 --   from pg_policies where schemaname = 'storage' and tablename = 'objects';
 --
--- This project has one bucket. If you ever add another, its rules have to be
--- written here too, because after this runs there is nothing else.
-do $$
-declare p record;
-begin
-  for p in select policyname from pg_policies
-           where schemaname = 'storage' and tablename = 'objects'
-  loop
-    execute format('drop policy if exists %I on storage.objects', p.policyname);
-  end loop;
-end $$;
+-- Only one of the four actually granted too much:
+--
+--   Authenticated upload images   INSERT  with_check (bucket_id = 'images')
+--       ^ no path, no person: any signed-in account could create a file
+--         anywhere in the bucket, including inside someone else's folder.
+--
+-- The other three were already sound — "Owners update images" and "Owners
+-- delete images" both check `owner = auth.uid()`, so changing or deleting
+-- another person's file was never possible. They are dropped anyway because
+-- ownership by the uploader and ownership by the path should not be two
+-- different answers to the same question; the four written below are the
+-- whole rule set.
+drop policy if exists "Public read images"          on storage.objects;
+drop policy if exists "Authenticated upload images" on storage.objects;
+drop policy if exists "Owners update images"        on storage.objects;
+drop policy if exists "Owners delete images"        on storage.objects;
 
 drop policy if exists "Public read of images" on storage.objects;
 create policy "Public read of images" on storage.objects
