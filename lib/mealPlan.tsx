@@ -3,6 +3,7 @@ import { Recipe } from '../data/recipes';
 import { weekKey } from './week';
 import { useAuth } from './auth';
 import { supabase } from './supabase';
+import { reportError } from './errorLog';
 
 export type PlannedMeal = {
   id: string;
@@ -95,11 +96,33 @@ export function MealPlanProvider({ children }: { children: ReactNode }) {
       Object.entries(plansByWeek).forEach(([key, plan]) => {
         const snapshot = JSON.stringify(plan);
         if (persistedRef.current[key] === snapshot) return;
-        persistedRef.current[key] = snapshot;
+
         (async () => {
-          await supabase.from('meal_plan_items').delete().eq('user_id', uid).eq('week_start', key);
+          // Replacing a week is a delete followed by an insert, and neither
+          // half was checked. Two ways that lost a plan:
+          //
+          //   The week was marked saved BEFORE the write. A failure left the
+          //   app believing it had persisted, so it never tried again and the
+          //   plan died with the session.
+          //
+          //   The delete could succeed and the insert fail, which empties the
+          //   week in the database while the screen still shows it.
+          //
+          // Marking it saved only on success fixes both: an unmarked week is
+          // written again on the next change, and until then the client still
+          // holds it.
+          const del = await supabase
+            .from('meal_plan_items')
+            .delete()
+            .eq('user_id', uid)
+            .eq('week_start', key);
+          if (del.error) {
+            reportError('handled', del.error, { where: 'mealPlan.delete', week: key });
+            return;
+          }
+
           if (plan.length) {
-            await supabase.from('meal_plan_items').insert(
+            const ins = await supabase.from('meal_plan_items').insert(
               plan.map((m, i) => ({
                 user_id: uid,
                 week_start: key,
@@ -108,7 +131,13 @@ export function MealPlanProvider({ children }: { children: ReactNode }) {
                 sort: i,
               }))
             );
+            if (ins.error) {
+              reportError('handled', ins.error, { where: 'mealPlan.insert', week: key });
+              return;
+            }
           }
+
+          persistedRef.current[key] = snapshot;
         })();
       });
     }, 600);

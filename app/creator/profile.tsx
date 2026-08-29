@@ -1,27 +1,10 @@
 import { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  Image,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/auth';
 import { pickAndUploadImage } from '../../lib/storage';
-import {
-  getCreatorProfile,
-  updateCreatorProfile,
-  CreatorProfile,
-  emptyCreatorProfile,
-} from '../../lib/creatorProfile';
-import {
-  RECIPE_PRICE_TIERS, CREATOR_SUB_TIERS, creatorTakeHomeCents, feeBreakdown, usd,
-} from '../../lib/pricing';
+import { getCreatorProfile, updateCreatorProfile, CreatorProfile, emptyCreatorProfile } from '../../lib/creatorProfile';
+import { RECIPE_PRICE_TIERS, CREATOR_SUB_TIERS, feeBreakdown, usd } from '../../lib/pricing';
 import { HEADER_TOP } from '../../lib/layout';
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200';

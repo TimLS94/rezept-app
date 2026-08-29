@@ -5,13 +5,11 @@
 // related things. They belong together: the household size is a shortcut for
 // this list, and portion scaling reads whichever is more specific.
 import { useEffect, useState } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, getCurrentUser } from '../lib/supabase';
 import { invalidateFamilyServings } from '../lib/family';
-import { COLORS, FONTS } from '../lib/theme';
+import { COLORS } from '../lib/theme';
 
 export type Member = {
   id: string;

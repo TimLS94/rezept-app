@@ -138,14 +138,21 @@ export default function ShoppingScreen() {
     const item = items.find(i => i.id === id);
     if (!item) return;
 
-    await supabase
+    const { error } = await supabase
       .from('shopping_items')
       .update({ checked: !item.checked })
       .eq('id', id);
 
-    setItems(items.map(i => 
-      i.id === id ? { ...i, checked: !i.checked } : i
-    ));
+    // Two faults in three lines. The write was never checked, so a failure
+    // left the tick on screen and gone after the next reload — the same shape
+    // as "12 items added" over an empty list. And the update read `items` from
+    // the closure, which is whatever it was when this handler was created:
+    // tick two things quickly and the second overwrote the first.
+    if (error) {
+      Alert.alert('Could not save', 'That did not stick. Try again in a moment.');
+      return;
+    }
+    setItems(prev => prev.map(i => (i.id === id ? { ...i, checked: !i.checked } : i)));
   };
 
   const addItem = async () => {
@@ -207,11 +214,17 @@ export default function ShoppingScreen() {
           text: 'Clear', 
           style: 'destructive',
           onPress: async () => {
-            await supabase
+            const { error } = await supabase
               .from('shopping_items')
               .delete()
               .in('id', checkedIds);
-            setItems(items.filter(i => !i.checked));
+            if (error) {
+              Alert.alert('Could not clear', 'Nothing was removed. Try again in a moment.');
+              return;
+            }
+            // By id, not by "whatever is ticked now": the list can have moved
+            // between the confirmation and the tap on Clear.
+            setItems(prev => prev.filter(i => !checkedIds.includes(i.id)));
           }
         }
       ]
@@ -219,9 +232,19 @@ export default function ShoppingScreen() {
   };
 
   // Delete a single ingredient.
+  //
+  // Removed from the screen first, because a swipe should feel instant — but
+  // put back if the delete fails. Without that, the row vanished, stayed in
+  // the database, and reappeared at the next reload with no explanation.
   const deleteItem = async (id: string) => {
+    const removed = items.find(i => i.id === id);
     setItems(prev => prev.filter(i => i.id !== id));
-    await supabase.from('shopping_items').delete().eq('id', id);
+
+    const { error } = await supabase.from('shopping_items').delete().eq('id', id);
+    if (error && removed) {
+      setItems(prev => (prev.some(i => i.id === id) ? prev : [...prev, removed]));
+      Alert.alert('Could not remove', 'That item is still on your list.');
+    }
   };
 
   // Delete every ingredient that belongs to one recipe/group.
@@ -234,7 +257,11 @@ export default function ShoppingScreen() {
         text: 'Remove', style: 'destructive',
         onPress: async () => {
           setItems(prev => prev.filter(i => !ids.includes(i.id)));
-          await supabase.from('shopping_items').delete().in('id', ids);
+          const { error } = await supabase.from('shopping_items').delete().in('id', ids);
+          if (error) {
+            setItems(prev => [...prev, ...groupItems.filter(g => !prev.some(p => p.id === g.id))]);
+            Alert.alert('Could not remove', 'Those ingredients are still on your list.');
+          }
         },
       },
     ]);

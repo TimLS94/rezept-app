@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { COLORS, FONTS, RADIUS } from '../lib/theme';
+import { COLORS, FONTS } from '../lib/theme';
 
 /**
  * Where Supabase sends people back to after an email confirmation or a password

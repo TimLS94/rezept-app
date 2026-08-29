@@ -10,15 +10,7 @@
 // requires a new native build instead of an over-the-air update. The whole
 // backlog reached testers as an OTA precisely because nothing native changed.
 import { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  PanResponder,
-  Animated,
-  LayoutChangeEvent,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, PanResponder, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';

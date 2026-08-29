@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, ReactNode 
 import { Recipe } from '../data/recipes';
 import { useAuth } from './auth';
 import { supabase } from './supabase';
+import { reportError } from './errorLog';
 
 type FavoritesContextValue = {
   favorites: Recipe[];
@@ -69,7 +70,13 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
             { user_id: user.id, recipe_id: recipe.id, recipe },
             { onConflict: 'user_id,recipe_id', ignoreDuplicates: true }
           )
-          .then(() => {});
+          // `.then(() => {})` threw the answer away. Nothing was ever going to
+          // block on this — the screen has already moved — but a failure that
+          // is neither shown nor recorded is a favourite that quietly does not
+          // exist tomorrow.
+          .then(({ error }) => {
+            if (error) reportError('handled', error, { where: 'favorites.add' });
+          });
       }
       return true;
     },
@@ -85,7 +92,9 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
           .delete()
           .eq('user_id', user.id)
           .eq('recipe_id', id)
-          .then(() => {});
+          .then(({ error }) => {
+            if (error) reportError('handled', error, { where: 'favorites.remove' });
+          });
       }
     },
     [user]

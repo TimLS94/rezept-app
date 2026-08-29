@@ -5,15 +5,11 @@
 // which is worse than never having made it.
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, ActivityIndicator } from 'react-native';
-import { router } from 'expo-router';
 import { COLORS, FONTS } from '../lib/theme';
 import { HEADER_TOP } from '../lib/layout';
 import { goBackOr } from '../lib/nav';
 import FamilyMembers from '../components/FamilyMembers';
-import {
-  Preferences, loadPreferences, savePreferences,
-  DIETS, AVOID, TIME_BUDGET, CUISINES,
-} from '../lib/preferences';
+import { Preferences, loadPreferences, savePreferences, DIETS, AVOID, TIME_BUDGET, CUISINES } from '../lib/preferences';
 import { loadConsent, saveConsent, Consent, MARKETING_EMAIL_NOTE, PUSH_NOTE } from '../lib/consent';
 
 export default function PreferencesScreen() {

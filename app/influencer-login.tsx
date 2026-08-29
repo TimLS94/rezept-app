@@ -1,20 +1,8 @@
 import { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-  ActivityIndicator
-} from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
-import { useAuth, canUploadRecipes } from '../lib/auth';
+import { useAuth } from '../lib/auth';
 import { landAfterAuth } from '../lib/nav';
 
 export default function InfluencerLoginScreen() {

@@ -23,6 +23,7 @@ import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { Recipe } from '../../data/recipes';
 import { HEADER_TOP } from '../../lib/layout';
+import { invalidateFamilyServings } from '../../lib/family';
 
 type FamilyMember = {
   id: string;
@@ -212,11 +213,17 @@ export default function ProfileScreen() {
   const saveBio = async () => {
     if (!userId) return;
     setSaving(true);
-    await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({ bio })
       .eq('id', userId);
     setSaving(false);
+    // Closing the editor is what tells someone it saved. Doing that after a
+    // failed write is the app lying about the only thing the button promised.
+    if (error) {
+      Alert.alert('Could not save', 'Your bio was not saved. Try again in a moment.');
+      return;
+    }
     setEditingBio(false);
   };
 
@@ -295,7 +302,7 @@ export default function ProfileScreen() {
         .eq('id', editingMember.id);
 
       if (!error) {
-        setFamilyMembers(familyMembers.map(m => 
+        setFamilyMembers(prev => prev.map(m => 
           m.id === editingMember.id 
             ? { ...m, ...formData, portionMultiplier: m.portionMultiplier }
             : m
@@ -333,8 +340,15 @@ export default function ProfileScreen() {
         text: 'Remove', 
         style: 'destructive',
         onPress: async () => {
-          await supabase.from('family_members').delete().eq('id', id);
-          setFamilyMembers(familyMembers.filter(m => m.id !== id));
+          const { error } = await supabase.from('family_members').delete().eq('id', id);
+          if (error) {
+            Alert.alert('Could not remove', 'That person is still in your household.');
+            return;
+          }
+          // Functional form: the list can have changed since this handler was
+          // created, and every portion in the app is computed from it.
+          setFamilyMembers(prev => prev.filter(m => m.id !== id));
+          invalidateFamilyServings();
         }
       }
     ]);

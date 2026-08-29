@@ -210,18 +210,30 @@ export default function CreatorProfileScreen() {
       return;
     }
 
+    // The screen used to change before the write was checked, so a failure
+    // left someone reading "following" while the database disagreed — and the
+    // count moved with it. Following a creator is how paid recipes are found;
+    // being wrong about it is not cosmetic.
     if (isSubscribed) {
-      await supabase
+      const { error } = await supabase
         .from('creator_subscribers')
         .delete()
         .eq('creator_id', creator.id)
         .eq('subscriber_id', user.id);
+      if (error) {
+        Alert.alert('Could not unfollow', 'Something went wrong. Try again in a moment.');
+        return;
+      }
       setIsSubscribed(false);
-      setSubscriberCount(c => c - 1);
+      setSubscriberCount(c => Math.max(0, c - 1));
     } else {
-      await supabase
+      const { error } = await supabase
         .from('creator_subscribers')
         .insert({ creator_id: creator.id, subscriber_id: user.id });
+      if (error) {
+        Alert.alert('Could not follow', 'Something went wrong. Try again in a moment.');
+        return;
+      }
       setIsSubscribed(true);
       setSubscriberCount(c => c + 1);
     }

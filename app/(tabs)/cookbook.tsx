@@ -1,26 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { DIETARY_TAGS, DietaryTag } from '../../data/recipes';
 import { router, useFocusEffect } from 'expo-router';
 import { fetchMyRecipes, deleteMyRecipe, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes';
-import {
-  fetchCookbookCreatorRecipes,
-  removeRecipeFromCookbook,
-  CookbookCreatorRecipe,
-} from '../../lib/recipes';
-import { addRecipesToShoppingList } from '../../lib/shopping';
+import { fetchCookbookCreatorRecipes, removeRecipeFromCookbook, CookbookCreatorRecipe } from '../../lib/recipes';
 import { useAuth } from '../../lib/auth';
 import Paywall from '../../components/Paywall';
 import RecipeActions from '../../components/RecipeActions';
@@ -28,10 +13,7 @@ import ServingsStepper from '../../components/ServingsStepper';
 import { getAllServings, setServings as setServingsStore } from '../../lib/servings';
 import { getFamilyServings } from '../../lib/family';
 import { HEADER_TOP } from '../../lib/layout';
-import {
-  fetchCollections, ensureDefaultCollections, createCollection,
-  COLLECTION_ICONS, Collection,
-} from '../../lib/collections';
+import { fetchCollections, ensureDefaultCollections, createCollection, COLLECTION_ICONS, Collection } from '../../lib/collections';
 import { Modal } from 'react-native';
 
 // Two kinds of thing live in a cookbook, and they behave differently: what you

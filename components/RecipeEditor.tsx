@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import { pickAndUploadImage } from '../lib/storage';
 import { Nutrition, estimateNutrition, ESTIMATE_NOTE } from '../lib/nutrition';
-import { Ingredient, DIETARY_TAGS, DietaryTag } from '../data/recipes';
+import { Ingredient, DIETARY_TAGS } from '../data/recipes';
 
 // A single editable shape shared by the import review step and the "edit saved
 // recipe" screen. Superset of ExtractedRecipe + the source link.

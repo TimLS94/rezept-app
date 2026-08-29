@@ -1,15 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  Image,
-  ActivityIndicator,
-  Alert
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator, Alert } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Recipe, DietaryTag, DIETARY_TAGS } from '../../data/recipes';
 import { addRecipesToShoppingList, describeAdd } from '../../lib/shopping';
@@ -18,8 +8,8 @@ import { useMealPlan, PlannedMeal } from '../../lib/mealPlan';
 import { logCook, removeCookLog } from '../../lib/cookStats';
 import { fetchMyRecipes, myRecipeToRecipe, MyRecipe } from '../../lib/myRecipes';
 import { fetchCookbookCreatorRecipes, CookbookCreatorRecipe } from '../../lib/recipes';
-import { buildRecipePool, filterByDietary, shuffled, withIngredients } from '../../lib/planner';
-import { WEEKDAYS, startOfWeek, addDays, weekKey, fmtDay } from '../../lib/week';
+import { buildRecipePool, shuffled, withIngredients } from '../../lib/planner';
+import { startOfWeek, addDays, weekKey, fmtDay } from '../../lib/week';
 import WeekPlanBoard from '../../components/WeekPlanBoard';
 import { Modal } from 'react-native';
 import { useCallback } from 'react';
