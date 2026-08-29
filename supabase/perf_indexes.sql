@@ -39,9 +39,15 @@ create index if not exists profiles_created_idx
 create index if not exists my_recipes_created_idx
   on public.my_recipes (created_at desc);
 
--- was_subscriber_at() is called once per cooked meal inside the payout run
--- and the earnings estimate — a lookup per row, over a window.
-create index if not exists creator_subscribers_user_idx
-  on public.creator_subscribers (user_id, creator_id);
+-- was_subscriber_at() is called once per cooked meal inside the payout run and
+-- the earnings estimate — a lookup per row, over a window.
+--
+-- It reads `entitlements`, not `creator_subscribers`: platform Premium is what
+-- makes a cook a paid cook. An earlier draft of this file indexed
+-- creator_subscribers on (user_id, creator_id) and was wrong twice over — that
+-- table's columns are creator_id and subscriber_id, and it is not the table the
+-- function touches. It failed loudly, which is the good version of being wrong.
+create index if not exists entitlements_user_scope_idx
+  on public.entitlements (user_id, scope, created_at);
 
 commit;
