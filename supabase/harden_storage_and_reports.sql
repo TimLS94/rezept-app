@@ -102,7 +102,13 @@ create policy "Users delete their own images" on storage.objects
 -- ── Crash reports ──────────────────────────────────────────────────────────
 revoke insert on public.app_errors from anon;
 
+-- Both names: the one being replaced, and the one about to be created. A file
+-- that only drops the old name runs once and fails on the second attempt with
+-- "policy already exists" — which is exactly what happened here, and it took
+-- the whole transaction with it, including the storage half that had not
+-- landed yet.
 drop policy if exists "Anyone signed in can report an error" on public.app_errors;
+drop policy if exists "Signed-in users report their own errors" on public.app_errors;
 create policy "Signed-in users report their own errors" on public.app_errors
   for insert to authenticated
   with check (auth.uid() = user_id);
