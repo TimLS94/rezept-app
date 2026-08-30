@@ -439,6 +439,10 @@ export default function SettingsScreen() {
             <Text style={styles.legalLinkText}>Terms of Service</Text>
             <Text style={styles.legalArrow}>›</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.legalLink} onPress={() => router.push('/imprint')}>
+            <Text style={styles.legalLinkText}>Legal Notice (Impressum)</Text>
+            <Text style={styles.legalArrow}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Danger zone */}
