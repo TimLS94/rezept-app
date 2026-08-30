@@ -31,8 +31,12 @@
 // The difference decides whether anyone ever moves to the standard price:
 //
 //   App Store Connect → the subscription → Introductory Offers
-//     Yearly:  pay up front, 1 year, $29.99   (standard $59.99/year)
-//     Monthly: pay as you go, 12 periods, $2.99/month (standard $5.99/month)
+//     Yearly:  pay up front, 1 year, $29.99   (standard $49.99/year)
+//     Monthly: pay as you go, 12 periods, $2.99/month (standard $4.99/month)
+//
+// These four numbers exist in exactly one place, and the paywall renders all
+// of them from here. If they ever disagree with App Store Connect, the store
+// is right and this file is a lie told to a customer before they pay.
 //
 // Sold as two separate products instead, a founding subscriber would renew at
 // the launch price forever, because nothing would ever move them.
@@ -42,10 +46,10 @@
 // the RevenueCat offering when the count is reached. Until that switch happens
 // the offer is simply open — which is honest, as long as no screen claims a
 // number of remaining places that nothing is actually counting.
-export const PREMIUM_MONTHLY_CENTS = 599;        // standard
-export const PREMIUM_YEARLY_CENTS = 5999;        // standard
-export const PREMIUM_MONTHLY_INTRO_CENTS = 299;  // first year
-export const PREMIUM_YEARLY_INTRO_CENTS = 2999;  // first year
+export const PREMIUM_MONTHLY_CENTS = 499;        // standard, from year two
+export const PREMIUM_YEARLY_CENTS = 4999;        // standard, from year two
+export const PREMIUM_MONTHLY_INTRO_CENTS = 299;  // founding, first year
+export const PREMIUM_YEARLY_INTRO_CENTS = 2999;  // founding, first year
 
 /** True while the launch offer is the one being presented. */
 export const FOUNDING_OFFER_OPEN = true;
