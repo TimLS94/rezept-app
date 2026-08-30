@@ -15,7 +15,12 @@
 -- The role is written by this function and by nothing else — no client, no
 -- matter what it sends, can grant it.
 --
--- Idempotent. Run in the Supabase SQL Editor.
+-- Idempotent, and worth re-running: the first version declared a variable
+-- called `current_role`, which is a reserved SQL keyword. PL/pgSQL resolved
+-- the keyword instead of the variable, so the "are you already a creator"
+-- check silently compared the database role and never matched.
+--
+-- Run in the Supabase SQL Editor.
 -- ============================================================================
 
 begin;
@@ -61,14 +66,20 @@ grant select on public.creator_applications to authenticated;
 -- ── Apply ──────────────────────────────────────────────────────────────────
 create or replace function public.apply_to_be_creator(p_pitch text, p_links text default null)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare current_role text; existing text;
+-- v_role, not current_role. `current_role` is a reserved SQL keyword that
+-- returns the database role — 'authenticated' here — and PL/pgSQL resolved the
+-- keyword rather than the variable. So the check compared 'authenticated'
+-- against ('creator','admin'), never matched, and an existing creator could
+-- file an application. Found by testing it rather than by reading it: the
+-- function ran, returned ok, and did the wrong thing quietly.
+declare v_role text; existing text;
 begin
   if auth.uid() is null then
     return jsonb_build_object('ok', false, 'error', 'not_signed_in');
   end if;
 
-  select role into current_role from public.profiles where id = auth.uid();
-  if current_role in ('creator', 'admin') then
+  select role into v_role from public.profiles where id = auth.uid();
+  if v_role in ('creator', 'admin') then
     return jsonb_build_object('ok', false, 'error', 'already_a_creator');
   end if;
 
