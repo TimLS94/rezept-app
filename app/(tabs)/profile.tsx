@@ -627,6 +627,14 @@ export default function ProfileScreen() {
         )}
 
         {!isCreator && (
+          <View style={styles.navGroup}>
+            <NavRow icon="videocam-outline" title="Become a creator"
+              sub="Publish your recipes and get paid for them"
+              onPress={() => router.push('/become-creator')} last />
+          </View>
+        )}
+
+        {!isCreator && (
         <View style={styles.navGroup}>
           <NavRow icon="book-outline" title="My Cookbook"
             sub="Your recipes and the ones you saved"

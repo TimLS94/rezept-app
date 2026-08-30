@@ -101,8 +101,11 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.sectionTitle}>10. Contact Us</Text>
         <Text style={styles.paragraph}>
           If you have questions about this Privacy Policy, please contact us at:{'\n\n'}
-          Email: privacy@spoondrop.app{'\n'}
-          Address: [Your Business Address]
+          Email: privacy@spoondrop.app{'\n\n'}
+          Tim Schäfer{'\n'}
+          Husemannstr. 9{'\n'}
+          10435 Berlin{'\n'}
+          Germany
         </Text>
 
         <View style={{ height: 60 }} />

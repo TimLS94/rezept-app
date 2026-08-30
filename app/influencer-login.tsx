@@ -23,15 +23,16 @@ export default function InfluencerLoginScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [code, setCode] = useState('');
 
-  const promoteToCreator = async (userId: string) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: 'creator' })
-      .eq('id', userId);
-    if (error) {
-      console.warn('Could not set creator role:', error.message);
-    }
-  };
+  // Signing in here used to promote the account to creator on the spot —
+  // `update profiles set role = 'creator'` on yourself. It has been failing
+  // silently since the profile columns were hardened (42501, no update grant),
+  // and it should have been failing from the start: a creator publishes
+  // recipes, sets prices and takes payouts, which is not something an account
+  // gives itself by visiting the right screen.
+  //
+  // Creators are approved by an admin now. This screen is the way an existing
+  // creator signs in; becoming one goes through Profile → Become a creator.
+  const promoteToCreator = async (_userId: string) => {};
 
   const handleAuth = async () => {
     if (!email || !password) {

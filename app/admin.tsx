@@ -16,10 +16,13 @@
 // not the lock.
 import { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import {
+  listApplications, decideApplication, type PendingApplication,
+} from '../lib/creatorApplications';
 import { COLORS, FONTS } from '../lib/theme';
 import { HEADER_TOP } from '../lib/layout';
 import { goBackOr } from '../lib/nav';
@@ -34,6 +37,8 @@ const RANGES = [
 export default function AdminScreen() {
   const [hours, setHours] = useState(24);
   const [data, setData] = useState<any>(null);
+  const [apps, setApps] = useState<PendingApplication[]>([]);
+  const [deciding, setDeciding] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,8 +59,37 @@ export default function AdminScreen() {
       setError(null);
       setData(d);
     }
+    // Applications are the one thing here that is a queue rather than a
+    // reading: somebody is waiting on the other end of each row.
+    setApps(await listApplications('pending'));
     setLoading(false);
   }, [hours]);
+
+  const decide = (app: PendingApplication, approve: boolean) => {
+    Alert.alert(
+      approve ? 'Approve as creator?' : 'Reject application?',
+      approve
+        ? `${app.name || app.email} will be able to publish recipes, set prices and take payouts.`
+        : `${app.name || app.email} can apply again later.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: approve ? 'Approve' : 'Reject',
+          style: approve ? 'default' : 'destructive',
+          onPress: async () => {
+            setDeciding(app.user_id);
+            const r = await decideApplication(app.user_id, approve);
+            setDeciding(null);
+            if (r.error) {
+              Alert.alert('Could not save', r.error);
+              return;
+            }
+            setApps(prev => prev.filter(a => a.user_id !== app.user_id));
+          },
+        },
+      ],
+    );
+  };
 
   useFocusEffect(useCallback(() => { setLoading(true); load(); }, [load]));
 
@@ -107,6 +141,43 @@ export default function AdminScreen() {
             <Stat n={money(m.gross_cents)} l="gross taken" />
             <Stat n={m.payouts_pending} l="payouts pending" />
           </View>
+
+          <Text style={styles.section}>
+            Creator applications{apps.length ? ` (${apps.length})` : ''}
+          </Text>
+          {apps.length === 0 ? (
+            <Text style={styles.empty}>Nobody waiting.</Text>
+          ) : (
+            apps.map(a => (
+              <View key={a.user_id} style={styles.appCard}>
+                <Text style={styles.rowTitle}>{a.name || a.email}</Text>
+                <Text style={styles.rowMeta}>
+                  {a.email}{a.username ? ` · @${a.username}` : ''} ·{' '}
+                  {new Date(a.applied_at).toLocaleDateString()}
+                </Text>
+                {a.pitch ? <Text style={styles.pitch}>{a.pitch}</Text> : null}
+                {a.links ? <Text style={styles.links}>{a.links}</Text> : null}
+                <View style={styles.appActions}>
+                  <TouchableOpacity
+                    style={[styles.appBtn, styles.reject]}
+                    onPress={() => decide(a, false)}
+                    disabled={deciding === a.user_id}
+                  >
+                    <Text style={styles.rejectText}>Reject</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.appBtn, styles.approve]}
+                    onPress={() => decide(a, true)}
+                    disabled={deciding === a.user_id}
+                  >
+                    <Text style={styles.approveText}>
+                      {deciding === a.user_id ? '…' : 'Approve'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
 
           <Text style={styles.section}>AI gateway</Text>
           {(data.ops ?? []).length === 0 ? (
@@ -213,6 +284,18 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontSize: 13.5, fontWeight: '700', color: COLORS.navy },
   rowMeta: { fontSize: 11.5, color: COLORS.warmGray, marginTop: 3 },
+  appCard: {
+    backgroundColor: '#FFF', borderRadius: 12, padding: 14, marginBottom: 8,
+    borderWidth: 1, borderColor: '#EFE7DC',
+  },
+  pitch: { fontSize: 13.5, color: COLORS.charcoal, lineHeight: 19, marginTop: 8 },
+  links: { fontSize: 12.5, color: COLORS.orange, marginTop: 6 },
+  appActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  appBtn: { flex: 1, paddingVertical: 11, borderRadius: 10, alignItems: 'center' },
+  reject: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EFE7DC' },
+  rejectText: { fontSize: 14, fontWeight: '700', color: '#B0402A' },
+  approve: { backgroundColor: COLORS.green },
+  approveText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
   rate: { fontSize: 15, fontWeight: '800' },
   good: { color: COLORS.green },
   bad: { color: '#B0402A' },

@@ -115,8 +115,11 @@ export default function TermsOfServiceScreen() {
         <Text style={styles.sectionTitle}>14. Contact</Text>
         <Text style={styles.paragraph}>
           For questions about these Terms, contact us at:{'\n\n'}
-          Email: legal@spoondrop.app{'\n'}
-          Address: [Your Business Address]
+          Email: legal@spoondrop.app{'\n\n'}
+          Tim Schäfer{'\n'}
+          Husemannstr. 9{'\n'}
+          10435 Berlin{'\n'}
+          Germany
         </Text>
 
         <View style={{ height: 60 }} />
