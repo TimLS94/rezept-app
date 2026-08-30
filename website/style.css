@@ -1,22 +1,31 @@
 /* The app's own palette (lib/theme.ts), so the site and the product read as
    one thing rather than two: navy #0D2B63, orange #F2701E, cream #FFF9F2.
    Anton is the app's display face — the wordmark on the home screen is set in
-   it, so the site inherits the same voice rather than inventing one. */
+   it, so the site inherits the same voice rather than inventing one.
+
+   Deliberately one theme, with no dark variant. The app is cream at every
+   hour of the day, so a site that turns dark for half its visitors advertises
+   a product they will not recognise when they open it. Food also simply reads
+   better on warm paper than on near-black, which is why cookbooks are printed
+   the way they are. Every colour is stated rather than inherited, so the page
+   holds whatever the browser would otherwise impose. */
 @import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
 
 :root {
-  --ground:#FFF9F2; --surface:#fff; --sunk:#F6F1E9;
-  --ink:#16213B; --muted:#7C756A; --navy:#0D2B63; --accent:#F2701E;
-  --green:#3C8D40; --line:#EFE7DC;
+  color-scheme: light;   /* stop the browser tinting form controls dark */
+  --ground:#FFFBF5; --surface:#fff; --sunk:#F8F3EA;
+  --ink:#16213B; --muted:#6B6459; --navy:#0D2B63;
+  /* Three oranges, because one cannot do three jobs.
+     --brand is the app's own #F2701E, kept for large display type and for
+     decoration where contrast is not the question.
+     --accent is the same hue darkened until small text on cream clears 4.5:1
+     — nav links and eyebrows are 11–14px, and the brand orange manages 2.86.
+     --accent-fill is darker still, so white on the button clears it too: white
+     on #F2701E is 2.95, which is a button nobody with tired eyes can read. */
+  --brand:#F2701E; --accent:#B84B08; --accent-fill:#B84B08;
+  --green:#3C8D40; --line:#EDE4D6;
   --display:'Anton', Impact, 'Haettenschweiler', sans-serif;
   --body:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ground:#14110F; --surface:#1D1A17; --sunk:#231F1B;
-    --ink:#F2EDE5; --muted:#A0968A; --navy:#F2EDE5; --accent:#F58A3E;
-    --green:#7CC384; --line:#302A25;
-  }
 }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--ground); color:var(--ink); font:16px/1.65 var(--body); -webkit-font-smoothing:antialiased; }
@@ -26,7 +35,7 @@ body { margin:0; background:var(--ground); color:var(--ink); font:16px/1.65 var(
 /* ── chrome ─────────────────────────────────────────────── */
 header.site { display:flex; align-items:center; justify-content:space-between; padding:26px 0; flex-wrap:wrap; gap:14px; }
 .mark { font-family:var(--display); font-size:24px; letter-spacing:.06em; color:var(--navy); text-decoration:none; }
-.mark span { color:var(--accent); }
+.mark span { color:var(--brand); }
 nav a { color:var(--muted); text-decoration:none; font-size:14px; margin-left:20px; }
 nav a:hover, nav a:focus-visible { color:var(--accent); }
 
@@ -35,9 +44,9 @@ nav a:hover, nav a:focus-visible { color:var(--accent); }
 @media (max-width:820px){ .hero{ grid-template-columns:1fr; gap:40px; padding-bottom:52px; } }
 h1 { font-family:var(--display); font-size:clamp(44px,7vw,78px); line-height:.98; letter-spacing:.005em;
      margin:0 0 20px; color:var(--navy); text-transform:uppercase; text-wrap:balance; }
-h1 em { font-style:normal; color:var(--accent); }
+h1 em { font-style:normal; color:var(--brand); }  /* 78px display type — large enough that the brand orange carries it */
 .lede { font-size:19px; line-height:1.55; color:var(--muted); margin:0 0 30px; max-width:46ch; }
-.cta { display:inline-flex; align-items:center; gap:9px; background:var(--accent); color:#fff;
+.cta { display:inline-flex; align-items:center; gap:9px; background:var(--accent-fill); color:#fff;
        text-decoration:none; font-weight:700; font-size:16px; padding:16px 26px; border-radius:14px; }
 .cta:hover { filter:brightness(1.06); }
 .cta-note { font-size:13.5px; color:var(--muted); margin-top:14px; }
@@ -91,7 +100,7 @@ h3 { font-size:18px; margin:0 0 7px; color:var(--navy); }
 .plans { display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; }
 .plan { flex:1 1 210px; background:var(--surface); border:1.5px solid var(--line); border-radius:16px;
         padding:22px; position:relative; }
-.plan.best { border-color:var(--accent); }
+.plan.best { border-color:var(--brand); }
 .plan .save { position:absolute; top:-11px; left:22px; background:var(--green); color:#fff;
               font-size:10.5px; font-weight:800; padding:4px 10px; border-radius:11px; }
 .plan .term { font-size:13px; font-weight:700; color:var(--muted); }
@@ -99,7 +108,6 @@ h3 { font-size:18px; margin:0 0 7px; color:var(--navy); }
 .plan .per { font-size:13px; color:var(--muted); }
 .founding { display:inline-block; background:#FFF3E9; color:#8A4B1E; border:1px solid #F5D9C2;
             border-radius:12px; padding:9px 15px; font-size:13.5px; font-weight:600; margin-bottom:22px; }
-@media (prefers-color-scheme: dark){ .founding{ background:#2A2115; border-color:#3D3222; color:#E0B27A; } }
 .fine { font-size:13px; color:var(--muted); margin-top:18px; }
 
 footer.site { padding:34px 0 60px; border-top:1px solid var(--line); font-size:13.5px; color:var(--muted); }
