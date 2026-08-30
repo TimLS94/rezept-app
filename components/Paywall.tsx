@@ -7,8 +7,7 @@ import {
   grantPlatformEntitlement, purchasesAvailable, type PremiumPlan,
 } from '../lib/purchases';
 import {
-  PREMIUM_INCLUDES, PREMIUM_EXCLUDES, PREMIUM_YEARLY_INTRO_CENTS,
-  PREMIUM_MONTHLY_INTRO_CENTS, PREMIUM_MONTHLY_CENTS, PREMIUM_YEARLY_CENTS,
+  PREMIUM_INCLUDES, PREMIUM_EXCLUDES, PREMIUM_MONTHLY_CENTS, PREMIUM_YEARLY_CENTS,
   FOUNDING_OFFER_OPEN, FOUNDING_HEADLINE, FOUNDING_SUB, renewalNote, usd,
 } from '../lib/pricing';
 import { useAuth } from '../lib/auth';
@@ -24,14 +23,15 @@ type Props = {
 // what someone is actually charged first, so that is the number that stands in
 // — quoting the standard price here would overstate it.
 const FALLBACK: Record<PremiumPlan, string> = {
-  annual: usd(PREMIUM_YEARLY_INTRO_CENTS),
-  monthly: usd(PREMIUM_MONTHLY_INTRO_CENTS),
+  annual: usd(PREMIUM_YEARLY_CENTS),
+  monthly: usd(PREMIUM_MONTHLY_CENTS),
 };
 
-// What the yearly plan saves against paying monthly, from the numbers rather
-// than from a marketing round number — if the prices change, so does this.
+// What the yearly plan saves against paying monthly. A real comparison
+// between two prices we actually charge, computed rather than typed — unlike
+// a struck-through "regular price" nobody has ever paid.
 const SAVING_PERCENT = Math.round(
-  (1 - PREMIUM_YEARLY_INTRO_CENTS / (PREMIUM_MONTHLY_INTRO_CENTS * 12)) * 100,
+  (1 - PREMIUM_YEARLY_CENTS / (PREMIUM_MONTHLY_CENTS * 12)) * 100,
 );
 
 export default function Paywall({ visible, onClose, onSubscribed, creatorName }: Props) {
@@ -190,9 +190,9 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
               onPress={() => setPlan('annual')}
               title="Yearly"
               price={prices.annual}
-              unit="first year"
+              unit="a year"
               badge={SAVING_PERCENT > 0 ? `Save ${SAVING_PERCENT}%` : undefined}
-              after={`then ${usd(PREMIUM_YEARLY_CENTS)}/year`}
+              after={`${usd(Math.round(PREMIUM_YEARLY_CENTS / 12))} a month`}
             />
             <PlanCard
               selected={plan === 'monthly'}
@@ -200,7 +200,7 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
               title="Monthly"
               price={prices.monthly}
               unit="a month"
-              after={`then ${usd(PREMIUM_MONTHLY_CENTS)}/month`}
+              after="billed monthly"
             />
           </View>
 
