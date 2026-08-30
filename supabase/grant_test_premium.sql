@@ -47,12 +47,20 @@ returning user_id, status, current_period_end;
 commit;
 
 -- ── Check ──────────────────────────────────────────────────────────────────
--- Who currently holds a comped subscription.
+-- Who currently holds Premium without having paid for it.
 --
---   select u.email, e.status, e.current_period_end
+-- TWO categories, not one. `store = 'test'` is what this file grants. But the
+-- dev-unlock path in verify-purchase writes `product_id = 'dev_unlock'` and no
+-- store at all, so a query on store alone misses every one of those — and
+-- while ALLOW_DEV_UNLOCK was set, any signed-in account could grant itself one
+-- by calling the endpoint directly. Check both:
+--
+--   select u.email, e.product_id, e.store, e.status, e.current_period_end
 --   from public.entitlements e
 --   join auth.users u on u.id = e.user_id
---   where e.store = 'test';
+--   where e.status = 'active'
+--     and (e.store = 'test' or e.product_id = 'dev_unlock'
+--          or e.store is null);
 
 -- ── Revoke, one tester ─────────────────────────────────────────────────────
 --   update public.entitlements e
@@ -63,9 +71,15 @@ commit;
 --     and e.store = 'test';
 
 -- ── Sweep before launch ────────────────────────────────────────────────────
--- Expires every comped account in one go. Real subscriptions are untouched:
--- they carry store 'app_store' or 'play_store', never 'test'.
+-- Expires everything granted without a payment. Real subscriptions are
+-- untouched: those carry store 'app_store' or 'play_store' and a product id
+-- from lib/pricing.ts.
+--
+-- Not before launch, though — testers need theirs until the day you submit.
+-- That is what the marking is for: so this can wait until the right moment
+-- rather than being remembered.
 --
 --   update public.entitlements
 --   set status = 'expired', current_period_end = now(), updated_at = now()
---   where store = 'test' and status <> 'expired';
+--   where status <> 'expired'
+--     and (store = 'test' or product_id = 'dev_unlock' or store is null);

@@ -116,7 +116,9 @@ begin
 
   -- 5. A comped account still live, which is a launch-day embarrassment
   --    rather than an outage.
-  select count(*) into n from public.entitlements where store = 'test' and status = 'active';
+  select count(*) into n from public.entitlements
+  where status = 'active'
+    and (store = 'test' or product_id = 'dev_unlock' or store is null);
   if n > 0 then
     out_alerts := out_alerts || jsonb_build_object(
       'key', 'comped_accounts',

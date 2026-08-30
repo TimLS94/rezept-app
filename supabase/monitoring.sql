@@ -111,8 +111,13 @@ begin
     'money', jsonb_build_object(
       'active_premium', (select count(*) from public.entitlements
                          where scope = 'platform' and status = 'active'),
+      -- Both ways an account can hold Premium without paying: granted by
+      -- grant_test_premium.sql (store 'test'), or by the dev-unlock endpoint
+      -- (product_id 'dev_unlock', no store). Counting only the first would
+      -- have reported zero while the second was reachable by anyone.
       'comped', (select count(*) from public.entitlements
-                 where store = 'test' and status = 'active'),
+                 where status = 'active'
+                   and (store = 'test' or product_id = 'dev_unlock' or store is null)),
       'purchases', (select count(*) from public.purchase_events where occurred_at > since),
       'gross_cents', (select coalesce(sum(price_cents), 0) from public.purchase_events
                       where occurred_at > since),
