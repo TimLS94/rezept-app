@@ -6,6 +6,11 @@ node_modules/
 # Expo
 .expo/
 .env
+# Every variant, not just the exact name. A `.env.bak` written while rotating
+# keys was not matched by `.env`, went into a commit, and was stopped by
+# GitHub's push protection — which is not a control to rely on twice.
+.env.*
+!.env.example
 dist/
 
 # Supabase CLI local state
