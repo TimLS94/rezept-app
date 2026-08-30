@@ -1,0 +1,40 @@
+/* The app's own tokens (lib/theme.ts), so the site and the product look like
+   one thing: navy #0D2B63, orange #F2701E, cream #FFF9F2, warm grey #8A8378. */
+:root {
+  --ground: #FFF9F2; --surface: #fff; --ink: #16213B; --muted: #7C756A;
+  --navy: #0D2B63; --accent: #D95E0C; --line: #EFE7DC;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #14110F; --surface: #1C1917; --ink: #F0EAE1; --muted: #A0968A;
+    --navy: #F0EAE1; --accent: #F58A3E; --line: #302A25;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 40px 22px 80px; }
+header.site {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 22px; border-bottom: 1px solid var(--line); margin-bottom: 34px;
+  flex-wrap: wrap; gap: 12px;
+}
+.mark { font-weight: 800; font-size: 19px; letter-spacing: .04em; color: var(--navy); text-decoration: none; }
+.mark span { color: var(--accent); }
+nav a { color: var(--muted); text-decoration: none; font-size: 14px; margin-left: 18px; }
+nav a:hover, nav a:focus-visible { color: var(--accent); }
+h1 { font-size: clamp(30px, 5vw, 40px); line-height: 1.1; letter-spacing: -.02em; margin: 0 0 14px; text-wrap: balance; }
+h2 { font-size: 18px; margin: 34px 0 10px; color: var(--navy); }
+p, li { color: var(--ink); }
+.lede { font-size: 18px; color: var(--muted); margin: 0 0 30px; max-width: 58ch; }
+.updated { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; margin: 22px 0; }
+a { color: var(--accent); }
+footer.site { margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+footer.site a { color: var(--muted); margin-right: 16px; }
+ul { padding-left: 20px; }
+address { font-style: normal; line-height: 1.7; }
+a:focus-visible, .mark:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }

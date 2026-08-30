@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.spoondrop.app"],
+        "components": [
+          { "/": "/s/*",      "comment": "shared recipe links" },
+          { "/": "/recipe/*", "comment": "creator recipe links" }
+        ]
+      }
+    ]
+  }
+}

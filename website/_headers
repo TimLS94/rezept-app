@@ -1,0 +1,5 @@
+# Apple fetches this file and refuses anything that is not JSON. It has no
+# file extension, so the server would otherwise guess — usually wrong, and
+# universal links fail silently with no error anywhere.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
