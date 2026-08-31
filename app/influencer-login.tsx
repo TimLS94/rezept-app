@@ -129,13 +129,18 @@ export default function InfluencerLoginScreen() {
 
         {/* Auth Form */}
         <View style={styles.formContainer}>
+          {/* Signing up here makes an ordinary account, not a creator one —
+              promoteToCreator has been empty since creators became
+              admin-approved. The copy still said "Become a Creator", so someone
+              signed up expecting a creator account, got a normal one, and was
+              told nothing about the step they still had to take. */}
           <Text style={styles.formTitle}>
-            {isLogin ? 'Creator Login' : 'Become a Creator'}
+            {isLogin ? 'Creator Login' : 'Create your account'}
           </Text>
           <Text style={styles.formSubtitle}>
-            {isLogin 
-              ? 'Sign in to manage and upload your recipes' 
-              : 'Join our community of food creators'}
+            {isLogin
+              ? 'Sign in to manage and upload your recipes'
+              : 'Creator access is approved by us. Sign up first, then apply from your profile.'}
           </Text>
 
           <View style={styles.inputContainer}>
@@ -232,7 +237,7 @@ export default function InfluencerLoginScreen() {
               onPress={() => setIsLogin(!isLogin)}
             >
               <Text style={styles.switchAuthText}>
-                {isLogin ? "Don't have a creator account? " : "Already a creator? "}
+                {isLogin ? "New to SpoonDrop? " : "Already have an account? "}
                 <Text style={styles.switchAuthLink}>
                   {isLogin ? 'Sign Up' : 'Sign In'}
                 </Text>
