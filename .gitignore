@@ -48,3 +48,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Datenbank-Dumps: enthalten auth.users mit E-Mails und Passwort-Hashes.
+# Niemals ins Repo — siehe den .env.bak-Vorfall.
+backup-*.sql
+*.dump
