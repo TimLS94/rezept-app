@@ -27,6 +27,13 @@ export type ExtractedRecipe = {
    *  parse `steps` as plain strings. A new sibling field they never read is
    *  harmless; a changed shape would break all of them at once. */
   stepTimers?: (number | null)[];
+  /** Where the dish is from, when the source says so. The model is told not
+   *  to infer one from a single ingredient: soy sauce does not make a dish
+   *  Japanese, and a wrong label is worse than none. */
+  cuisine?: string | null;
+  /** Only what the recipe cannot be made without and a kitchen does not
+   *  simply have. Pans and pots would be noise. */
+  equipment?: string[];
   /** Total ingredient cost, if the person reviewing the import fills one in.
    *  The model is never asked to guess a price — it cannot know what things
    *  cost where you shop, and a made-up figure would end up on the card as a

@@ -100,7 +100,9 @@ Return a JSON object with this exact structure:
     }
   ],
   "steps": ["Step 1 instruction", "Step 2 instruction", ...],
-  "stepTimers": [<seconds or null for each step, same order and length as steps>]
+  "stepTimers": [<seconds or null for each step, same order and length as steps>],
+  "cuisine": "<one word, e.g. Italian, Mexican, Thai — or null if the recipe does not say>",
+  "equipment": ["<special equipment the recipe requires, e.g. air fryer, blender>"]
 }
 
 Rules:
@@ -118,6 +120,13 @@ Rules:
   is watching the pan, and a timer there rings at the wrong moment and teaches
   people to ignore it. When unsure, null. Fewer timers that are right beats more
   that are guesses.
+- cuisine: only when the recipe or the post actually indicates one. Do not infer
+  a cuisine from a single ingredient — soy sauce does not make a dish Japanese.
+  Null when unclear; a wrong label is worse than none.
+- equipment: only what the recipe cannot be made without and what a kitchen does
+  not simply have — air fryer, blender, stand mixer, pressure cooker, thermometer.
+  Never pans, pots, bowls, knives or an oven: listing those is noise that trains
+  people to skip the line. Empty array when nothing special is needed.
 - Return ONLY valid JSON, no markdown or extra text`;
 
 const VISION_PROMPT = `Analyze this image of a recipe (screenshot from Instagram, TikTok, or similar).
@@ -148,7 +157,9 @@ Return a JSON object with this exact structure:
     }
   ],
   "steps": ["Step 1 instruction", "Step 2 instruction", ...],
-  "stepTimers": [<seconds or null for each step, same order and length as steps>]
+  "stepTimers": [<seconds or null for each step, same order and length as steps>],
+  "cuisine": "<one word, e.g. Italian, Mexican, Thai — or null if the recipe does not say>",
+  "equipment": ["<special equipment the recipe requires, e.g. air fryer, blender>"]
 }
 
 stepTimers must have one entry per step, in the same order. Use a number of seconds

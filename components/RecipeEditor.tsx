@@ -22,6 +22,10 @@ export type EditableRecipe = {
   /** Seconds per step, index-aligned with `steps`. Null = no timer. */
   stepTimers?: (number | null)[];
   nutrition?: Nutrition;
+  cuisine?: string;
+  /** Only what the recipe cannot be made without and a kitchen does not simply
+   *  have. Pans and pots would be noise. */
+  equipment?: string[];
   image?: string;
   sourceUrl?: string;
 };
@@ -300,6 +304,32 @@ export default function RecipeEditor({ value, onChange }: Props) {
       </View>
 
       {/* Nutrition */}
+      {/* Cuisine and equipment. Optional, and deliberately free text rather
+          than a picker: nobody can enumerate the world's cuisines, and a list
+          that is missing yours reads as "your food does not count". */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Cuisine & equipment</Text>
+        <TextInput
+          style={styles.input}
+          value={value.cuisine ?? ''}
+          onChangeText={t => set({ cuisine: t })}
+          placeholder="Italian, Thai, Mexican… (optional)"
+          placeholderTextColor="#BBB"
+        />
+        <TextInput
+          style={[styles.input, { marginTop: 10 }]}
+          value={(value.equipment ?? []).join(', ')}
+          onChangeText={t =>
+            set({ equipment: t.split(',').map(x => x.trim()).filter(Boolean) })
+          }
+          placeholder="Air fryer, blender… (optional)"
+          placeholderTextColor="#BBB"
+        />
+        <Text style={styles.equipHint}>
+          Only what the recipe can't be made without. No pans, pots or ovens.
+        </Text>
+      </View>
+      
       <View style={styles.card}>
         <View style={styles.nutriHead}>
           <Text style={styles.sectionTitle}>Nutrition (per serving)</Text>
@@ -402,6 +432,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 },
   mt: { marginTop: 14 },
   hint: { fontSize: 12, color: '#999', marginTop: 6 },
+  equipHint: { fontSize: 12, color: '#8A8A8A', marginTop: 8, lineHeight: 16 },
   input: {
     backgroundColor: '#FFF9F2',
     borderRadius: 10,

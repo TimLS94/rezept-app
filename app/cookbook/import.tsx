@@ -130,7 +130,14 @@ export default function ImportRecipeScreen() {
   // Move an extracted recipe into the editable review step, pre-filling the
   // source link from whatever URL we know (typed, or shared into the app).
   const showReview = (extracted: ExtractedRecipe) => {
-    setRecipe({ ...extracted, sourceUrl: url.trim() || params.sharedUrl || '' });
+    setRecipe({
+      ...extracted,
+      // The model may answer null for a cuisine it could not determine; the
+      // editor's field is "absent or a string", and null is neither.
+      cuisine: extracted.cuisine ?? undefined,
+      equipment: extracted.equipment ?? [],
+      sourceUrl: url.trim() || params.sharedUrl || '',
+    });
     setStep('review');
   };
 

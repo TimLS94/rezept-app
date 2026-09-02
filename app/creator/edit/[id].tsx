@@ -13,7 +13,8 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase, updateByIdTolerant } from '../../../lib/supabase';
 import { pickAndUploadImage } from '../../../lib/storage';
-import { DIETARY_TAGS } from '../../../data/recipes';
+import { DIETARY_TAGS, Recipe } from '../../../data/recipes';
+import NutritionFields from '../../../components/NutritionFields';
 import { RECIPE_PRICE_TIERS, creatorTakeHomeCents, usd } from '../../../lib/pricing';
 import { HEADER_TOP } from '../../../lib/layout';
 
@@ -40,6 +41,9 @@ type RecipeData = {
   instructions: string[];
   stepImages: (string | null)[];
   stepTimers: (number | null)[];
+  nutrition?: Recipe['nutrition'];
+  cuisine: string;
+  equipment: string[];
 };
 
 export default function EditRecipeScreen() {
@@ -88,6 +92,9 @@ export default function EditRecipeScreen() {
       instructions: instr.map(s => (typeof s === 'string' ? s : (s?.text ?? ''))),
       stepImages: instr.map(s => (typeof s === 'string' ? null : (s?.image ?? null))),
       stepTimers: instr.map(s => (typeof s === 'string' ? null : (s?.timer ?? null))),
+      nutrition: data.nutrition ?? undefined,
+      cuisine: data.cuisine || '',
+      equipment: Array.isArray(data.equipment) ? data.equipment : [],
     });
     setLoading(false);
   };
@@ -111,6 +118,9 @@ export default function EditRecipeScreen() {
         servings: recipe.servings,
         calories: recipe.calories,
         is_paid: recipe.is_paid,
+        nutrition: recipe.nutrition ?? null,
+        cuisine: recipe.cuisine.trim() || null,
+        equipment: recipe.equipment.length ? recipe.equipment : null,
         // Only meaningful on a premium recipe; clearing it on a free one keeps
         // a stale price from reappearing if it's flipped back to premium later.
         price_cents: recipe.is_paid ? recipe.price_cents : null,
@@ -426,6 +436,42 @@ export default function EditRecipeScreen() {
           )}
         </View>
 
+        {/* Nutrition, cuisine and equipment. None of this existed on the creator
+            path — a creator could see calories on their own recipe and had no field
+            to correct them, while the cookbook editor had all of it. NutritionFields
+            is the same component both sides use now, so the estimate flag cannot
+            drift apart again. */}
+        <View style={styles.card}>
+          <NutritionFields
+            value={{ calories: recipe.calories, nutrition: recipe.nutrition }}
+            ingredients={recipe.ingredients}
+            servings={recipe.servings}
+            onChange={v => setRecipe({ ...recipe, calories: v.calories, nutrition: v.nutrition })}
+          />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Cuisine & equipment</Text>
+          <TextInput
+            style={[styles.input, { marginTop: 10 }]}
+            value={recipe.cuisine}
+            onChangeText={t => setRecipe({ ...recipe, cuisine: t })}
+            placeholder="Italian, Thai, Mexican… (optional)"
+            placeholderTextColor="#BBB"
+          />
+          <TextInput
+            style={[styles.input, { marginTop: 10 }]}
+            value={recipe.equipment.join(', ')}
+            onChangeText={t =>
+              setRecipe({ ...recipe, equipment: t.split(',').map(x => x.trim()).filter(Boolean) })
+            }
+            placeholder="Air fryer, blender… (optional)"
+            placeholderTextColor="#BBB"
+          />
+          <Text style={styles.equipHint}>
+            Only what the recipe can't be made without. No pans, pots or ovens.
+          </Text>
+        </View>
         {/* Ingredients */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
@@ -584,6 +630,7 @@ const styles = StyleSheet.create({
   toggleTextActive: { color: '#FFF' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
+  equipHint: { fontSize: 12, color: '#8A8A8A', marginTop: 8, lineHeight: 16 },
   addLink: { fontSize: 14, color: '#F2701E', fontWeight: '600' },
   ingredientRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
   ingredientAmount: { width: 50, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, fontSize: 14, textAlign: 'center' },

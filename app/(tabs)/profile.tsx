@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchProfileStats, ProfileStats } from '../../lib/profileStats';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { fetchMyProfile } from '../../lib/profile';
 import { supabase, getCurrentUser } from '../../lib/supabase';
 import { FEATURES } from '../../lib/features';
@@ -137,9 +137,16 @@ export default function ProfileScreen() {
     dietaryRestrictions: [] as string[],
   });
 
-  useEffect(() => {
-    loadProfile();
-  }, [role]); // Re-load when role changes
+  // On focus, not just on mount. Mounting once meant the screen kept whatever
+  // it read the first time it was opened: publish a recipe, come back, and My
+  // Recipes still showed the old list — while the Studio, which has always
+  // reloaded on focus, showed the new one. Two screens reading the same table
+  // and disagreeing is worse than either being wrong.
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [role]),
+  );
 
   const loadProfile = async () => {
     try {

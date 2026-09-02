@@ -298,6 +298,14 @@ export default function CookbookRecipeScreen() {
             <>
               {recipe.ingredients.length > 0 && (
                 <View style={styles.section}>
+                  {/* Before the ingredients: it decides whether this can be cooked at
+                      all, and step four is too late to learn it wants an air fryer. */}
+                  {!!recipe.equipment?.length && (
+                    <View style={styles.equipmentRow}>
+                      <Text style={styles.equipmentLabel}>You'll need</Text>
+                      <Text style={styles.equipmentList}>{recipe.equipment.join(' · ')}</Text>
+                    </View>
+                  )}
                   <Text style={styles.sectionTitle}>Ingredients ({recipe.ingredients.length})</Text>
                   {recipe.ingredients.map((ing, i) => (
                     <View key={i} style={styles.ingredientRow}>
@@ -441,6 +449,13 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 16,
   },
+  equipmentRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+    marginBottom: 14, paddingVertical: 10, paddingHorizontal: 14,
+    backgroundColor: '#FFF4EC', borderRadius: 12,
+  },
+  equipmentLabel: { fontSize: 12, fontWeight: '700', color: '#B84B08', textTransform: 'uppercase', letterSpacing: 0.5 },
+  equipmentList: { flex: 1, fontSize: 14, color: '#4A4A4A' },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
   ingredientRow: {
     flexDirection: 'row',

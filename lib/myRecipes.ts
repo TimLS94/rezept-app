@@ -17,6 +17,8 @@ export type MyRecipe = {
   ingredients: Ingredient[];
   steps: string[];
   nutrition?: Recipe['nutrition'];
+  cuisine?: string;
+  equipment?: string[];
   // Index-aligned with `steps`. Null means "no timer on this step". Stored
   // inside the step object in the database, the same way creator recipes do it.
   stepTimers?: (number | null)[];
@@ -41,6 +43,8 @@ export type MyRecipeInput = {
   stepTimers?: (number | null)[];
   stepImages?: (string | null)[];
   nutrition?: Recipe['nutrition'];
+  cuisine?: string;
+  equipment?: string[];
   sourceUrl?: string;
 };
 
@@ -93,6 +97,8 @@ function mapDbRow(row: any): MyRecipe {
       typeof s === 'string' ? null : (s?.image ?? null)
     ),
     nutrition: row.nutrition ?? undefined,
+    cuisine: row.cuisine ?? undefined,
+    equipment: Array.isArray(row.equipment) ? row.equipment : [],
     sourceUrl: row.source_url,
     createdAt: row.created_at,
   };
@@ -126,6 +132,8 @@ export function snapshotToInput(row: any): MyRecipeInput {
     stepTimers: r.stepTimers,
     stepImages: r.stepImages,
     nutrition: r.nutrition,
+    cuisine: r.cuisine,
+    equipment: r.equipment,
     sourceUrl: r.sourceUrl,
   };
 }
@@ -153,6 +161,8 @@ export function myRecipeToRecipe(myRecipe: MyRecipe): Recipe {
     },
     source: 'mine',
     nutrition: myRecipe.nutrition,
+    cuisine: myRecipe.cuisine,
+    equipment: myRecipe.equipment,
     ingredients: myRecipe.ingredients,
     steps: myRecipe.steps,
     stepTimers: myRecipe.stepTimers,
@@ -249,6 +259,8 @@ export async function saveMyRecipe(input: MyRecipeInput): Promise<SaveResult> {
       tags: input.dietary,
       ingredients: input.ingredients,
       nutrition: input.nutrition ?? null,
+      cuisine: input.cuisine ?? null,
+      equipment: input.equipment ?? null,
       instructions: packSteps(input.steps, input.stepTimers, input.stepImages),
       source_url: input.sourceUrl,
     })
@@ -277,6 +289,8 @@ export async function updateMyRecipe(id: string, input: Partial<MyRecipeInput>):
   if (input.dietary !== undefined) updates.tags = input.dietary;
   if (input.ingredients !== undefined) updates.ingredients = input.ingredients;
   if (input.nutrition !== undefined) updates.nutrition = input.nutrition;
+  if (input.cuisine !== undefined) updates.cuisine = input.cuisine;
+  if (input.equipment !== undefined) updates.equipment = input.equipment;
   if (input.steps !== undefined)
     updates.instructions = packSteps(input.steps, input.stepTimers, input.stepImages);
 

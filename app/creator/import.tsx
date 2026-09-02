@@ -230,6 +230,8 @@ export default function ImportRecipeScreen() {
       // one. A shorter array from the model must not shift timers onto the
       // wrong steps, so it is indexed rather than passed through.
       stepTimers: recipe.steps.map((_, i) => recipe.stepTimers?.[i] ?? null),
+      cuisine: recipe.cuisine ?? undefined,
+      equipment: recipe.equipment ?? [],
     });
 
     if ('error' in result) {

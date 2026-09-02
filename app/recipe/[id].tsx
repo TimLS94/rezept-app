@@ -459,6 +459,11 @@ export default function RecipeDetailScreen() {
                   <Text style={styles.badgeText}>👶 Kid Approved</Text>
                 </View>
               )}
+              {!!recipe.cuisine && (
+                <View style={[styles.badge, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
+                  <Text style={styles.badgeText}>{recipe.cuisine}</Text>
+                </View>
+              )}
               <View style={[styles.badge, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
                 <Text style={styles.badgeText}>{recipe.difficulty}</Text>
               </View>
@@ -691,6 +696,16 @@ export default function RecipeDetailScreen() {
         </View>
 
         {/* Content */}
+        {/* Above the tabs, not inside one: it changes whether this recipe can
+            be cooked at all, and finding out at step four that it wants an air
+            fryer is finding out too late. Absent on most recipes — the model is
+            told to list only what a kitchen does not simply have. */}
+        {!!recipe.equipment?.length && (
+          <View style={styles.equipmentRow}>
+            <Text style={styles.equipmentLabel}>You'll need</Text>
+            <Text style={styles.equipmentList}>{recipe.equipment.join(' · ')}</Text>
+          </View>
+        )}
         {activeTab === 'ingredients' ? (
           <View style={styles.ingredientsList}>
             {recipe.ingredients.map((ing, index) => (
@@ -915,6 +930,13 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: '#FFF' },
   tabText: { fontSize: 14, color: '#888', fontWeight: '500' },
   tabTextActive: { color: '#1A1A1A', fontWeight: '600' },
+  equipmentRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+    marginHorizontal: 20, marginBottom: 12, paddingVertical: 10, paddingHorizontal: 14,
+    backgroundColor: '#FFF4EC', borderRadius: 12,
+  },
+  equipmentLabel: { fontSize: 12, fontWeight: '700', color: '#B84B08', textTransform: 'uppercase', letterSpacing: 0.5 },
+  equipmentList: { flex: 1, fontSize: 14, color: '#4A4A4A' },
   ingredientsList: { padding: 16 },
   ingredientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   ingredientAmount: { width: 80, backgroundColor: '#F5F5F5', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginRight: 12 },

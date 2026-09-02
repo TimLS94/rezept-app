@@ -341,6 +341,14 @@ export default function CookbookCreatorRecipeScreen() {
           )}
 
           {/* Ingredients */}
+          {/* Before the ingredients: it decides whether this can be cooked at
+              all, and step four is too late to learn it wants an air fryer. */}
+          {!!recipe.equipment?.length && (
+            <View style={styles.equipmentRow}>
+              <Text style={styles.equipmentLabel}>You'll need</Text>
+              <Text style={styles.equipmentList}>{recipe.equipment.join(' · ')}</Text>
+            </View>
+          )}
           <Text style={styles.sectionTitle}>Ingredients</Text>
           {displayRecipe.ingredients.map((ing, i) => (
             <View key={i} style={styles.ingredientRow}>
@@ -470,6 +478,13 @@ const styles = StyleSheet.create({
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   tag: { backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   tagText: { fontSize: 12, color: '#3C8D40', fontWeight: '600' },
+  equipmentRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+    marginBottom: 14, paddingVertical: 10, paddingHorizontal: 14,
+    backgroundColor: '#FFF4EC', borderRadius: 12,
+  },
+  equipmentLabel: { fontSize: 12, fontWeight: '700', color: '#B84B08', textTransform: 'uppercase', letterSpacing: 0.5 },
+  equipmentList: { flex: 1, fontSize: 14, color: '#4A4A4A' },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A', marginTop: 8, marginBottom: 16 },
   ingredientRow: { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   ingredientAmount: { width: 100, fontSize: 14, fontWeight: '600', color: '#F2701E' },

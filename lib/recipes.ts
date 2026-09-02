@@ -41,6 +41,8 @@ export function mapDbRecipe(row: any): Recipe {
       typeof s === 'string' ? null : (s?.timer ?? null)
     ),
     nutrition: row.nutrition ?? undefined,
+    cuisine: row.cuisine ?? undefined,
+    equipment: Array.isArray(row.equipment) ? row.equipment : [],
     isPaid: row.is_paid ?? false,
     // Real counts (survive premium stripping) + server lock flag for the teaser.
     ingredientsCount: row.ingredients_count ?? (Array.isArray(row.ingredients) ? row.ingredients.length : 0),
@@ -57,7 +59,8 @@ export function mapDbRecipe(row: any): Recipe {
 // comes from get_recipe_full (paywalled) or get_recipe_for_edit (owner only).
 export const RECIPE_LIST_COLUMNS =
   'id, title, description, image_url, prep_time, cook_time, servings, calories, cost, ' +
-  'difficulty, tags, kid_approved, is_paid, price_cents, nutrition, influencer_id, influencer_name, ' +
+  'difficulty, tags, kid_approved, is_paid, price_cents, nutrition, cuisine, equipment, ' +
+  'influencer_id, influencer_name, ' +
   'influencer_handle, influencer_avatar, created_at, ingredients_count, steps_count';
 
 // Shared in-memory cache so Discover/Search/Home don't re-hit the network on
@@ -304,6 +307,11 @@ export type NewRecipeInput = {
   steps: string[];
   stepImages?: (string | null)[]; // index-aligned with steps
   stepTimers?: (number | null)[]; // seconds, index-aligned
+  /** Per-serving figures. Absent until now, so a creator upload could not carry
+   *  macros at all — the field existed on the edit path and nowhere else. */
+  nutrition?: Recipe['nutrition'];
+  cuisine?: string | null;
+  equipment?: string[];
   isPaid?: boolean;
 };
 
@@ -345,6 +353,11 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
         const timer = input.stepTimers?.[i] ?? null;
         return image || timer ? { text, ...(image ? { image } : {}), ...(timer ? { timer } : {}) } : text;
       }),
+      // Undefined rather than null when absent, so the column keeps its
+      // default instead of being actively written empty.
+      nutrition: input.nutrition ?? undefined,
+      cuisine: input.cuisine || undefined,
+      equipment: input.equipment?.length ? input.equipment : undefined,
       is_paid: input.isPaid ?? false,
       influencer_id: user.id,
       influencer_name: profile?.full_name || 'Creator',

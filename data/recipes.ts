@@ -37,6 +37,12 @@ export type Recipe = {
   categories: ('quick' | 'kids' | 'healthy' | 'budget')[];
   dietary: DietaryTag[];
   kidApproved: boolean;
+  /** Where the dish is from, when the recipe says. Display only — nothing
+   *  filters on it, and a guessed cuisine is worse than none. */
+  cuisine?: string;
+  /** Only what the recipe cannot be made without and a kitchen does not simply
+   *  have. Pans and pots are noise that teach people to skip the line. */
+  equipment?: string[];
   influencer: {
     id?: string;
     name: string;
