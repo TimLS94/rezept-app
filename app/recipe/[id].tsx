@@ -414,7 +414,13 @@ export default function RecipeDetailScreen() {
         pointerEvents="none"
         style={[styles.statusScrim, { opacity: scrimOpacity }]}
       />
-      <ScrollView
+      {/* Animated.ScrollView, not ScrollView. An Animated.event with
+          useNativeDriver: true is wired up on the native side, and that only
+          works on a component Animated has wrapped — a plain ScrollView hands
+          the native animation module a view it cannot resolve, and the app dies
+          on the first scroll event. Natively, so nothing reaches the error
+          boundary and nothing is ever written to app_errors. */}
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={Animated.event(
@@ -749,7 +755,7 @@ export default function RecipeDetailScreen() {
         <NutritionStrip nutrition={recipe.nutrition} calories={recipe.calories} />
 
         <View style={styles.bottomSpacer} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Bottom Action */}
       {!locked && !guestLocked && (
