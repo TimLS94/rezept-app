@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import NutritionFields from '../../components/NutritionFields';
 import ChipMultiSelect from '../../components/ChipMultiSelect';
+import EquipmentList, { cleanEquipment } from '../../components/EquipmentList';
 import { explainDeniedPermission } from '../../lib/permissions';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { fetchInstagramContent, isValidInstagramUrl, buildExtractionContent } from '../../lib/instagram';
@@ -21,7 +22,7 @@ import { extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideoAud
 import { createRecipe } from '../../lib/recipes';
 import { uploadBase64Image, pickAndUploadImage } from '../../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
-import { DietaryTag, Ingredient, DIETARY_TAGS, CUISINES, EQUIPMENT } from '../../data/recipes';
+import { DietaryTag, Ingredient, DIETARY_TAGS, CUISINES } from '../../data/recipes';
 import { HEADER_TOP } from '../../lib/layout';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
@@ -234,7 +235,7 @@ export default function ImportRecipeScreen() {
       stepTimers: recipe.steps.map((_, i) => recipe.stepTimers?.[i] ?? null),
       nutrition: recipe.nutrition,
       cuisines: recipe.cuisines ?? undefined,
-      equipment: recipe.equipment ?? [],
+      equipment: cleanEquipment(recipe.equipment),
     });
 
     if ('error' in result) {
@@ -600,8 +601,7 @@ export default function ImportRecipeScreen() {
                 onChange={v => setRecipe({ ...recipe, cuisines: v })}
               />
               <Text style={[styles.equipHint, { marginTop: 14 }]}>Equipment</Text>
-              <ChipMultiSelect
-                options={EQUIPMENT}
+              <EquipmentList
                 value={recipe.equipment}
                 onChange={v => setRecipe({ ...recipe, equipment: v })}
               />

@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image } fro
 import { pickAndUploadImage } from '../lib/storage';
 import { Nutrition, estimateNutrition, ESTIMATE_NOTE } from '../lib/nutrition';
 import ChipMultiSelect from './ChipMultiSelect';
-import { Ingredient, DIETARY_TAGS, CUISINES, EQUIPMENT } from '../data/recipes';
+import EquipmentList from './EquipmentList';
+import { Ingredient, DIETARY_TAGS, CUISINES } from '../data/recipes';
 
 // A single editable shape shared by the import review step and the "edit saved
 // recipe" screen. Superset of ExtractedRecipe + the source link.
@@ -319,8 +320,7 @@ export default function RecipeEditor({ value, onChange }: Props) {
           onChange={v => set({ cuisines: v })}
         />
         <Text style={[styles.equipHint, { marginTop: 14 }]}>Equipment</Text>
-        <ChipMultiSelect
-          options={EQUIPMENT}
+        <EquipmentList
           value={value.equipment}
           onChange={v => set({ equipment: v })}
         />

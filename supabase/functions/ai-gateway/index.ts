@@ -102,7 +102,7 @@ Return a JSON object with this exact structure:
   "steps": ["Step 1 instruction", "Step 2 instruction", ...],
   "stepTimers": [<seconds or null for each step, same order and length as steps>],
   "cuisines": [<0-2 ids from: italian, mexican, american, chinese, japanese, thai, indian, mediterranean, greek, french, korean, vietnamese, middle-eastern, caribbean, german, bbq>],
-  "equipment": [<ids from: air-fryer, blender, food-processor, stand-mixer, hand-mixer, pressure-cooker, slow-cooker, grill, thermometer, kitchen-scale, waffle-iron, ice-cream-maker, mandoline, dutch-oven, wok, piping-bag>]
+  "equipment": ["<short plain name, e.g. air fryer, pizza stone, tortilla press>"]
 }
 
 Rules:
@@ -125,11 +125,11 @@ Rules:
   infer a cuisine from a single ingredient, because soy sauce does not make a dish
   Japanese and a wrong label is worse than none. Use two only for a genuine fusion
   dish that belongs to both.
-- equipment: ids from the list above and nothing else. Only what the recipe cannot
-  be made without. Anything not on the list is left out rather than approximated —
-  and never pans, pots, bowls, knives or an oven, which every kitchen has: a line
-  listing those is one people learn to skip, and then they skip the air fryer too.
-  Empty array when nothing special is needed.
+- equipment: plain names, lower case, one per item — free text, because nothing
+  filters on it and no list could hold every pizza stone and tortilla press. Only
+  what the recipe cannot be made without, and never pans, pots, bowls, knives or an
+  oven, which every kitchen has: a line listing those is one people learn to skip,
+  and then they skip the air fryer too. Empty array when nothing special is needed.
 - Return ONLY valid JSON, no markdown or extra text`;
 
 const VISION_PROMPT = `Analyze this image of a recipe (screenshot from Instagram, TikTok, or similar).
@@ -162,7 +162,7 @@ Return a JSON object with this exact structure:
   "steps": ["Step 1 instruction", "Step 2 instruction", ...],
   "stepTimers": [<seconds or null for each step, same order and length as steps>],
   "cuisines": [<0-2 ids from: italian, mexican, american, chinese, japanese, thai, indian, mediterranean, greek, french, korean, vietnamese, middle-eastern, caribbean, german, bbq>],
-  "equipment": [<ids from: air-fryer, blender, food-processor, stand-mixer, hand-mixer, pressure-cooker, slow-cooker, grill, thermometer, kitchen-scale, waffle-iron, ice-cream-maker, mandoline, dutch-oven, wok, piping-bag>]
+  "equipment": ["<short plain name, e.g. air fryer, pizza stone, tortilla press>"]
 }
 
 stepTimers must have one entry per step, in the same order. Use a number of seconds

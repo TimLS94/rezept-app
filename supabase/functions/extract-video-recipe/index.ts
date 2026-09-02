@@ -38,7 +38,7 @@ Return JSON:
   "steps": ["Step 1", "Step 2", ...],
   "stepTimers": [<seconds or null per step, same order and length as steps>],
   "cuisines": [<0-2 ids from: italian, mexican, american, chinese, japanese, thai, indian, mediterranean, greek, french, korean, vietnamese, middle-eastern, caribbean, german, bbq>],
-  "equipment": [<ids from: air-fryer, blender, food-processor, stand-mixer, hand-mixer, pressure-cooker, slow-cooker, grill, thermometer, kitchen-scale, waffle-iron, ice-cream-maker, mandoline, dutch-oven, wok, piping-bag>]
+  "equipment": ["<short plain name, e.g. air fryer, pizza stone, tortilla press>"]
 }
 
 Watch carefully for:
@@ -51,8 +51,9 @@ unattended wait ("simmer 10 minutes", "bake 25 minutes"); null for everything
 else, including "until golden, about 5 minutes" — the cook is watching the pan
 there, and a timer rings at the wrong moment. When unsure, null.
 
-cuisines and equipment: ids from the lists above and nothing else, never invented
-values. Empty arrays when the video does not indicate them. Do not infer a cuisine
+cuisines: ids from the list above and nothing else, never invented values.
+equipment: plain lower-case names, free text, only what the recipe cannot be made
+without — never pans, pots or an oven. Empty arrays when the video does not indicate them. Do not infer a cuisine
 from a single ingredient; use two only for a genuine fusion dish.
 
 Be thorough - extract ALL ingredients, estimate amounts if not stated.

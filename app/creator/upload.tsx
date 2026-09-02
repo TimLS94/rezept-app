@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { DIETARY_TAGS, DietaryTag, Ingredient, Recipe, CUISINES, EQUIPMENT } from '../../data/recipes';
+import { DIETARY_TAGS, DietaryTag, Ingredient, Recipe, CUISINES } from '../../data/recipes';
 import NutritionFields from '../../components/NutritionFields';
 import ChipMultiSelect from '../../components/ChipMultiSelect';
+import EquipmentList, { cleanEquipment } from '../../components/EquipmentList';
 import { createRecipe } from '../../lib/recipes';
 import { pickAndUploadImage } from '../../lib/storage';
 import { COLORS } from '../../lib/theme';
@@ -148,7 +149,7 @@ export default function UploadRecipeScreen() {
       stepTimers: cleanedStepTimers,
       nutrition,
       cuisines: cuisines.length ? cuisines : undefined,
-      equipment: equipment.length ? equipment : undefined,
+      equipment: cleanEquipment(equipment).length ? cleanEquipment(equipment) : undefined,
     });
     setSaving(false);
 
@@ -357,8 +358,7 @@ export default function UploadRecipeScreen() {
             onChange={v => setCuisines(v)}
           />
           <Text style={[styles.equipHint, { marginTop: 14 }]}>Equipment</Text>
-          <ChipMultiSelect
-            options={EQUIPMENT}
+          <EquipmentList
             value={equipment}
             onChange={v => setEquipment(v)}
           />

@@ -23,6 +23,12 @@ import {
   saveRecipeToCookbook,
   setRecipePaid,
 } from '../../lib/recipes';
+import {
+  fetchRecipeEngagement,
+  countLabel,
+  EMPTY_ENGAGEMENT,
+  type Engagement,
+} from '../../lib/engagement';
 import { copyRecipeToCookbook, fetchMyRecipeById } from '../../lib/myRecipes';
 import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
@@ -73,6 +79,7 @@ export default function RecipeDetailScreen() {
   const [showPortionModal, setShowPortionModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'steps'>('ingredients');
   const [viewerUri, setViewerUri] = useState<string | null>(null);
+  const [engagement, setEngagement] = useState<Engagement>(EMPTY_ENGAGEMENT);
   const [togglingPaid, setTogglingPaid] = useState(false);
   
   // Check if current user is the recipe owner (can edit)
@@ -96,6 +103,15 @@ export default function RecipeDetailScreen() {
   // True while we are still looking. Without it "not found" and "not loaded
   // yet" are the same state, and the screen can only ever show a spinner.
   const [resolving, setResolving] = useState(!localRecipe && !!id);
+
+  // Counted server-side across everyone's cook log and favourites, which are
+  // per-user RLS — the screen gets sums, never who.
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    fetchRecipeEngagement(id).then(e => { if (active) setEngagement(e); });
+    return () => { active = false; };
+  }, [id]);
 
   // Fades the status-bar scrim in over the last 60pt of the hero.
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -481,6 +497,9 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
 
+        {/* A row that is simply absent until there is something to say. Zeros
+            are not printed: "0 cooked" under a recipe someone spent an evening
+            writing reads as a verdict, when it only means the app is new. */}
         {/* Influencer */}
         <View style={styles.influencerBar}>
           <Image source={{ uri: recipe.influencer.avatar }} style={styles.influencerAvatar} />
@@ -511,6 +530,17 @@ export default function RecipeDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
+        {(engagement.cooked > 0 || engagement.favorited > 0 || engagement.saved > 0) && (
+          <View style={styles.engagementRow}>
+            {[
+              countLabel(engagement.cooked, 'cook', 'cooks'),
+              countLabel(engagement.favorited, 'favorite', 'favorites'),
+              countLabel(engagement.saved, 'save', 'saves'),
+            ].filter(Boolean).map(t => (
+              <Text key={t} style={styles.engagementItem}>{t}</Text>
+            ))}
+          </View>
+        )}
 
         {/* Time breakdown */}
         <View style={styles.timeCard}>
@@ -930,6 +960,11 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: '#FFF' },
   tabText: { fontSize: 14, color: '#888', fontWeight: '500' },
   tabTextActive: { color: '#1A1A1A', fontWeight: '600' },
+  engagementRow: {
+    flexDirection: 'row', gap: 16, flexWrap: 'wrap',
+    paddingHorizontal: 20, paddingBottom: 14, marginTop: -4,
+  },
+  engagementItem: { fontSize: 13, color: '#7A7A7A', fontWeight: '600' },
   equipmentRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap',
     marginHorizontal: 20, marginBottom: 12, paddingVertical: 10, paddingHorizontal: 14,

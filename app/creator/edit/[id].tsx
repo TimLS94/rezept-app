@@ -13,9 +13,10 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase, updateByIdTolerant } from '../../../lib/supabase';
 import { pickAndUploadImage } from '../../../lib/storage';
-import { DIETARY_TAGS, Recipe, CUISINES, EQUIPMENT } from '../../../data/recipes';
+import { DIETARY_TAGS, Recipe, CUISINES } from '../../../data/recipes';
 import NutritionFields from '../../../components/NutritionFields';
 import ChipMultiSelect from '../../../components/ChipMultiSelect';
+import EquipmentList, { cleanEquipment } from '../../../components/EquipmentList';
 import { RECIPE_PRICE_TIERS, creatorTakeHomeCents, usd } from '../../../lib/pricing';
 import { HEADER_TOP } from '../../../lib/layout';
 
@@ -122,7 +123,7 @@ export default function EditRecipeScreen() {
         is_paid: recipe.is_paid,
         nutrition: recipe.nutrition ?? null,
         cuisines: recipe.cuisines.length ? recipe.cuisines : null,
-        equipment: recipe.equipment.length ? recipe.equipment : null,
+        equipment: cleanEquipment(recipe.equipment).length ? cleanEquipment(recipe.equipment) : null,
         // Only meaningful on a premium recipe; clearing it on a free one keeps
         // a stale price from reappearing if it's flipped back to premium later.
         price_cents: recipe.is_paid ? recipe.price_cents : null,
@@ -461,8 +462,7 @@ export default function EditRecipeScreen() {
             onChange={v => setRecipe({ ...recipe, cuisines: v })}
           />
           <Text style={[styles.equipHint, { marginTop: 14 }]}>Equipment</Text>
-          <ChipMultiSelect
-            options={EQUIPMENT}
+          <EquipmentList
             value={recipe.equipment}
             onChange={v => setRecipe({ ...recipe, equipment: v })}
           />

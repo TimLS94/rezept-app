@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  fetchCreatorEngagement,
+  EMPTY_ENGAGEMENT,
+  type CreatorEngagement,
+} from '../../lib/engagement';
+import {
   View,
   Text,
   StyleSheet,
@@ -49,6 +54,10 @@ export default function CreatorProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [creator, setCreator] = useState<CreatorProfile | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [engagement, setEngagement] = useState<CreatorEngagement>({
+    totals: EMPTY_ENGAGEMENT,
+    perRecipe: {},
+  });
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [query, setQuery] = useState('');
@@ -136,6 +145,11 @@ export default function CreatorProfileScreen() {
     if (recipeData) {
       setRecipes(recipeData.map(mapDbRecipe));
     }
+
+    // Cooked and saved come from three per-user tables, counted server-side so
+    // the follow graph and everyone's cook log stay private. One call for the
+    // whole creator rather than one per card.
+    setEngagement(await fetchCreatorEngagement(creatorId));
 
     // The subscriber list is private; only the number is public. Reading the
     // table for a count used to hand out the whole follow graph with it.
@@ -297,6 +311,28 @@ export default function CreatorProfileScreen() {
               <Text style={styles.statNumber}>{subscriberCount}</Text>
               <Text style={styles.statLabel}>Followers</Text>
             </View>
+            {/* Cooked is the number that means something here: somebody shopped
+                for it and spent an evening on it. Both are left out entirely
+                while they are zero — "0 Cooked" on a new catalogue reads as a
+                verdict when it only means nobody has arrived yet. */}
+            {engagement.totals.cooked > 0 && (
+              <>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{engagement.totals.cooked}</Text>
+                  <Text style={styles.statLabel}>Cooked</Text>
+                </View>
+              </>
+            )}
+            {engagement.totals.favorited > 0 && (
+              <>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{engagement.totals.favorited}</Text>
+                  <Text style={styles.statLabel}>Favorited</Text>
+                </View>
+              </>
+            )}
           </View>
 
           {/* Free follow. Deliberately NOT called "Subscribe" any more: the paid
