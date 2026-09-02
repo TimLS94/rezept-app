@@ -99,7 +99,8 @@ Return a JSON object with this exact structure:
       "category": "produce" | "meat" | "dairy" | "pantry" | "bakery" | "frozen" | "other"
     }
   ],
-  "steps": ["Step 1 instruction", "Step 2 instruction", ...]
+  "steps": ["Step 1 instruction", "Step 2 instruction", ...],
+  "stepTimers": [<seconds or null for each step, same order and length as steps>]
 }
 
 Rules:
@@ -109,6 +110,14 @@ Rules:
 - Break down instructions into clear, numbered steps
 - Estimate prep/cook times if not explicitly stated
 - Only include dietary tags that actually apply
+- stepTimers: one entry per step, in the same order, so index 0 belongs to step 1.
+  Give a number ONLY when the step contains a definite, unattended wait that a
+  kitchen timer would help with — "simmer 10 minutes", "bake for 25 minutes",
+  "chill 1 hour". Use null for everything else. In particular use null for
+  approximations tied to an outcome ("until golden, about 5 minutes"): the cook
+  is watching the pan, and a timer there rings at the wrong moment and teaches
+  people to ignore it. When unsure, null. Fewer timers that are right beats more
+  that are guesses.
 - Return ONLY valid JSON, no markdown or extra text`;
 
 const VISION_PROMPT = `Analyze this image of a recipe (screenshot from Instagram, TikTok, or similar).
@@ -138,8 +147,14 @@ Return a JSON object with this exact structure:
       "category": "produce" | "meat" | "dairy" | "pantry" | "bakery" | "frozen" | "other"
     }
   ],
-  "steps": ["Step 1 instruction", "Step 2 instruction", ...]
+  "steps": ["Step 1 instruction", "Step 2 instruction", ...],
+  "stepTimers": [<seconds or null for each step, same order and length as steps>]
 }
+
+stepTimers must have one entry per step, in the same order. Use a number of seconds
+only for a definite, unattended wait ("simmer 10 minutes", "bake 25 minutes"), and
+null for everything else — including "until golden, about 5 minutes", where the cook
+is watching rather than waiting. When unsure, null.
 
 If the image shows a video frame with food being prepared, describe what you see and estimate the recipe.
 Return ONLY valid JSON, no markdown or extra text.`;

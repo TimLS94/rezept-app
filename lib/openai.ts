@@ -21,6 +21,12 @@ export type ExtractedRecipe = {
     category: 'produce' | 'meat' | 'dairy' | 'pantry' | 'bakery' | 'frozen' | 'other';
   }[];
   steps: string[];
+  /** Seconds per step, index-aligned with `steps`; null where a timer would
+   *  not help. A separate array rather than turning `steps` into objects:
+   *  the gateway answers every build at once, and older bundles in TestFlight
+   *  parse `steps` as plain strings. A new sibling field they never read is
+   *  harmless; a changed shape would break all of them at once. */
+  stepTimers?: (number | null)[];
   /** Total ingredient cost, if the person reviewing the import fills one in.
    *  The model is never asked to guess a price — it cannot know what things
    *  cost where you shop, and a made-up figure would end up on the card as a

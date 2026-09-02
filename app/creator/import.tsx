@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { explainDeniedPermission } from '../../lib/permissions';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { fetchInstagramContent, isValidInstagramUrl, buildExtractionContent } from '../../lib/instagram';
 import { extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideoAudio, ExtractedRecipe } from '../../lib/openai';
@@ -50,8 +51,15 @@ export default function ImportRecipeScreen() {
   const [error, setError] = useState('');
 
   const pickScreenshots = async () => {
+    // This screen never asked, so a refused library permission looked like a
+    // button that does nothing: launchImageLibraryAsync just returns canceled.
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      explainDeniedPermission(perm, 'to pick screenshots of the recipe');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.8,
       base64: true,
@@ -70,8 +78,13 @@ export default function ImportRecipeScreen() {
   };
 
   const pickVideo = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      explainDeniedPermission(perm, 'to pick a video of the recipe');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      mediaTypes: ['videos'],
       quality: 0.8,
     });
     if (!result.canceled && result.assets.length > 0) {
@@ -213,6 +226,10 @@ export default function ImportRecipeScreen() {
       ) as DietaryTag[],
       ingredients: recipe.ingredients as Ingredient[],
       steps: recipe.steps,
+      // Only as many timers as there are steps, and only where the model gave
+      // one. A shorter array from the model must not shift timers onto the
+      // wrong steps, so it is indexed rather than passed through.
+      stepTimers: recipe.steps.map((_, i) => recipe.stepTimers?.[i] ?? null),
     });
 
     if ('error' in result) {

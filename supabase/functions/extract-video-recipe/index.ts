@@ -35,13 +35,19 @@ Return JSON:
   "difficulty": "Easy" | "Medium" | "Hard",
   "dietary": ["tags if applicable"],
   "ingredients": [{"name": "ingredient", "amount": 1, "unit": "cup", "category": "produce|meat|dairy|pantry|other"}],
-  "steps": ["Step 1", "Step 2", ...]
+  "steps": ["Step 1", "Step 2", ...],
+  "stepTimers": [<seconds or null per step, same order and length as steps>]
 }
 
 Watch carefully for:
 - All ingredients shown or mentioned
 - Cooking techniques and times
 - Temperatures and measurements
+
+stepTimers: one entry per step, same order. A number only for a definite,
+unattended wait ("simmer 10 minutes", "bake 25 minutes"); null for everything
+else, including "until golden, about 5 minutes" — the cook is watching the pan
+there, and a timer rings at the wrong moment. When unsure, null.
 
 Be thorough - extract ALL ingredients, estimate amounts if not stated.
 Return ONLY valid JSON, no markdown.`;
