@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { explainDeniedPermission } from '../../lib/permissions';
 import { useAuth, canImportToCookbook } from '../../lib/auth';
 import {
   extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideo, ExtractedRecipe,
@@ -161,7 +162,7 @@ export default function ImportRecipeScreen() {
   // Pick screenshots from gallery
   const pickScreenshots = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: IMAGE_QUALITY,
       base64: true,
@@ -184,14 +185,15 @@ export default function ImportRecipeScreen() {
 
   // Take photo with camera
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    const { status } = perm;
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow camera access to take photos');
+      explainDeniedPermission(perm, 'to take a photo of the recipe');
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: IMAGE_QUALITY,
       base64: true,
     });

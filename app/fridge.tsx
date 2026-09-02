@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { explainDeniedPermission } from '../lib/permissions';
 import { useAuth } from '../lib/auth';
 import {
   detectFridgeItems, matchRecipes, getFridgeQuota, recordFridgeScan,
@@ -92,9 +93,9 @@ export default function FridgeScreen() {
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert(
-        'Permission needed',
-        from === 'camera' ? 'Allow camera access to photograph your fridge.' : 'Allow photo access to pick a photo.',
+      explainDeniedPermission(
+        perm,
+        from === 'camera' ? 'to photograph your fridge' : 'to pick a photo',
       );
       return;
     }

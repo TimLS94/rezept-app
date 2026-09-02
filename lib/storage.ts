@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { explainDeniedPermission } from './permissions';
 import { decode } from 'base64-arraybuffer';
 import { supabase, getCurrentUser } from './supabase';
 
@@ -13,7 +14,7 @@ export async function pickAndUploadImage(
 ): Promise<string | null> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) {
-    Alert.alert('Permission needed', 'Allow photo access to upload an image.');
+    explainDeniedPermission(perm, 'to choose a photo to upload');
     return null;
   }
 
