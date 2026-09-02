@@ -34,6 +34,11 @@ export type ExtractedRecipe = {
   /** Only what the recipe cannot be made without and a kitchen does not
    *  simply have. Pans and pots would be noise. */
   equipment?: string[];
+  /** Not produced by the extraction — the recipe prompt returns calories
+   *  only. It exists so the review step can hold macros the person enters
+   *  or estimates before publishing, instead of making them republish. */
+  nutrition?: { calories?: number; protein?: number; carbs?: number; fat?: number;
+                estimated?: boolean; estimated_at?: string };
   /** Total ingredient cost, if the person reviewing the import fills one in.
    *  The model is never asked to guess a price — it cannot know what things
    *  cost where you shop, and a made-up figure would end up on the card as a

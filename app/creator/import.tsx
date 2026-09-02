@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import NutritionFields from '../../components/NutritionFields';
 import { explainDeniedPermission } from '../../lib/permissions';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { fetchInstagramContent, isValidInstagramUrl, buildExtractionContent } from '../../lib/instagram';
@@ -230,6 +231,7 @@ export default function ImportRecipeScreen() {
       // one. A shorter array from the model must not shift timers onto the
       // wrong steps, so it is indexed rather than passed through.
       stepTimers: recipe.steps.map((_, i) => recipe.stepTimers?.[i] ?? null),
+      nutrition: recipe.nutrition,
       cuisine: recipe.cuisine ?? undefined,
       equipment: recipe.equipment ?? [],
     });
@@ -576,6 +578,37 @@ export default function ImportRecipeScreen() {
               </View>
             </View>
 
+            {/* Filled in before publishing, not after. Every one of these recipes
+                passes through this screen, and sending someone back into the editor
+                afterwards is how the fields stayed empty in the first place. */}
+            <View style={styles.section}>
+              <NutritionFields
+                value={{ calories: recipe.calories, nutrition: recipe.nutrition }}
+                ingredients={recipe.ingredients}
+                servings={recipe.servings}
+                onChange={v => setRecipe({ ...recipe, calories: v.calories, nutrition: v.nutrition })}
+              />
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Cuisine & equipment</Text>
+              <TextInput
+                style={styles.input}
+                value={recipe.cuisine ?? ''}
+                onChangeText={t => setRecipe({ ...recipe, cuisine: t })}
+                placeholder="Italian, Thai, Mexican… (optional)"
+                placeholderTextColor="#BBB"
+              />
+              <TextInput
+                style={[styles.input, { marginTop: 10 }]}
+                value={(recipe.equipment ?? []).join(', ')}
+                onChangeText={t =>
+                  setRecipe({ ...recipe, equipment: t.split(',').map(x => x.trim()).filter(Boolean) })
+                }
+                placeholder="Air fryer, blender… (optional)"
+                placeholderTextColor="#BBB"
+              />
+            </View>
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>

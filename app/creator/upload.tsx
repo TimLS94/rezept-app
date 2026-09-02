@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { DIETARY_TAGS, DietaryTag, Ingredient } from '../../data/recipes';
+import { DIETARY_TAGS, DietaryTag, Ingredient, Recipe } from '../../data/recipes';
+import NutritionFields from '../../components/NutritionFields';
 import { createRecipe } from '../../lib/recipes';
 import { pickAndUploadImage } from '../../lib/storage';
 import { COLORS } from '../../lib/theme';
@@ -51,6 +52,9 @@ export default function UploadRecipeScreen() {
   const [steps, setSteps] = useState<string[]>(['']);
   const [stepImages, setStepImages] = useState<(string | null)[]>([null]);
   const [stepTimers, setStepTimers] = useState<(number | null)[]>([null]); // seconds
+  const [nutrition, setNutrition] = useState<Recipe['nutrition']>(undefined);
+  const [cuisine, setCuisine] = useState('');
+  const [equipment, setEquipment] = useState<string[]>([]);
   const [uploadingStep, setUploadingStep] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -141,6 +145,9 @@ export default function UploadRecipeScreen() {
       steps: cleanedSteps,
       stepImages: cleanedStepImages,
       stepTimers: cleanedStepTimers,
+      nutrition,
+      cuisine: cuisine.trim() || undefined,
+      equipment: equipment.length ? equipment : undefined,
     });
     setSaving(false);
 
@@ -321,6 +328,45 @@ export default function UploadRecipeScreen() {
           </View>
         </View>
 
+        {/* Nutrition, cuisine and equipment — the same three the edit screen and
+            the cookbook editor carry. Leaving them off here meant a creator had to
+            publish first and immediately reopen the recipe to fill them in. */}
+        <View style={styles.field}>
+          <NutritionFields
+            value={{ calories: parseInt(calories) || 0, nutrition }}
+            ingredients={ingredients.map(i => ({
+              name: i.name,
+              amount: Number(i.amount) || 0,
+              unit: i.unit,
+            }))}
+            servings={parseInt(servings) || 4}
+            onChange={v => {
+              setCalories(v.calories ? String(v.calories) : '');
+              setNutrition(v.nutrition);
+            }}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Cuisine & equipment</Text>
+          <TextInput
+            style={styles.input}
+            value={cuisine}
+            onChangeText={setCuisine}
+            placeholder="Italian, Thai, Mexican… (optional)"
+            placeholderTextColor="#BBB"
+          />
+          <TextInput
+            style={[styles.input, { marginTop: 10 }]}
+            value={equipment.join(', ')}
+            onChangeText={t => setEquipment(t.split(',').map(x => x.trim()).filter(Boolean))}
+            placeholder="Air fryer, blender… (optional)"
+            placeholderTextColor="#BBB"
+          />
+          <Text style={styles.equipHint}>
+            Only what the recipe can't be made without. No pans, pots or ovens.
+          </Text>
+        </View>
         {/* Ingredients */}
         <View style={styles.field}>
           <Text style={styles.label}>Ingredients</Text>
@@ -465,6 +511,7 @@ const styles = StyleSheet.create({
   previewEmptyText: { fontSize: 16, color: '#AAA' },
   field: { paddingHorizontal: 20, marginTop: 16 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
+  equipHint: { fontSize: 12, color: '#8A8A8A', marginTop: 8, lineHeight: 16 },
   photoButton: { padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#F2701E', backgroundColor: '#FFF5F0' },
   photoButtonText: { color: '#F2701E', fontSize: 15, fontWeight: '700' },
   orLabel: { fontSize: 12, color: '#999', textAlign: 'center', marginVertical: 8 },
