@@ -13,6 +13,7 @@ import {
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import NutritionFields from '../../components/NutritionFields';
+import ChipMultiSelect from '../../components/ChipMultiSelect';
 import { explainDeniedPermission } from '../../lib/permissions';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { fetchInstagramContent, isValidInstagramUrl, buildExtractionContent } from '../../lib/instagram';
@@ -20,7 +21,7 @@ import { extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideoAud
 import { createRecipe } from '../../lib/recipes';
 import { uploadBase64Image, pickAndUploadImage } from '../../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
-import { DietaryTag, Ingredient, DIETARY_TAGS } from '../../data/recipes';
+import { DietaryTag, Ingredient, DIETARY_TAGS, CUISINES, EQUIPMENT } from '../../data/recipes';
 import { HEADER_TOP } from '../../lib/layout';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
@@ -232,7 +233,7 @@ export default function ImportRecipeScreen() {
       // wrong steps, so it is indexed rather than passed through.
       stepTimers: recipe.steps.map((_, i) => recipe.stepTimers?.[i] ?? null),
       nutrition: recipe.nutrition,
-      cuisine: recipe.cuisine ?? undefined,
+      cuisines: recipe.cuisines ?? undefined,
       equipment: recipe.equipment ?? [],
     });
 
@@ -592,21 +593,17 @@ export default function ImportRecipeScreen() {
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Cuisine & equipment</Text>
-              <TextInput
-                style={styles.input}
-                value={recipe.cuisine ?? ''}
-                onChangeText={t => setRecipe({ ...recipe, cuisine: t })}
-                placeholder="Italian, Thai, Mexican… (optional)"
-                placeholderTextColor="#BBB"
+              <Text style={styles.equipHint}>Cuisine — pick one, or two for fusion</Text>
+              <ChipMultiSelect
+                options={CUISINES}
+                value={recipe.cuisines}
+                onChange={v => setRecipe({ ...recipe, cuisines: v })}
               />
-              <TextInput
-                style={[styles.input, { marginTop: 10 }]}
-                value={(recipe.equipment ?? []).join(', ')}
-                onChangeText={t =>
-                  setRecipe({ ...recipe, equipment: t.split(',').map(x => x.trim()).filter(Boolean) })
-                }
-                placeholder="Air fryer, blender… (optional)"
-                placeholderTextColor="#BBB"
+              <Text style={[styles.equipHint, { marginTop: 14 }]}>Equipment</Text>
+              <ChipMultiSelect
+                options={EQUIPMENT}
+                value={recipe.equipment}
+                onChange={v => setRecipe({ ...recipe, equipment: v })}
               />
             </View>
             <View style={styles.section}>
@@ -869,6 +866,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 16,
   },
+  equipHint: { fontSize: 12, color: '#8A8A8A', marginBottom: 8, lineHeight: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
   ingredientRow: {
     flexDirection: 'row',

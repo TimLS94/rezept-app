@@ -134,7 +134,7 @@ export default function ImportRecipeScreen() {
       ...extracted,
       // The model may answer null for a cuisine it could not determine; the
       // editor's field is "absent or a string", and null is neither.
-      cuisine: extracted.cuisine ?? undefined,
+      cuisines: extracted.cuisines ?? [],
       equipment: extracted.equipment ?? [],
       sourceUrl: url.trim() || params.sharedUrl || '',
     });

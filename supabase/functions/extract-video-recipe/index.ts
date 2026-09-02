@@ -37,8 +37,8 @@ Return JSON:
   "ingredients": [{"name": "ingredient", "amount": 1, "unit": "cup", "category": "produce|meat|dairy|pantry|other"}],
   "steps": ["Step 1", "Step 2", ...],
   "stepTimers": [<seconds or null per step, same order and length as steps>],
-  "cuisine": "<one word, e.g. Italian, Thai — null if the video does not say>",
-  "equipment": ["<special equipment required, e.g. air fryer, blender>"]
+  "cuisines": [<0-2 ids from: italian, mexican, american, chinese, japanese, thai, indian, mediterranean, greek, french, korean, vietnamese, middle-eastern, caribbean, german, bbq>],
+  "equipment": [<ids from: air-fryer, blender, food-processor, stand-mixer, hand-mixer, pressure-cooker, slow-cooker, grill, thermometer, kitchen-scale, waffle-iron, ice-cream-maker, mandoline, dutch-oven, wok, piping-bag>]
 }
 
 Watch carefully for:
@@ -51,9 +51,9 @@ unattended wait ("simmer 10 minutes", "bake 25 minutes"); null for everything
 else, including "until golden, about 5 minutes" — the cook is watching the pan
 there, and a timer rings at the wrong moment. When unsure, null.
 
-cuisine only when the video actually indicates one — do not infer it from a single
-ingredient. equipment only for what the recipe cannot be made without and a kitchen
-does not simply have (air fryer, blender, stand mixer); never pans, pots or an oven.
+cuisines and equipment: ids from the lists above and nothing else, never invented
+values. Empty arrays when the video does not indicate them. Do not infer a cuisine
+from a single ingredient; use two only for a genuine fusion dish.
 
 Be thorough - extract ALL ingredients, estimate amounts if not stated.
 Return ONLY valid JSON, no markdown.`;

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getRecipeById, Recipe, totalTime, isQuick, isBudget } from '../../data/recipes';
+import { getRecipeById, Recipe, totalTime, isQuick, isBudget, CUISINES, labelsFor, EQUIPMENT } from '../../data/recipes';
 import { supabase, getCurrentUser } from '../../lib/supabase';
 import { addRecipesToShoppingList } from '../../lib/shopping';
 import {
@@ -459,11 +459,11 @@ export default function RecipeDetailScreen() {
                   <Text style={styles.badgeText}>👶 Kid Approved</Text>
                 </View>
               )}
-              {!!recipe.cuisine && (
-                <View style={[styles.badge, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
-                  <Text style={styles.badgeText}>{recipe.cuisine}</Text>
+              {labelsFor(recipe.cuisines, CUISINES).map(c => (
+                <View key={c} style={[styles.badge, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
+                  <Text style={styles.badgeText}>{c}</Text>
                 </View>
-              )}
+              ))}
               <View style={[styles.badge, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
                 <Text style={styles.badgeText}>{recipe.difficulty}</Text>
               </View>
@@ -703,7 +703,7 @@ export default function RecipeDetailScreen() {
         {!!recipe.equipment?.length && (
           <View style={styles.equipmentRow}>
             <Text style={styles.equipmentLabel}>You'll need</Text>
-            <Text style={styles.equipmentList}>{recipe.equipment.join(' · ')}</Text>
+            <Text style={styles.equipmentList}>{labelsFor(recipe.equipment, EQUIPMENT).join(' · ')}</Text>
           </View>
         )}
         {activeTab === 'ingredients' ? (

@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { DIETARY_TAGS, DietaryTag, Ingredient, Recipe } from '../../data/recipes';
+import { DIETARY_TAGS, DietaryTag, Ingredient, Recipe, CUISINES, EQUIPMENT } from '../../data/recipes';
 import NutritionFields from '../../components/NutritionFields';
+import ChipMultiSelect from '../../components/ChipMultiSelect';
 import { createRecipe } from '../../lib/recipes';
 import { pickAndUploadImage } from '../../lib/storage';
 import { COLORS } from '../../lib/theme';
@@ -53,7 +54,7 @@ export default function UploadRecipeScreen() {
   const [stepImages, setStepImages] = useState<(string | null)[]>([null]);
   const [stepTimers, setStepTimers] = useState<(number | null)[]>([null]); // seconds
   const [nutrition, setNutrition] = useState<Recipe['nutrition']>(undefined);
-  const [cuisine, setCuisine] = useState('');
+  const [cuisines, setCuisines] = useState<string[]>([]);
   const [equipment, setEquipment] = useState<string[]>([]);
   const [uploadingStep, setUploadingStep] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -146,7 +147,7 @@ export default function UploadRecipeScreen() {
       stepImages: cleanedStepImages,
       stepTimers: cleanedStepTimers,
       nutrition,
-      cuisine: cuisine.trim() || undefined,
+      cuisines: cuisines.length ? cuisines : undefined,
       equipment: equipment.length ? equipment : undefined,
     });
     setSaving(false);
@@ -349,19 +350,17 @@ export default function UploadRecipeScreen() {
 
         <View style={styles.field}>
           <Text style={styles.label}>Cuisine & equipment</Text>
-          <TextInput
-            style={styles.input}
-            value={cuisine}
-            onChangeText={setCuisine}
-            placeholder="Italian, Thai, Mexican… (optional)"
-            placeholderTextColor="#BBB"
+          <Text style={styles.equipHint}>Cuisine — pick one, or two for fusion</Text>
+          <ChipMultiSelect
+            options={CUISINES}
+            value={cuisines}
+            onChange={v => setCuisines(v)}
           />
-          <TextInput
-            style={[styles.input, { marginTop: 10 }]}
-            value={equipment.join(', ')}
-            onChangeText={t => setEquipment(t.split(',').map(x => x.trim()).filter(Boolean))}
-            placeholder="Air fryer, blender… (optional)"
-            placeholderTextColor="#BBB"
+          <Text style={[styles.equipHint, { marginTop: 14 }]}>Equipment</Text>
+          <ChipMultiSelect
+            options={EQUIPMENT}
+            value={equipment}
+            onChange={v => setEquipment(v)}
           />
           <Text style={styles.equipHint}>
             Only what the recipe can't be made without. No pans, pots or ovens.

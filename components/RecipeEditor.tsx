@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import { pickAndUploadImage } from '../lib/storage';
 import { Nutrition, estimateNutrition, ESTIMATE_NOTE } from '../lib/nutrition';
-import { Ingredient, DIETARY_TAGS } from '../data/recipes';
+import ChipMultiSelect from './ChipMultiSelect';
+import { Ingredient, DIETARY_TAGS, CUISINES, EQUIPMENT } from '../data/recipes';
 
 // A single editable shape shared by the import review step and the "edit saved
 // recipe" screen. Superset of ExtractedRecipe + the source link.
@@ -22,7 +23,7 @@ export type EditableRecipe = {
   /** Seconds per step, index-aligned with `steps`. Null = no timer. */
   stepTimers?: (number | null)[];
   nutrition?: Nutrition;
-  cuisine?: string;
+  cuisines?: string[];
   /** Only what the recipe cannot be made without and a kitchen does not simply
    *  have. Pans and pots would be noise. */
   equipment?: string[];
@@ -304,26 +305,24 @@ export default function RecipeEditor({ value, onChange }: Props) {
       </View>
 
       {/* Nutrition */}
-      {/* Cuisine and equipment. Optional, and deliberately free text rather
-          than a picker: nobody can enumerate the world's cuisines, and a list
-          that is missing yours reads as "your food does not count". */}
+      {/* Cuisine and equipment, both chosen rather than typed. Free text meant
+          "Italian", "italienisch" and "Italy" arriving as three different
+          cuisines, which no filter can put back together — and grouping is the
+          only reason the field exists. Both multi-select: a dish can come out
+          of two kitchens, and a recipe can want two machines. */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Cuisine & equipment</Text>
-        <TextInput
-          style={styles.input}
-          value={value.cuisine ?? ''}
-          onChangeText={t => set({ cuisine: t })}
-          placeholder="Italian, Thai, Mexican… (optional)"
-          placeholderTextColor="#BBB"
+        <Text style={styles.equipHint}>Cuisine — pick one, or two for fusion</Text>
+        <ChipMultiSelect
+          options={CUISINES}
+          value={value.cuisines}
+          onChange={v => set({ cuisines: v })}
         />
-        <TextInput
-          style={[styles.input, { marginTop: 10 }]}
-          value={(value.equipment ?? []).join(', ')}
-          onChangeText={t =>
-            set({ equipment: t.split(',').map(x => x.trim()).filter(Boolean) })
-          }
-          placeholder="Air fryer, blender… (optional)"
-          placeholderTextColor="#BBB"
+        <Text style={[styles.equipHint, { marginTop: 14 }]}>Equipment</Text>
+        <ChipMultiSelect
+          options={EQUIPMENT}
+          value={value.equipment}
+          onChange={v => set({ equipment: v })}
         />
         <Text style={styles.equipHint}>
           Only what the recipe can't be made without. No pans, pots or ovens.

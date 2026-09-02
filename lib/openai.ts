@@ -30,7 +30,7 @@ export type ExtractedRecipe = {
   /** Where the dish is from, when the source says so. The model is told not
    *  to infer one from a single ingredient: soy sauce does not make a dish
    *  Japanese, and a wrong label is worse than none. */
-  cuisine?: string | null;
+  cuisines?: string[] | null;
   /** Only what the recipe cannot be made without and a kitchen does not
    *  simply have. Pans and pots would be noise. */
   equipment?: string[];

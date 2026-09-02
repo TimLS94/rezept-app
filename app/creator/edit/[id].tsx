@@ -13,8 +13,9 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase, updateByIdTolerant } from '../../../lib/supabase';
 import { pickAndUploadImage } from '../../../lib/storage';
-import { DIETARY_TAGS, Recipe } from '../../../data/recipes';
+import { DIETARY_TAGS, Recipe, CUISINES, EQUIPMENT } from '../../../data/recipes';
 import NutritionFields from '../../../components/NutritionFields';
+import ChipMultiSelect from '../../../components/ChipMultiSelect';
 import { RECIPE_PRICE_TIERS, creatorTakeHomeCents, usd } from '../../../lib/pricing';
 import { HEADER_TOP } from '../../../lib/layout';
 
@@ -42,7 +43,7 @@ type RecipeData = {
   stepImages: (string | null)[];
   stepTimers: (number | null)[];
   nutrition?: Recipe['nutrition'];
-  cuisine: string;
+  cuisines: string[];
   equipment: string[];
 };
 
@@ -93,7 +94,8 @@ export default function EditRecipeScreen() {
       stepImages: instr.map(s => (typeof s === 'string' ? null : (s?.image ?? null))),
       stepTimers: instr.map(s => (typeof s === 'string' ? null : (s?.timer ?? null))),
       nutrition: data.nutrition ?? undefined,
-      cuisine: data.cuisine || '',
+      cuisines: Array.isArray(data.cuisines) ? data.cuisines
+        : data.cuisine ? [data.cuisine] : [],
       equipment: Array.isArray(data.equipment) ? data.equipment : [],
     });
     setLoading(false);
@@ -119,7 +121,7 @@ export default function EditRecipeScreen() {
         calories: recipe.calories,
         is_paid: recipe.is_paid,
         nutrition: recipe.nutrition ?? null,
-        cuisine: recipe.cuisine.trim() || null,
+        cuisines: recipe.cuisines.length ? recipe.cuisines : null,
         equipment: recipe.equipment.length ? recipe.equipment : null,
         // Only meaningful on a premium recipe; clearing it on a free one keeps
         // a stale price from reappearing if it's flipped back to premium later.
@@ -452,21 +454,17 @@ export default function EditRecipeScreen() {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Cuisine & equipment</Text>
-          <TextInput
-            style={[styles.input, { marginTop: 10 }]}
-            value={recipe.cuisine}
-            onChangeText={t => setRecipe({ ...recipe, cuisine: t })}
-            placeholder="Italian, Thai, Mexican… (optional)"
-            placeholderTextColor="#BBB"
+          <Text style={styles.equipHint}>Cuisine — pick one, or two for fusion</Text>
+          <ChipMultiSelect
+            options={CUISINES}
+            value={recipe.cuisines}
+            onChange={v => setRecipe({ ...recipe, cuisines: v })}
           />
-          <TextInput
-            style={[styles.input, { marginTop: 10 }]}
-            value={recipe.equipment.join(', ')}
-            onChangeText={t =>
-              setRecipe({ ...recipe, equipment: t.split(',').map(x => x.trim()).filter(Boolean) })
-            }
-            placeholder="Air fryer, blender… (optional)"
-            placeholderTextColor="#BBB"
+          <Text style={[styles.equipHint, { marginTop: 14 }]}>Equipment</Text>
+          <ChipMultiSelect
+            options={EQUIPMENT}
+            value={recipe.equipment}
+            onChange={v => setRecipe({ ...recipe, equipment: v })}
           />
           <Text style={styles.equipHint}>
             Only what the recipe can't be made without. No pans, pots or ovens.

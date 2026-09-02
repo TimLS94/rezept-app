@@ -41,7 +41,8 @@ export function mapDbRecipe(row: any): Recipe {
       typeof s === 'string' ? null : (s?.timer ?? null)
     ),
     nutrition: row.nutrition ?? undefined,
-    cuisine: row.cuisine ?? undefined,
+    cuisines: Array.isArray(row.cuisines) ? row.cuisines
+      : row.cuisine ? [row.cuisine] : [],
     equipment: Array.isArray(row.equipment) ? row.equipment : [],
     isPaid: row.is_paid ?? false,
     // Real counts (survive premium stripping) + server lock flag for the teaser.
@@ -59,7 +60,7 @@ export function mapDbRecipe(row: any): Recipe {
 // comes from get_recipe_full (paywalled) or get_recipe_for_edit (owner only).
 export const RECIPE_LIST_COLUMNS =
   'id, title, description, image_url, prep_time, cook_time, servings, calories, cost, ' +
-  'difficulty, tags, kid_approved, is_paid, price_cents, nutrition, cuisine, equipment, ' +
+  'difficulty, tags, kid_approved, is_paid, price_cents, nutrition, cuisine, cuisines, equipment, ' +
   'influencer_id, influencer_name, ' +
   'influencer_handle, influencer_avatar, created_at, ingredients_count, steps_count';
 
@@ -310,7 +311,7 @@ export type NewRecipeInput = {
   /** Per-serving figures. Absent until now, so a creator upload could not carry
    *  macros at all — the field existed on the edit path and nowhere else. */
   nutrition?: Recipe['nutrition'];
-  cuisine?: string | null;
+  cuisines?: string[];
   equipment?: string[];
   isPaid?: boolean;
 };
@@ -356,7 +357,7 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
       // Undefined rather than null when absent, so the column keeps its
       // default instead of being actively written empty.
       nutrition: input.nutrition ?? undefined,
-      cuisine: input.cuisine || undefined,
+      cuisines: input.cuisines?.length ? input.cuisines : undefined,
       equipment: input.equipment?.length ? input.equipment : undefined,
       is_paid: input.isPaid ?? false,
       influencer_id: user.id,
