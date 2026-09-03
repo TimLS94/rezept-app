@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   fetchCreatorEngagement,
+  countLabel,
   EMPTY_ENGAGEMENT,
   type CreatorEngagement,
 } from '../../lib/engagement';
@@ -473,6 +474,20 @@ export default function CreatorProfileScreen() {
                   <Text style={styles.recipeMeta}>
                     {recipe.prepTime + recipe.cookTime} min • {recipe.calories} cal
                   </Text>
+                  {/* Visible to whoever is looking, not only to the author.
+                      "40 people cooked this" is the strongest thing a reader can
+                      be told about a recipe, and it is the reason to open it. */}
+                  {(() => {
+                    const e = engagement.perRecipe[recipe.id];
+                    const parts = e
+                      ? [
+                          countLabel(e.cooked, 'cook', 'cooks'),
+                          countLabel(e.favorited, 'like', 'likes'),
+                        ].filter(Boolean)
+                      : [];
+                    if (!parts.length) return null;
+                    return <Text style={styles.recipeStats}>{parts.join(' · ')}</Text>;
+                  })()}
                 </TouchableOpacity>
               ))}
             </View>
@@ -552,5 +567,6 @@ const styles = StyleSheet.create({
   premiumBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(13,43,99,0.85)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
   premiumBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
   recipeTitle: { fontSize: 14, fontWeight: '600', color: '#1A1A1A', padding: 10, paddingBottom: 4 },
+  recipeStats: { fontSize: 11, color: '#B84B08', fontWeight: '700', marginTop: 3 },
   recipeMeta: { fontSize: 12, color: '#888', paddingHorizontal: 10, paddingBottom: 10 },
 });

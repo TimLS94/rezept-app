@@ -137,6 +137,21 @@ export default function CreatorStudioScreen() {
             </View>
           )}
 
+          {/* The same page a reader lands on, opened by its author. A creator
+              could edit a profile they had never been able to look at — every
+              route to /creator/[handle] came from somewhere else in the app, so
+              the one person who most needs to see it was the only one who
+              could not. [handle] accepts a username or an id, and a creator who
+              has not set a username yet still has an id. */}
+          {(profile.username || user?.id) && (
+            <TouchableOpacity
+              style={styles.viewPublicButton}
+              onPress={() => router.push(`/creator/${profile.username || user?.id}`)}
+            >
+              <Text style={styles.viewPublicText}>View my public profile</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity style={styles.editButton} onPress={() => router.push('/creator/profile')}>
             <Text style={styles.editButtonText}>✏️ Edit creator profile</Text>
           </TouchableOpacity>
@@ -284,6 +299,11 @@ const styles = StyleSheet.create({
   socialRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 14 },
   socialChip: { backgroundColor: '#F5F5F5', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
   socialText: { fontSize: 13, color: '#333', fontWeight: '600' },
+  viewPublicButton: {
+    borderWidth: 1.5, borderColor: '#F2701E', borderRadius: 12,
+    paddingVertical: 12, alignItems: 'center', marginBottom: 10,
+  },
+  viewPublicText: { fontSize: 15, fontWeight: '700', color: '#B84B08' },
   editButton: { marginTop: 16, backgroundColor: '#F2701E', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, alignSelf: 'stretch', alignItems: 'center' },
   editButtonText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
 

@@ -17,7 +17,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { explainDeniedPermission } from '../../lib/permissions';
-import { useAuth, canImportToCookbook } from '../../lib/auth';
+import { useAuth, canImportToCookbook, canUploadRecipes } from '../../lib/auth';
 import {
   extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideo, ExtractedRecipe,
 } from '../../lib/openai';
@@ -31,6 +31,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Paywall from '../../components/Paywall';
 import { DietaryTag, Ingredient } from '../../data/recipes';
+import { createRecipe } from '../../lib/recipes';
+import { cleanEquipment } from '../../components/EquipmentList';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
 import { HEADER_TOP } from '../../lib/layout';
 import { goBackOr } from '../../lib/nav';
@@ -78,6 +80,11 @@ const MAX_TEXT_HEIGHT = 360;
 
 export default function ImportRecipeScreen() {
   const { isGuest, role, isPremium, refresh } = useAuth();
+  // Where a finished import goes. Only creators get a second option, and the
+  // private cookbook stays the default: this is the cookbook's import screen,
+  // and publishing to a public catalogue must never be what happens to someone
+  // who did not choose it.
+  const [target, setTarget] = useState<'cookbook' | 'catalogue'>('cookbook');
   // One per bucket. Instagram is scarcer than the rest, so showing a single
   // number would misstate whichever mode the user is not looking at.
   // Watching a reel takes noticeably longer than reading a caption, so the
@@ -409,6 +416,38 @@ export default function ImportRecipeScreen() {
     if (!recipe) return;
 
     setStep('saving');
+
+    if (target === 'catalogue') {
+      const published = await createRecipe({
+        title: recipe.title,
+        description: recipe.description,
+        image: thumbnailUrl || 'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800',
+        prepTime: recipe.prepTime,
+        cookTime: recipe.cookTime,
+        servings: recipe.servings,
+        calories: recipe.calories,
+        cost: recipe.cost ?? 0,
+        nutrition: recipe.nutrition,
+        cuisines: recipe.cuisines ?? undefined,
+        equipment: cleanEquipment(recipe.equipment),
+        difficulty: recipe.difficulty,
+        dietary: recipe.dietary.filter(d =>
+          ['healthy', 'high-protein', 'gluten-free', 'vegetarian', 'vegan', 'dairy-free'].includes(d)
+        ) as DietaryTag[],
+        ingredients: recipe.ingredients as Ingredient[],
+        steps: recipe.steps,
+        stepTimers: recipe.steps.map((_, i) => recipe.stepTimers?.[i] ?? null),
+      });
+      if ('error' in published) {
+        Alert.alert('Could not publish', published.error);
+        setStep('review');
+        return;
+      }
+      Alert.alert('Published', 'The recipe is live on your creator profile.', [
+        { text: 'Open Studio', onPress: () => router.replace('/creator') },
+      ]);
+      return;
+    }
 
     const result = await saveMyRecipe({
       title: recipe.title,
@@ -868,8 +907,33 @@ Steps:
               >
                 <Text style={styles.secondaryButtonText}>Try Another</Text>
               </TouchableOpacity>
+              {/* A creator sees this screen as well as the Studio's own import.
+                  The two look alike and write to different places — one to a
+                  private cookbook, one to a public catalogue — and this screen
+                  said nothing about which. A recipe meant for the catalogue
+                  quietly became a private one. It asks now. */}
+              {canUploadRecipes(role) && (
+                <View style={styles.targetRow}>
+                  {([
+                    ['cookbook', 'My cookbook', 'Private to you'],
+                    ['catalogue', 'Creator profile', 'Public, on your profile'],
+                  ] as const).map(([id, label, hint]) => (
+                    <TouchableOpacity
+                      key={id}
+                      style={[styles.targetCard, target === id && styles.targetCardOn]}
+                      onPress={() => setTarget(id)}
+                    >
+                      <Text style={[styles.targetLabel, target === id && styles.targetLabelOn]}>{label}</Text>
+                      <Text style={styles.targetHint}>{hint}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                <Text style={styles.saveButtonText}>Save to Cookbook</Text>
+                <Text style={styles.saveButtonText}>
+                  {target === 'catalogue' ? 'Publish to Creator Profile' : 'Save to Cookbook'}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -1151,6 +1215,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryButtonText: { fontSize: 15, fontWeight: '600', color: '#666' },
+  targetRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  targetCard: {
+    flex: 1, borderRadius: 12, padding: 12,
+    borderWidth: 1.5, borderColor: '#E6E6E6', backgroundColor: '#FFF',
+  },
+  targetCardOn: { borderColor: '#F2701E', backgroundColor: '#FFF4EC' },
+  targetLabel: { fontSize: 14, fontWeight: '700', color: '#555' },
+  targetLabelOn: { color: '#B84B08' },
+  targetHint: { fontSize: 11, color: '#8A8A8A', marginTop: 3 },
   saveButton: {
     flex: 2,
     backgroundColor: '#3C8D40',
