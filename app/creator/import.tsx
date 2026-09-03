@@ -17,7 +17,8 @@ import ChipMultiSelect from '../../components/ChipMultiSelect';
 import EquipmentList, { cleanEquipment } from '../../components/EquipmentList';
 import { explainDeniedPermission } from '../../lib/permissions';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
-import { fetchInstagramContent, isValidInstagramUrl, buildExtractionContent } from '../../lib/instagram';
+import { fetchInstagramWithFallback, isValidInstagramUrl, buildExtractionContent } from '../../lib/instagram';
+import { getImportQuota, recordImport, quotaText } from '../../lib/importQuota';
 import { extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideoAudio, ExtractedRecipe } from '../../lib/openai';
 import { createRecipe } from '../../lib/recipes';
 import { uploadBase64Image, pickAndUploadImage } from '../../lib/storage';
@@ -164,16 +165,36 @@ export default function ImportRecipeScreen() {
       return;
     }
 
+    // The weekly allowance is checked before an Instagram call is spent, not
+    // after. This screen skipped it entirely, so a creator had no cap at all —
+    // and the cap exists because every lookup spends one call from a shared
+    // paid plan, not because we distrust the creator.
+    const quota = await getImportQuota('instagram');
+    if (quota.remaining <= 0) {
+      setError(quotaText(quota));
+      return;
+    }
+
     setStep('extracting');
 
-    // Step 1: Fetch Instagram content
-    const igResult = await fetchInstagramContent(url.trim());
+    // RapidAPI first, oEmbed only as a long shot afterwards.
+    //
+    // This called fetchInstagramContent — the oEmbed leg on its own. Instagram
+    // answers that with an HTML page almost every time, which surfaced as
+    // "Instagram API blocked. Please paste the recipe text manually", so the
+    // screen looked broken and the paid scraper it should have been using was
+    // never called at all. The cookbook's import had the right chain all along.
+    const igResult = await fetchInstagramWithFallback(url.trim());
 
     if (!igResult.success) {
       setError(igResult.error);
       setStep('input');
       return;
     }
+
+    // Booked only once the post actually came back. A lookup that failed cost
+    // us nothing worth charging to the creator's week.
+    await recordImport('instagram');
 
     if (igResult.content.thumbnailUrl) {
       setThumbnailUrl(igResult.content.thumbnailUrl);
