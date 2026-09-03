@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   View,
   Text,
@@ -14,6 +15,12 @@ import { usd } from '../../lib/pricing';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { getCreatorProfile, CreatorProfile, emptyCreatorProfile } from '../../lib/creatorProfile';
 import { fetchRecipesByCreator, setRecipePaid } from '../../lib/recipes';
+import {
+  fetchCreatorEngagement,
+  countLabel,
+  EMPTY_ENGAGEMENT,
+  type CreatorEngagement,
+} from '../../lib/engagement';
 import { Recipe } from '../../data/recipes';
 import { HEADER_TOP } from '../../lib/layout';
 
@@ -23,6 +30,10 @@ export default function CreatorStudioScreen() {
   const { user, role } = useAuth();
   const [profile, setProfile] = useState<CreatorProfile>(emptyCreatorProfile);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [engagement, setEngagement] = useState<CreatorEngagement>({
+    totals: EMPTY_ENGAGEMENT,
+    perRecipe: {},
+  });
 
   // Reload on focus so edits from the profile screen show up immediately.
   useFocusEffect(
@@ -31,13 +42,17 @@ export default function CreatorStudioScreen() {
       (async () => {
         // In parallel — the recipe list doesn't depend on the profile, and
         // chaining them cost a needless second round trip on every focus.
-        const [p, r] = await Promise.all([
+        const [p, r, e] = await Promise.all([
           getCreatorProfile(),
           user ? fetchRecipesByCreator(user.id) : Promise.resolve(null),
+          // Every recipe's counts in one call rather than one per card — the
+          // catalogue is meant to reach two hundred of them.
+          user ? fetchCreatorEngagement(user.id) : Promise.resolve(null),
         ]);
         if (!active) return;
         if (p) setProfile(p);
         if (r) setRecipes(r);
+        if (e) setEngagement(e);
       })();
       return () => {
         active = false;
@@ -92,6 +107,11 @@ export default function CreatorStudioScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Creator Studio</Text>
+        {/* Creators look for other creators and for recipes too — the same
+            search everyone else uses, reachable without leaving the Studio. */}
+        <TouchableOpacity onPress={() => router.push('/search')} style={styles.headerSearch}>
+          <Ionicons name="search-outline" size={20} color="#0D2B63" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -171,6 +191,15 @@ export default function CreatorStudioScreen() {
         {/* My recipes */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>My recipes ({recipes.length})</Text>
+          {(engagement.totals.cooked > 0 || engagement.totals.favorited > 0) && (
+            <Text style={styles.totalsLine}>
+              {[
+                countLabel(engagement.totals.cooked, 'cook', 'cooks'),
+                countLabel(engagement.totals.favorited, 'like', 'likes'),
+                countLabel(engagement.totals.saved, 'save', 'saves'),
+              ].filter(Boolean).join(' · ')}{' '}across all your recipes
+            </Text>
+          )}
           {recipes.length > 0 && (
             <Text style={styles.sectionHint}>Tap 🔓/🔒 to set a recipe free or behind the paywall.</Text>
           )}
@@ -184,6 +213,21 @@ export default function CreatorStudioScreen() {
                   <View style={styles.recipeBody}>
                     <Text style={styles.recipeTitle} numberOfLines={1}>{r.title}</Text>
                     <Text style={styles.recipeMeta}>{r.prepTime + r.cookTime} min · {r.calories} cal</Text>
+                    {/* What actually happened to this recipe. Cooked first: it
+                        is the one that took somebody an evening, and the one
+                        no other platform can measure. Absent while zero. */}
+                    {(() => {
+                      const e = engagement.perRecipe[r.id];
+                      const parts = e
+                        ? [
+                            countLabel(e.cooked, 'cook', 'cooks'),
+                            countLabel(e.favorited, 'like', 'likes'),
+                            countLabel(e.saved, 'save', 'saves'),
+                          ].filter(Boolean)
+                        : [];
+                      if (!parts.length) return null;
+                      return <Text style={styles.recipeStats}>{parts.join(' · ')}</Text>;
+                    })()}
                     {r.dietary.length > 0 && (
                       <View style={styles.tagRow}>
                         {r.dietary.slice(0, 3).map(t => (
@@ -214,7 +258,14 @@ export default function CreatorStudioScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF9F2' },
-  header: { paddingHorizontal: 20, paddingTop: HEADER_TOP, paddingBottom: 12, alignItems: 'center' },
+  header: {
+    paddingHorizontal: 20, paddingTop: HEADER_TOP, paddingBottom: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  headerSearch: {
+    width: 38, height: 38, borderRadius: 19, alignItems: 'center',
+    justifyContent: 'center', backgroundColor: '#F4F4F6',
+  },
   headerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: '#0D2B63', letterSpacing: 0.3 },
 
   blocked: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
@@ -257,6 +308,8 @@ const styles = StyleSheet.create({
   payToggleText: { fontSize: 12, fontWeight: '700', color: '#3C8D40' },
   payToggleTextOn: { color: '#F2701E' },
   recipeTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
+  recipeStats: { fontSize: 12, color: '#B84B08', fontWeight: '700', marginTop: 4 },
+  totalsLine: { fontSize: 13, color: '#7A7A7A', marginTop: 2, marginBottom: 6 },
   recipeMeta: { fontSize: 12, color: '#888', marginTop: 4 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   tag: { backgroundColor: '#FFF5F0', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },

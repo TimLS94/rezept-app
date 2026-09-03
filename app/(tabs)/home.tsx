@@ -182,9 +182,6 @@ export default function HomeScreen() {
         <View style={styles.topBar}>
           <Text style={styles.wordmark}>SPOON<Text style={styles.wordmarkAccent}>DROP</Text></Text>
           <View style={styles.topRight}>
-            <TouchableOpacity onPress={() => router.push('/search')} style={styles.iconBtn}>
-              <Ionicons name="search-outline" size={22} color={COLORS.navy} />
-            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push('/profile')}>
               <Image source={{ uri: avatar }} style={styles.avatar} />
             </TouchableOpacity>
@@ -195,6 +192,21 @@ export default function HomeScreen() {
           {greeting()}{name ? `, ${name}` : ''} 👋
         </Text>
         <Text style={styles.headline}>What's for dinner?</Text>
+
+        {/* A search bar rather than the magnifier that used to sit in the top
+            corner. Search covers both recipes and creators, and an icon the
+            size of a fingertip in the corner of the header hid that entirely —
+            people look for a field, not a symbol, and never found the creators
+            at all. It is not a live input: tapping opens the search screen,
+            which owns the query and the recipe/creator switch. */}
+        <TouchableOpacity
+          style={styles.searchBar}
+          activeOpacity={0.7}
+          onPress={() => router.push('/search')}
+        >
+          <Ionicons name="search-outline" size={19} color={COLORS.warmGray} />
+          <Text style={styles.searchPlaceholder}>Search recipes and creators</Text>
+        </TouchableOpacity>
         {/* Say what the suggestion is actually based on, and only claim the
             parts that are true right now. */}
         <Text style={styles.sub}>
@@ -392,6 +404,14 @@ const styles = StyleSheet.create({
   iconBtn: { padding: 4 },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEE' },
 
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: COLORS.card, borderRadius: 14,
+    paddingHorizontal: 16, paddingVertical: 14,
+    marginTop: 16, marginBottom: 4,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  searchPlaceholder: { fontSize: 15, color: COLORS.warmGray, fontFamily: FONTS.body },
   greeting: { fontSize: 14, color: COLORS.warmGray, marginTop: 18 },
   headline: { fontFamily: FONTS.display, fontSize: 30, color: COLORS.navy, marginTop: 4 },
   sub: { fontSize: 14, color: COLORS.warmGray, marginTop: 6, lineHeight: 20 },
