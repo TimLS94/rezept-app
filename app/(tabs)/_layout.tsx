@@ -23,25 +23,26 @@ export default function TabsLayout() {
         tabBarActiveTintColor: COLORS.orange,
         tabBarInactiveTintColor: COLORS.warmGray,
         tabBarStyle: { backgroundColor: COLORS.card, borderTopColor: COLORS.border, paddingTop: 6 },
-        // A creator sees seven tabs, everyone else six. At 10pt with seven,
-        // "Cookbook" and "Shopping" rendered as "Cookb…" and "Shoppi…", and a
-        // truncated word carries less than a shorter one. Nine point, and the
-        // two long labels shortened below — the icons carry the meaning.
-        tabBarLabelStyle: { fontFamily: FONTS.semibold, fontSize: 9 },
+        // Six tabs for a consumer, two for a creator. The full words fit again
+        // at six, which is why "Cookbook" and "Shopping" are back from the
+        // "Book"/"List" they were shortened to while creators briefly saw
+        // seven and both truncated.
+        tabBarLabelStyle: { fontFamily: FONTS.semibold, fontSize: 10 },
       }}
     >
-      {/* Everyone gets these, creators included. They were hidden behind
-          `href: null` for creator accounts on the idea that a creator "only
-          creates & markets" — but they cook, keep a cookbook, plan a week, and
-          could not even open their own recipe the way a reader sees it.
-          Studio is the only tab that depends on the role. */}
-      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tabIcon('home-outline', 'home') }} />
-      <Tabs.Screen name="discover" options={{ title: 'Discover', tabBarIcon: tabIcon('flame-outline', 'flame') }} />
-      {/* Labelled "Book" and "List" rather than truncated. The full words live
-          in each screen's own header, where there is room for them. */}
-      <Tabs.Screen name="cookbook" options={{ title: 'Book', tabBarIcon: tabIcon('book-outline', 'book') }} />
-      <Tabs.Screen name="budget" options={{ title: 'Planner', tabBarIcon: tabIcon('calendar-outline', 'calendar') }} />
-      <Tabs.Screen name="shopping" options={{ title: 'List', tabBarIcon: tabIcon('cart-outline', 'cart') }} />
+      {/* Consumer tabs, hidden from creator accounts again.
+          They were opened up so a creator could search and could look at their
+          own public profile — both of which now live in the Studio itself, so
+          nothing is lost by closing them. What was lost while they were open:
+          a creator had two import screens that looked alike and wrote to
+          different tables, and a recipe meant for the catalogue quietly became
+          a private one.
+          `href: null` hides the tab and blocks the route. */}
+      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tabIcon('home-outline', 'home'), href: isCreator ? null : undefined }} />
+      <Tabs.Screen name="discover" options={{ title: 'Discover', tabBarIcon: tabIcon('flame-outline', 'flame'), href: isCreator ? null : undefined }} />
+      <Tabs.Screen name="cookbook" options={{ title: 'Cookbook', tabBarIcon: tabIcon('book-outline', 'book'), href: isCreator ? null : undefined }} />
+      <Tabs.Screen name="budget" options={{ title: 'Planner', tabBarIcon: tabIcon('calendar-outline', 'calendar'), href: isCreator ? null : undefined }} />
+      <Tabs.Screen name="shopping" options={{ title: 'Shopping', tabBarIcon: tabIcon('cart-outline', 'cart'), href: isCreator ? null : undefined }} />
       {/* Creator Studio — only for creator/admin accounts. */}
       <Tabs.Screen name="creator" options={{ title: 'Studio', tabBarIcon: tabIcon('videocam-outline', 'videocam'), href: isCreator ? undefined : null }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: tabIcon('person-outline', 'person') }} />
