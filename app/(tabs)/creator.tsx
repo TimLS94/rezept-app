@@ -299,12 +299,16 @@ const styles = StyleSheet.create({
   socialRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 14 },
   socialChip: { backgroundColor: '#F5F5F5', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
   socialText: { fontSize: 13, color: '#333', fontWeight: '600' },
+  // Same width and height as the edit button below it — the card centres its
+  // children, so without alignSelf this one shrank to fit its label and sat
+  // there as a narrow outline between two full-width elements.
   viewPublicButton: {
-    borderWidth: 1.5, borderColor: '#F2701E', borderRadius: 12,
-    paddingVertical: 12, alignItems: 'center', marginBottom: 10,
+    marginTop: 16, borderWidth: 1.5, borderColor: '#F2701E', borderRadius: 12,
+    paddingHorizontal: 20, paddingVertical: 12,
+    alignSelf: 'stretch', alignItems: 'center',
   },
   viewPublicText: { fontSize: 15, fontWeight: '700', color: '#B84B08' },
-  editButton: { marginTop: 16, backgroundColor: '#F2701E', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, alignSelf: 'stretch', alignItems: 'center' },
+  editButton: { marginTop: 10, backgroundColor: '#F2701E', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, alignSelf: 'stretch', alignItems: 'center' },
   editButtonText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
 
   actions: { marginTop: 16, marginHorizontal: 20, gap: 12 },

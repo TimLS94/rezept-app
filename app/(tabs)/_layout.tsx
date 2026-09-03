@@ -23,21 +23,25 @@ export default function TabsLayout() {
         tabBarActiveTintColor: COLORS.orange,
         tabBarInactiveTintColor: COLORS.warmGray,
         tabBarStyle: { backgroundColor: COLORS.card, borderTopColor: COLORS.border, paddingTop: 6 },
-        // Six tabs share the width now, and at 11pt "Cookbook" rendered as
-        // "Cookbo…". Everything fits at 10.
-        tabBarLabelStyle: { fontFamily: FONTS.semibold, fontSize: 10 },
+        // A creator sees seven tabs, everyone else six. At 10pt with seven,
+        // "Cookbook" and "Shopping" rendered as "Cookb…" and "Shoppi…", and a
+        // truncated word carries less than a shorter one. Nine point, and the
+        // two long labels shortened below — the icons carry the meaning.
+        tabBarLabelStyle: { fontFamily: FONTS.semibold, fontSize: 9 },
       }}
     >
-      {/* Consumer tabs — hidden for creators, who only create & market.
-          `href: null` hides the tab and blocks the route. */}
+      {/* Everyone gets these, creators included. They were hidden behind
+          `href: null` for creator accounts on the idea that a creator "only
+          creates & markets" — but they cook, keep a cookbook, plan a week, and
+          could not even open their own recipe the way a reader sees it.
+          Studio is the only tab that depends on the role. */}
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tabIcon('home-outline', 'home') }} />
       <Tabs.Screen name="discover" options={{ title: 'Discover', tabBarIcon: tabIcon('flame-outline', 'flame') }} />
-      {/* The cookbook is where a user's own recipes live, so it is the screen
-          they return to most. It used to be a card on Home, which meant going
-          Home first from anywhere else in the app. */}
-      <Tabs.Screen name="cookbook" options={{ title: 'Cookbook', tabBarIcon: tabIcon('book-outline', 'book') }} />
+      {/* Labelled "Book" and "List" rather than truncated. The full words live
+          in each screen's own header, where there is room for them. */}
+      <Tabs.Screen name="cookbook" options={{ title: 'Book', tabBarIcon: tabIcon('book-outline', 'book') }} />
       <Tabs.Screen name="budget" options={{ title: 'Planner', tabBarIcon: tabIcon('calendar-outline', 'calendar') }} />
-      <Tabs.Screen name="shopping" options={{ title: 'Shopping', tabBarIcon: tabIcon('cart-outline', 'cart') }} />
+      <Tabs.Screen name="shopping" options={{ title: 'List', tabBarIcon: tabIcon('cart-outline', 'cart') }} />
       {/* Creator Studio — only for creator/admin accounts. */}
       <Tabs.Screen name="creator" options={{ title: 'Studio', tabBarIcon: tabIcon('videocam-outline', 'videocam'), href: isCreator ? undefined : null }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: tabIcon('person-outline', 'person') }} />

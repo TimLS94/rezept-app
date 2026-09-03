@@ -213,8 +213,11 @@ export default function OnboardingScreen() {
             <View style={styles.chips}>
               {AVOID.map(a => <Chip key={a.id} {...a} group="avoid" />)}
             </View>
+            {/* Set apart from the grid above it. It is not a ninth allergy —
+                choosing it clears the other eight — and sitting flush against
+                them it read as one more item in the same list. */}
             <TouchableOpacity
-              style={[styles.row, (prefs.avoid?.length ?? 0) === 0 && styles.rowOn]}
+              style={[styles.noneRow, (prefs.avoid?.length ?? 0) === 0 && styles.rowOn]}
               onPress={() => set({ avoid: [] })}
             >
               <Ionicons name="checkmark-circle-outline" size={18} color={COLORS.green} />
@@ -402,11 +405,23 @@ const styles = StyleSheet.create({
   },
   switchLabel: { fontSize: 15, color: COLORS.navy, fontWeight: '600' },
 
+  // Separated from the grid, and pushed in from the edges so it does not read
+  // as a wider version of the chips above.
+  noneRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#FFF', borderRadius: 14, paddingVertical: 16, paddingHorizontal: 16,
+    borderWidth: 1.5, borderColor: '#EFE7DC', marginTop: 18,
+  },
+
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     backgroundColor: '#FFF', borderRadius: 14, paddingVertical: 13, paddingHorizontal: 15,
-    borderWidth: 1.5, borderColor: '#EFE7DC', minWidth: '46%',
+    borderWidth: 1.5, borderColor: '#EFE7DC',
+    // flexBasis over minWidth: minWidth let a long label push its chip wider
+    // than its neighbour, so the two columns did not line up. This splits the
+    // row evenly whatever the labels say.
+    flexGrow: 1, flexBasis: '46%',
   },
   chipOn: { borderColor: COLORS.orange, backgroundColor: '#FFF6EE' },
   chipIcon: { fontSize: 15 },
