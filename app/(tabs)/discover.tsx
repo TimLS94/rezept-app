@@ -21,6 +21,7 @@ import {
   DIETARY_TAGS,
 } from '../../data/recipes';
 import { fetchDbRecipes } from '../../lib/recipes';
+import { loadPreferences } from '../../lib/preferences';
 import { useFavorites } from '../../lib/favorites';
 import { getSeenIds, addSeenId, clearSeenIds } from '../../lib/seen';
 import { addRecipesToShoppingList, describeAdd } from '../../lib/shopping';
@@ -35,6 +36,31 @@ export default function DiscoverScreen() {
   const { addFavorite, favorites, loaded: favLoaded } = useFavorites();
   const { isGuest } = useAuth();
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
+  // Discover ignored the onboarding answers entirely. Someone told us they eat
+  // vegetarian, then opened this screen and swiped past meat until they thought
+  // to set the filter themselves — every session, from scratch. The answers are
+  // stored under the same ids these chips use (DIETS is DIETARY_TAGS), so the
+  // only thing missing was reading them.
+  //
+  // A default, not a rule: the chips are right there, and clearing one holds
+  // for the rest of the session. Applied once on mount rather than on every
+  // focus, so a deliberate change does not get undone on the next tab switch.
+  const prefsApplied = useRef(false);
+  useEffect(() => {
+    if (prefsApplied.current) return;
+    loadPreferences()
+      .then(({ prefs }) => {
+        prefsApplied.current = true;
+        const ids = new Set<string>(DIETARY_TAGS.map(t => t.id));
+        // Filtered against the chip list rather than trusted: preferences are
+        // stored as plain strings, and a diet that stops being a dietary tag
+        // would otherwise become a filter no recipe can ever match, leaving an
+        // empty deck with nothing on screen to explain it.
+        const fromPrefs = (prefs.diets ?? []).filter((d): d is DietaryTag => ids.has(d));
+        if (fromPrefs.length) setActiveFilters(fromPrefs);
+      })
+      .catch(() => { prefsApplied.current = true; });
+  }, []);
   // Swiped in this session. `excluded` is a snapshot taken once when the screen
   // opens, so a card swiped since then is still in the deck — the old code only
   // stepped an index past it. That made changing a filter bring every swiped
