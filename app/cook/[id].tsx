@@ -52,9 +52,22 @@ export default function CookModeScreen() {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
   }, []);
 
+  // The household is the better default than whatever the recipe was written
+  // for. A recipe says "serves 4" because that suited its author; the person
+  // about to cook it knows how many are eating, and they told us once during
+  // onboarding. Starting at 4 for a household of two meant scaling every recipe
+  // down by hand, every time, or quietly cooking twice what was needed.
+  //
+  // Only when nothing else was chosen. An explicit count passed in from the
+  // recipe screen is the person having just picked one, and that wins.
   useEffect(() => {
-    getFamilyServings().then(setFamilyServings).catch(() => {});
-  }, []);
+    getFamilyServings()
+      .then(n => {
+        setFamilyServings(n);
+        if (n != null && !servings) setServingsSel(prev => prev ?? n);
+      })
+      .catch(() => {});
+  }, [servings]);
 
   // Per-step countdown. Buzzes (haptic) when it reaches zero.
   useEffect(() => {
