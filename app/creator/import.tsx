@@ -33,6 +33,17 @@ type InputMode = 'url' | 'screenshot' | 'video' | 'text';
 // de-dupes across images, so allow a comfortable number.
 const MAX_SCREENSHOTS = 10;
 
+/**
+ * A number for a text field, or nothing.
+ *
+ * These fields used String(value), and the model returns null for anything it
+ * could not work out — so a recipe whose calories it could not judge arrived
+ * with the literal word "null" sitting in the box, which a person then had to
+ * delete before typing. null, undefined and 0 all mean "not filled in" here,
+ * and all three should show the placeholder instead.
+ */
+const numText = (n: number | null | undefined): string => (n ? String(n) : '');
+
 export default function ImportRecipeScreen() {
   const { role } = useAuth();
   const [step, setStep] = useState<Step>('input');
@@ -524,42 +535,48 @@ export default function ImportRecipeScreen() {
                 multiline
               />
 
+              {/* Four fields, not five. Calories used to sit here as well as in
+                  the nutrition card below, so the screen asked for the same
+                  number twice and showed two different answers for it.
+                  It belongs with the macros; this row is about the recipe.
+
+                  Labels sit under the fields and read "Prep · min" rather than
+                  "Prep (min)" on two lines — the wrap is what pushed the first
+                  two inputs lower than the rest. Same shape as NutritionFields
+                  uses, so the two blocks line up. */}
               <View style={styles.metaEditRow}>
                 <View style={styles.metaEditItem}>
-                  <Text style={styles.editLabel}>Prep (min)</Text>
                   <TextInput
                     style={styles.editInputSmall}
-                    value={String(recipe.prepTime)}
+                    value={numText(recipe.prepTime)}
                     onChangeText={(t) => setRecipe({ ...recipe, prepTime: parseInt(t) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor="#BBB"
                     keyboardType="numeric"
                   />
+                  <Text style={styles.metaEditLabel}>Prep · min</Text>
                 </View>
                 <View style={styles.metaEditItem}>
-                  <Text style={styles.editLabel}>Cook (min)</Text>
                   <TextInput
                     style={styles.editInputSmall}
-                    value={String(recipe.cookTime)}
+                    value={numText(recipe.cookTime)}
                     onChangeText={(t) => setRecipe({ ...recipe, cookTime: parseInt(t) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor="#BBB"
                     keyboardType="numeric"
                   />
+                  <Text style={styles.metaEditLabel}>Cook · min</Text>
                 </View>
                 <View style={styles.metaEditItem}>
-                  <Text style={styles.editLabel}>Servings</Text>
                   <TextInput
                     style={styles.editInputSmall}
-                    value={String(recipe.servings)}
+                    value={numText(recipe.servings)}
                     onChangeText={(t) => setRecipe({ ...recipe, servings: parseInt(t) || 4 })}
+                    placeholder="4"
+                    placeholderTextColor="#BBB"
                     keyboardType="numeric"
                   />
-                </View>
-                <View style={styles.metaEditItem}>
-                  <Text style={styles.editLabel}>Calories</Text>
-                  <TextInput
-                    style={styles.editInputSmall}
-                    value={String(recipe.calories)}
-                    onChangeText={(t) => setRecipe({ ...recipe, calories: parseInt(t) || 0 })}
-                    keyboardType="numeric"
-                  />
+                  <Text style={styles.metaEditLabel}>Servings</Text>
                 </View>
                 {/* Cost was hardcoded to zero here, so a creator who imported
                     a recipe published it with no price on the ingredients —
@@ -567,10 +584,9 @@ export default function ImportRecipeScreen() {
                     one. The app shows cost per serving in three places, and
                     all three were blank for imported recipes. */}
                 <View style={styles.metaEditItem}>
-                  <Text style={styles.editLabel}>Cost ($)</Text>
                   <TextInput
                     style={styles.editInputSmall}
-                    value={recipe.cost ? String(recipe.cost) : ''}
+                    value={numText(recipe.cost)}
                     onChangeText={(t) =>
                       setRecipe({ ...recipe, cost: parseFloat(t.replace(',', '.')) || 0 })
                     }
@@ -578,6 +594,7 @@ export default function ImportRecipeScreen() {
                     placeholderTextColor="#BBB"
                     keyboardType="numeric"
                   />
+                  <Text style={styles.metaEditLabel}>Cost · $</Text>
                 </View>
               </View>
 
@@ -643,7 +660,7 @@ export default function ImportRecipeScreen() {
                 <View key={i} style={styles.ingredientEditRow}>
                   <TextInput
                     style={styles.ingredientAmountInput}
-                    value={String(ing.amount)}
+                    value={numText(ing.amount)}
                     onChangeText={(t) => {
                       const updated = [...recipe.ingredients];
                       updated[i] = { ...ing, amount: parseFloat(t) || 0 };
@@ -956,8 +973,9 @@ const styles = StyleSheet.create({
   tagPickTextActive: { color: '#FFF' },
   editInput: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 14, fontSize: 16, color: '#1A1A1A' },
   editTextArea: { minHeight: 80, textAlignVertical: 'top' },
-  metaEditRow: { flexDirection: 'row', marginTop: 16, gap: 8 },
+  metaEditRow: { flexDirection: 'row', marginTop: 18, gap: 8 },
   metaEditItem: { flex: 1 },
+  metaEditLabel: { fontSize: 12, color: '#8A8A8A', marginTop: 5, textAlign: 'center' },
   editInputSmall: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 12, fontSize: 15, textAlign: 'center', color: '#1A1A1A' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   addLink: { fontSize: 14, color: '#F2701E', fontWeight: '600' },

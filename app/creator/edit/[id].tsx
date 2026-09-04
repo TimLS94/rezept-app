@@ -48,6 +48,16 @@ type RecipeData = {
   equipment: string[];
 };
 
+/**
+ * A number for a text field, or nothing.
+ *
+ * String(value) put a literal "null" in the box whenever the value was missing,
+ * and a plain "0" where the field had simply never been filled in — both of
+ * which someone has to delete before they can type. null, undefined and 0 all
+ * mean "empty" here, and all three should show the placeholder.
+ */
+const numText = (n: number | null | undefined): string => (n ? String(n) : '');
+
 export default function EditRecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
@@ -331,7 +341,7 @@ export default function EditRecipeScreen() {
               <Text style={styles.label}>Prep (min)</Text>
               <TextInput
                 style={styles.inputSmall}
-                value={String(recipe.prep_time)}
+                value={numText(recipe.prep_time)}
                 onChangeText={(t) => setRecipe({ ...recipe, prep_time: parseInt(t) || 0 })}
                 keyboardType="numeric"
               />
@@ -340,7 +350,7 @@ export default function EditRecipeScreen() {
               <Text style={styles.label}>Cook (min)</Text>
               <TextInput
                 style={styles.inputSmall}
-                value={String(recipe.cook_time)}
+                value={numText(recipe.cook_time)}
                 onChangeText={(t) => setRecipe({ ...recipe, cook_time: parseInt(t) || 0 })}
                 keyboardType="numeric"
               />
@@ -349,7 +359,7 @@ export default function EditRecipeScreen() {
               <Text style={styles.label}>Servings</Text>
               <TextInput
                 style={styles.inputSmall}
-                value={String(recipe.servings)}
+                value={numText(recipe.servings)}
                 onChangeText={(t) => setRecipe({ ...recipe, servings: parseInt(t) || 4 })}
                 keyboardType="numeric"
               />
@@ -358,7 +368,7 @@ export default function EditRecipeScreen() {
               <Text style={styles.label}>Calories</Text>
               <TextInput
                 style={styles.inputSmall}
-                value={String(recipe.calories)}
+                value={numText(recipe.calories)}
                 onChangeText={(t) => setRecipe({ ...recipe, calories: parseInt(t) || 0 })}
                 keyboardType="numeric"
               />
@@ -482,7 +492,7 @@ export default function EditRecipeScreen() {
             <View key={i} style={styles.ingredientRow}>
               <TextInput
                 style={styles.ingredientAmount}
-                value={String(ing.amount)}
+                value={numText(ing.amount)}
                 onChangeText={(t) => updateIngredient(i, 'amount', parseFloat(t) || 0)}
                 keyboardType="numeric"
               />
