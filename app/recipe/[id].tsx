@@ -376,10 +376,19 @@ export default function RecipeDetailScreen() {
     return scaled.toFixed(1).replace('.0', '');
   };
 
+  // Writing the ingredients is a round trip, and this said nothing while it
+  // ran: the button stayed idle and the confirmation turned up seconds later,
+  // long enough to look like the tap had missed. The guard also stops a second
+  // tap in that gap from adding everything twice.
+  const [addingToList, setAddingToList] = useState(false);
+
   const addToShoppingList = async () => {
-    if (!recipe) return;
+    if (!recipe || addingToList) return;
+    setAddingToList(true);
 
     const result = await addRecipesToShoppingList([{ recipe, servings }]);
+    setAddingToList(false);
+
     if ('error' in result) {
       Alert.alert('Error', 'Please log in to add to shopping list');
       return;
@@ -814,8 +823,16 @@ export default function RecipeDetailScreen() {
             >
               <Text style={styles.cookButtonText}>👨‍🍳 Cook</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.addToCartButton} onPress={addToShoppingList}>
-              <Text style={styles.addToCartText}>🛒 Shopping List</Text>
+            <TouchableOpacity
+              style={[styles.addToCartButton, addingToList && styles.addToCartButtonBusy]}
+              onPress={addToShoppingList}
+              disabled={addingToList}
+            >
+              {addingToList ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.addToCartText}>🛒 Shopping List</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -1010,7 +1027,10 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: 10 },
   cookButton: { flex: 1, backgroundColor: '#0D2B63', padding: 18, borderRadius: 14, alignItems: 'center' },
   cookButtonText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
-  addToCartButton: { flex: 1.3, backgroundColor: '#F2701E', padding: 18, borderRadius: 14, alignItems: 'center' },
+  addToCartButton: { flex: 1.3, backgroundColor: '#F2701E', padding: 18, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  // Dimmed rather than resized: the spinner is shorter than the label, and a
+  // button that shrinks mid-tap reads as a glitch.
+  addToCartButtonBusy: { opacity: 0.75 },
   addToCartText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },

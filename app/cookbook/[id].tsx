@@ -116,9 +116,18 @@ export default function CookbookRecipeScreen() {
     router.push(`/cook/${recipe.id}?source=mine&servings=${recipe.servings}`);
   };
 
+  // Writing the ingredients is a round trip. Without a busy state the button
+  // sat unchanged while it ran and the confirmation arrived seconds later,
+  // which reads as a tap that missed — and a second tap in that gap added
+  // everything twice.
+  const [addingToCart, setAddingToCart] = useState(false);
+
   const addToCart = async () => {
+    if (addingToCart) return;
+    setAddingToCart(true);
     if (!recipe) return;
     const result = await addRecipesToShoppingList([{ recipe: myRecipeToRecipe(recipe) }]);
+    setAddingToCart(false);
     if ('error' in result) {
       Alert.alert('Error', result.error);
       return;
@@ -341,9 +350,10 @@ export default function CookbookRecipeScreen() {
               <TouchableOpacity
                 style={[styles.cartButton, addedToCart && styles.cartButtonAdded]}
                 onPress={addToCart}
+                disabled={addingToCart}
               >
                 <Text style={styles.cartButtonText}>
-                  {addedToCart ? '✓ Added to shopping list' : '🛒 Add to shopping list'}
+                  {addingToCart ? 'Adding…' : addedToCart ? '✓ Added to shopping list' : '🛒 Add to shopping list'}
                 </Text>
               </TouchableOpacity>
             </>

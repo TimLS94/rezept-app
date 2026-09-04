@@ -35,7 +35,14 @@ export default function DiscoverScreen() {
   const { addFavorite, favorites, loaded: favLoaded } = useFavorites();
   const { isGuest } = useAuth();
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
-  const [index, setIndex] = useState(0);
+  // Swiped in this session. `excluded` is a snapshot taken once when the screen
+  // opens, so a card swiped since then is still in the deck — the old code only
+  // stepped an index past it. That made changing a filter bring every swiped
+  // card back, because the index went to 0 while the deck still held them.
+  //
+  // The deck is a queue now: the top card is always the first one, and swiping
+  // removes it. There is no index to get out of step with the contents.
+  const [swiped, setSwiped] = useState<Set<string>>(new Set());
   const [liked, setLiked] = useState<Recipe[]>([]);
   const [uploaded, setUploaded] = useState<Recipe[]>([]);
   // Ids to skip in the deck: already favorited or previously swiped. Captured as
@@ -55,10 +62,12 @@ export default function DiscoverScreen() {
   const deck = useMemo(() => {
     if (!excluded) return []; // still loading the exclusion snapshot
     // Only show free recipes the user hasn't already favorited or swiped.
-    const pool = [...uploaded, ...RECIPES].filter(r => !r.isPaid && !excluded.has(r.id));
+    const pool = [...uploaded, ...RECIPES].filter(
+      r => !r.isPaid && !excluded.has(r.id) && !swiped.has(r.id),
+    );
     if (activeFilters.length === 0) return pool;
     return pool.filter(r => activeFilters.every(tag => r.dietary.includes(tag)));
-  }, [activeFilters, uploaded, excluded]);
+  }, [activeFilters, uploaded, excluded, swiped]);
 
   const position = useRef(new Animated.ValueXY()).current;
 
@@ -66,8 +75,6 @@ export default function DiscoverScreen() {
   // instead of the stale values captured on the first render.
   const deckRef = useRef(deck);
   deckRef.current = deck;
-  const indexRef = useRef(index);
-  indexRef.current = index;
   const isGuestRef = useRef(isGuest);
   isGuestRef.current = isGuest;
 
@@ -75,9 +82,10 @@ export default function DiscoverScreen() {
     setActiveFilters(prev =>
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
-    // Reset the deck when the filter changes.
+    // Only the drag offset. The deck itself no longer needs resetting: swiped
+    // cards are gone from it, so whatever is at the front is genuinely the next
+    // unseen recipe under the new filter.
     position.setValue({ x: 0, y: 0 });
-    setIndex(0);
   };
 
   const advance = (recipe: Recipe, direction: 'like' | 'skip') => {
@@ -101,7 +109,7 @@ export default function DiscoverScreen() {
     // Remember this recipe so it won't reappear on a later visit.
     addSeenId(recipe.id);
     position.setValue({ x: 0, y: 0 });
-    setIndex(i => i + 1);
+    setSwiped(prev => new Set(prev).add(recipe.id));
   };
 
   // Push everything swiped in this session straight to the shopping list,
@@ -130,11 +138,10 @@ export default function DiscoverScreen() {
     // Guests can browse recipes but can't swipe — prompt sign-up, reset to first.
     if (isGuest) {
       Animated.spring(position, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
-      setIndex(0);
       router.push('/login');
       return;
     }
-    const recipe = deckRef.current[indexRef.current];
+    const recipe = deckRef.current[0];
     if (!recipe) return;
     const x = direction === 'like' ? width * 1.5 : -width * 1.5;
     Animated.timing(position, {
@@ -163,7 +170,6 @@ export default function DiscoverScreen() {
         // Guests: swiping does nothing but prompt sign-up and reset to the first card.
         if (isGuestRef.current) {
           resetPosition();
-          setIndex(0);
           router.push('/login');
           return;
         }
@@ -217,11 +223,11 @@ export default function DiscoverScreen() {
     clearSeenIds();
     setExcluded(new Set(favorites.map(f => f.id)));
     position.setValue({ x: 0, y: 0 });
-    setIndex(0);
+    setSwiped(new Set());
     setLiked([]);
   };
 
-  const deckDone = index >= deck.length;
+  const deckDone = deck.length === 0;
 
   return (
     <View style={styles.container}>
@@ -297,8 +303,8 @@ export default function DiscoverScreen() {
           // Render the next card behind, and the active card on top.
           deck
             .map((recipe, i) => {
-              if (i < index || i > index + 1) return null;
-              const isTop = i === index;
+              if (i > 1) return null;
+              const isTop = i === 0;
 
               const cardStyle = isTop
                 ? {
@@ -412,7 +418,7 @@ export default function DiscoverScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.infoButton]}
-            onPress={() => router.push(`/recipe/${deck[index].id}`)}
+            onPress={() => router.push(`/recipe/${deck[0].id}`)}
           >
             <Text style={styles.infoButtonIcon}>ℹ︎</Text>
           </TouchableOpacity>

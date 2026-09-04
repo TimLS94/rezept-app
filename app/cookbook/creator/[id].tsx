@@ -145,7 +145,15 @@ export default function CookbookCreatorRecipeScreen() {
     router.push(`/cook/${recipe.id}?source=creator&servings=${displayRecipe?.servings || recipe.servings}`);
   };
 
+  // Writing the ingredients is a round trip. Without a busy state the button
+  // sat unchanged while it ran and the confirmation arrived seconds later,
+  // which reads as a tap that missed — and a second tap in that gap added
+  // everything twice.
+  const [addingToCart, setAddingToCart] = useState(false);
+
   const addToCart = async () => {
+    if (addingToCart) return;
+    setAddingToCart(true);
     if (!displayRecipe) return;
 
     // A locked recipe arrives with three teaser ingredients, so shopping from
@@ -164,6 +172,7 @@ export default function CookbookCreatorRecipeScreen() {
     // list stayed empty. That is what "adding from the cookbook does nothing"
     // was.
     const result = await addRecipesToShoppingList([{ recipe: displayRecipe }]);
+    setAddingToCart(false);
     if ('error' in result) {
       if (result.error === 'not-authenticated') {
         Alert.alert('Sign in required', 'Sign in to save your shopping list.');
@@ -399,10 +408,10 @@ export default function CookbookCreatorRecipeScreen() {
         <TouchableOpacity 
           style={[styles.cartButton, addedToCart && styles.cartButtonDone]} 
           onPress={addToCart}
-          disabled={addedToCart}
+          disabled={addedToCart || addingToCart}
         >
           <Text style={[styles.cartButtonText, addedToCart && styles.cartButtonTextDone]}>
-            {addedToCart ? '✓ Added' : '🛒 Shopping List'}
+            {addingToCart ? 'Adding…' : addedToCart ? '✓ Added' : '🛒 Shopping List'}
           </Text>
         </TouchableOpacity>
       </View>
