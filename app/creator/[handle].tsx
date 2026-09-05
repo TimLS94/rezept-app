@@ -5,6 +5,8 @@ import {
   EMPTY_ENGAGEMENT,
   type CreatorEngagement,
 } from '../../lib/engagement';
+import ImageViewer from '../../components/ImageViewer';
+import EngagementRow from '../../components/EngagementRow';
 import {
   View,
   Text,
@@ -55,6 +57,7 @@ export default function CreatorProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [creator, setCreator] = useState<CreatorProfile | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
   const [engagement, setEngagement] = useState<CreatorEngagement>({
     totals: EMPTY_ENGAGEMENT,
     perRecipe: {},
@@ -291,10 +294,23 @@ export default function CreatorProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <Image
-            source={{ uri: creator.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200' }}
-            style={styles.avatar}
-          />
+          {/* Tappable. A hundred points across is enough to recognise someone
+              and not enough to see them, and the viewer this opens is the same
+              one recipe photos already use. */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() =>
+              setViewerUri(
+                creator.avatar_url ||
+                  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
+              )
+            }
+          >
+            <Image
+              source={{ uri: creator.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200' }}
+              style={styles.avatar}
+            />
+          </TouchableOpacity>
           <Text style={styles.name}>{creator.full_name || 'Creator'}</Text>
           <Text style={styles.handle}>@{creator.username || handle}</Text>
           
@@ -477,17 +493,10 @@ export default function CreatorProfileScreen() {
                   {/* Visible to whoever is looking, not only to the author.
                       "40 people cooked this" is the strongest thing a reader can
                       be told about a recipe, and it is the reason to open it. */}
-                  {(() => {
-                    const e = engagement.perRecipe[recipe.id];
-                    const parts = e
-                      ? [
-                          countLabel(e.cooked, 'cook', 'cooks'),
-                          countLabel(e.favorited, 'like', 'likes'),
-                        ].filter(Boolean)
-                      : [];
-                    if (!parts.length) return null;
-                    return <Text style={styles.recipeStats}>{parts.join(' · ')}</Text>;
-                  })()}
+                  <EngagementRow
+                    engagement={engagement.perRecipe[recipe.id] ?? EMPTY_ENGAGEMENT}
+                    size="sm"
+                  />
                 </TouchableOpacity>
               ))}
             </View>
@@ -496,6 +505,8 @@ export default function CreatorProfileScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <ImageViewer uri={viewerUri} onClose={() => setViewerUri(null)} />
     </View>
   );
 }

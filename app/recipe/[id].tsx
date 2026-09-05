@@ -29,6 +29,7 @@ import {
   EMPTY_ENGAGEMENT,
   type Engagement,
 } from '../../lib/engagement';
+import EngagementRow from '../../components/EngagementRow';
 import { copyRecipeToCookbook, fetchMyRecipeById } from '../../lib/myRecipes';
 import { FEATURES } from '../../lib/features';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
@@ -539,17 +540,9 @@ export default function RecipeDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
-        {(engagement.cooked > 0 || engagement.favorited > 0 || engagement.saved > 0) && (
-          <View style={styles.engagementRow}>
-            {[
-              countLabel(engagement.cooked, 'cook', 'cooks'),
-              countLabel(engagement.favorited, 'favorite', 'favorites'),
-              countLabel(engagement.saved, 'save', 'saves'),
-            ].filter(Boolean).map(t => (
-              <Text key={t} style={styles.engagementItem}>{t}</Text>
-            ))}
-          </View>
-        )}
+        <View style={styles.engagementRow}>
+          <EngagementRow engagement={engagement} />
+        </View>
 
         {/* Time breakdown */}
         <View style={styles.timeCard}>
