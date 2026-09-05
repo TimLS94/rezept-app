@@ -11,7 +11,7 @@
 // spent an evening writing.
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { Engagement } from '../lib/engagement';
+import { compactCount, type Engagement } from '../lib/engagement';
 
 type Size = 'sm' | 'md';
 
@@ -44,25 +44,13 @@ export default function EngagementRow({
       {items.map(i => (
         <View key={i.key} style={s.item}>
           <Ionicons name={i.icon} size={sm ? 12 : 14} color="#C2410C" />
-          <Text style={[s.count, sm && s.countSm]}>{compact(i.n)}</Text>
+          <Text style={[s.count, sm && s.countSm]}>{compactCount(i.n)}</Text>
         </View>
       ))}
     </View>
   );
 }
 
-/**
- * 1200 becomes 1.2k.
- *
- * Four digits under a recipe card push the title out of line, and nobody reads
- * the last two anyway — the difference between 1,203 and 1,247 cooks is not a
- * difference anyone acts on.
- */
-function compact(n: number): string {
-  if (n < 1000) return String(n);
-  const k = n / 1000;
-  return `${k < 10 ? k.toFixed(1).replace(/\.0$/, '') : Math.round(k)}k`;
-}
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   fetchCreatorEngagement,
-  countLabel,
+  compactCount,
   EMPTY_ENGAGEMENT,
   type CreatorEngagement,
 } from '../../lib/engagement';
@@ -318,38 +318,26 @@ export default function CreatorProfileScreen() {
             <Text style={styles.bio}>{creator.bio}</Text>
           )}
 
+          {/* Four fixed columns, no dividers, evenly split.
+              It was a row of items with hairlines between them, and two of them
+              appeared only once their number passed zero — so the whole row shifted
+              sideways the first time somebody cooked something, and the spacing was
+              whatever twenty-four points of padding happened to produce.
+              A zero here is honest rather than harsh: on a profile it reads as "new",
+              while under a single recipe it reads as a verdict, which is why that one
+              still hides. */}
           <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{recipes.length}</Text>
-              <Text style={styles.statLabel}>Recipes</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{subscriberCount}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
-            {/* Cooked is the number that means something here: somebody shopped
-                for it and spent an evening on it. Both are left out entirely
-                while they are zero — "0 Cooked" on a new catalogue reads as a
-                verdict when it only means nobody has arrived yet. */}
-            {engagement.totals.cooked > 0 && (
-              <>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{engagement.totals.cooked}</Text>
-                  <Text style={styles.statLabel}>Cooked</Text>
-                </View>
-              </>
-            )}
-            {engagement.totals.favorited > 0 && (
-              <>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{engagement.totals.favorited}</Text>
-                  <Text style={styles.statLabel}>Favorited</Text>
-                </View>
-              </>
-            )}
+            {[
+              { n: recipes.length, label: recipes.length === 1 ? 'Recipe' : 'Recipes' },
+              { n: subscriberCount, label: subscriberCount === 1 ? 'Follower' : 'Followers' },
+              { n: engagement.totals.cooked, label: 'Cooked' },
+              { n: engagement.totals.favorited, label: 'Likes' },
+            ].map(stat => (
+              <View key={stat.label} style={styles.statItem}>
+                <Text style={styles.statNumber}>{compactCount(stat.n)}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
+              </View>
+            ))}
           </View>
 
           {/* Free follow. Deliberately NOT called "Subscribe" any more: the paid
@@ -536,11 +524,10 @@ const styles = StyleSheet.create({
   name: { fontSize: 24, fontWeight: '700', color: '#1A1A1A', marginBottom: 4 },
   handle: { fontSize: 15, color: '#F2701E', fontWeight: '500', marginBottom: 12 },
   bio: { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22, marginBottom: 20, paddingHorizontal: 20 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  statItem: { alignItems: 'center', paddingHorizontal: 24 },
-  statNumber: { fontSize: 22, fontWeight: '700', color: '#1A1A1A' },
-  statLabel: { fontSize: 13, color: '#888', marginTop: 2 },
-  statDivider: { width: 1, height: 30, backgroundColor: '#E0E0E0' },
+  statsRow: { flexDirection: 'row', alignSelf: 'stretch', marginBottom: 20, marginTop: 4 },
+  statItem: { flex: 1, alignItems: 'center' },
+  statNumber: { fontSize: 20, fontWeight: '800', color: '#1A1A1A', fontVariant: ['tabular-nums'] },
+  statLabel: { fontSize: 12, color: '#8A8A8A', marginTop: 3 },
   subscribeButton: { backgroundColor: '#F2701E', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 24 },
   subscribedButton: { backgroundColor: '#E8F5E9' },
   subscribeButtonText: { fontSize: 16, fontWeight: '700', color: '#FFF' },

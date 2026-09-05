@@ -401,10 +401,19 @@ export default function ProfileScreen() {
     }, 0);
   };
 
-  const handleLogout = async () => {
+  const signOutNow = async () => {
     await supabase.auth.signOut();
     router.replace('/login');
   };
+
+  // Asks first. The button used to be the last thing on a long scroll, where
+  // nothing could be hit by accident; it is in the header now, one tap from
+  // anywhere, and an icon that logs you out on contact is a different thing.
+  const handleLogout = () =>
+    Alert.alert('Sign out?', "You'll need to sign in again to reach your recipes.", [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: signOutNow },
+    ]);
 
   // Get unique categories from creator's recipes
   const getCategories = () => {
@@ -442,7 +451,17 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.backButton} />
           <Text style={styles.headerTitle}>{isCreator ? 'Creator Profile' : 'Profile'}</Text>
-          <View style={{ width: 60 }} />
+          {/* Sign out lives up here as well as at the bottom. The bottom one is
+              below every recipe on the page, so the more recipes somebody has,
+              the further they scroll to leave — the one thing that should not
+              get harder the more you use the app. */}
+          <TouchableOpacity
+            style={styles.headerSignOut}
+            onPress={handleLogout}
+            accessibilityLabel="Sign out"
+          >
+            <Ionicons name="log-out-outline" size={22} color="#E53935" />
+          </TouchableOpacity>
         </View>
 
         {isCreator ? (
@@ -848,6 +867,9 @@ const styles = StyleSheet.create({
   creatorTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', marginBottom: 2 },
   creatorSubtitle: { fontSize: 13, color: '#F2701E' },
   creatorArrow: { fontSize: 20, color: '#F2701E' },
+  headerSignOut: {
+    width: 60, alignItems: 'flex-end', justifyContent: 'center', paddingVertical: 4,
+  },
   logoutButton: { marginHorizontal: 20, padding: 16, borderRadius: 12, backgroundColor: '#FFF', alignItems: 'center', borderWidth: 1, borderColor: '#E53935' },
   logoutText: { fontSize: 16, fontWeight: '600', color: '#E53935' },
   bottomSpacer: { height: 40 },

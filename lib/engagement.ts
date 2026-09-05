@@ -49,3 +49,16 @@ export function countLabel(n: number, one: string, many: string): string | null 
   if (!n) return null;
   return `${n} ${n === 1 ? one : many}`;
 }
+
+/**
+ * 1200 becomes 1.2k.
+ *
+ * Four digits in a stat column push the label out of line with its neighbours,
+ * and nobody acts on the last two: the difference between 1,203 and 1,247 cooks
+ * is not one anybody reads.
+ */
+export function compactCount(n: number): string {
+  if (n < 1000) return String(n);
+  const k = n / 1000;
+  return `${k < 10 ? k.toFixed(1).replace(/\.0$/, '') : Math.round(k)}k`;
+}
