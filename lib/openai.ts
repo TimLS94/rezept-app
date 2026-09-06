@@ -105,14 +105,35 @@ const NO_RECIPE_ERROR =
 // Text in, structured recipe out. The provider chain (Gemini, then Groq) now
 // runs inside the gateway — the phone holds no keys, so it cannot choose a
 // provider and does not need to know which one answered.
+/**
+ * What to tell someone when the gateway did not answer.
+ *
+ * Every failure used to come out as "All AI providers failed (rate limit or
+ * network)". A timeout is not a rate limit, and the difference matters: one
+ * says the service is busy and to come back later, the other says this attempt
+ * ran out of time and trying again right now is exactly the thing to do.
+ *
+ * The common way to hit the timeout is leaving the app mid-import — iOS
+ * suspends the request — so telling that person the AI providers are rate
+ * limited sends them away from the one action that would work.
+ */
+function gatewayMessage(error: string): string {
+  if (error === 'timeout')
+    return 'That took too long — it can happen if the app was in the background while it ran. Tap import again to retry.';
+  if (error === 'gateway-unreachable' || /network/i.test(error))
+    return 'No connection to the recipe service. Check your internet and try again.';
+  return 'The recipe service could not be reached right now. Please try again in a moment.';
+}
+
 export async function extractRecipeWithAI(content: string): Promise<ExtractionResult> {
   const res = await callGateway<GeminiReply>('recipe-from-text', { content });
 
   if (!res.ok) {
+    if (isCancelled(res.error)) return { success: false, error: 'cancelled' };
     if (isQuotaError(res.error)) return { success: false, error: QUOTA_MESSAGE };
     return {
       success: false,
-      error: 'All AI providers failed (rate limit or network). Please try again later.',
+      error: gatewayMessage(res.error),
     };
   }
 
@@ -243,10 +264,11 @@ export async function extractRecipeFromImages(imagesBase64: string[]): Promise<E
   const res = await callGateway<GeminiReply>('recipe-from-images', { images: imagesBase64 });
 
   if (!res.ok) {
+    if (isCancelled(res.error)) return { success: false, error: 'cancelled' };
     if (isQuotaError(res.error)) return { success: false, error: QUOTA_MESSAGE };
     return {
       success: false,
-      error: 'Could not extract recipe from image (rate limit or network). Try again in a moment.',
+      error: gatewayMessage(res.error),
     };
   }
 

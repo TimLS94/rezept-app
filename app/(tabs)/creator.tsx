@@ -17,10 +17,11 @@ import { getCreatorProfile, CreatorProfile, emptyCreatorProfile } from '../../li
 import { fetchRecipesByCreator, setRecipePaid } from '../../lib/recipes';
 import {
   fetchCreatorEngagement,
-  countLabel,
+  compactCount,
   EMPTY_ENGAGEMENT,
   type CreatorEngagement,
 } from '../../lib/engagement';
+import EngagementRow from '../../components/EngagementRow';
 import { Recipe } from '../../data/recipes';
 import { HEADER_TOP } from '../../lib/layout';
 
@@ -206,13 +207,10 @@ export default function CreatorStudioScreen() {
         {/* My recipes */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>My recipes ({recipes.length})</Text>
-          {(engagement.totals.cooked > 0 || engagement.totals.favorited > 0) && (
+          {engagement.totals.cooked > 0 && (
             <Text style={styles.totalsLine}>
-              {[
-                countLabel(engagement.totals.cooked, 'cook', 'cooks'),
-                countLabel(engagement.totals.favorited, 'like', 'likes'),
-                countLabel(engagement.totals.saved, 'save', 'saves'),
-              ].filter(Boolean).join(' · ')}{' '}across all your recipes
+              {compactCount(engagement.totals.cooked)}{' '}
+              {engagement.totals.cooked === 1 ? 'cook' : 'cooks'} across all your recipes
             </Text>
           )}
           {recipes.length > 0 && (
@@ -228,21 +226,14 @@ export default function CreatorStudioScreen() {
                   <View style={styles.recipeBody}>
                     <Text style={styles.recipeTitle} numberOfLines={1}>{r.title}</Text>
                     <Text style={styles.recipeMeta}>{r.prepTime + r.cookTime} min · {r.calories} cal</Text>
-                    {/* What actually happened to this recipe. Cooked first: it
-                        is the one that took somebody an evening, and the one
-                        no other platform can measure. Absent while zero. */}
-                    {(() => {
-                      const e = engagement.perRecipe[r.id];
-                      const parts = e
-                        ? [
-                            countLabel(e.cooked, 'cook', 'cooks'),
-                            countLabel(e.favorited, 'like', 'likes'),
-                            countLabel(e.saved, 'save', 'saves'),
-                          ].filter(Boolean)
-                        : [];
-                      if (!parts.length) return null;
-                      return <Text style={styles.recipeStats}>{parts.join(' · ')}</Text>;
-                    })()}
+                    {/* Cooks only, same as everywhere else. This screen still
+                        listed likes and saves beside them, so the studio and
+                        the public profile disagreed about what a recipe's
+                        numbers are. */}
+                    <EngagementRow
+                      engagement={engagement.perRecipe[r.id] ?? EMPTY_ENGAGEMENT}
+                      size="sm"
+                    />
                     {r.dietary.length > 0 && (
                       <View style={styles.tagRow}>
                         {r.dietary.slice(0, 3).map(t => (
@@ -332,7 +323,6 @@ const styles = StyleSheet.create({
   payToggleText: { fontSize: 12, fontWeight: '700', color: '#3C8D40' },
   payToggleTextOn: { color: '#F2701E' },
   recipeTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
-  recipeStats: { fontSize: 12, color: '#B84B08', fontWeight: '700', marginTop: 4 },
   totalsLine: { fontSize: 13, color: '#7A7A7A', marginTop: 2, marginBottom: 6 },
   recipeMeta: { fontSize: 12, color: '#888', marginTop: 4 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },

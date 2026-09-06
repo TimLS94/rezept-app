@@ -480,11 +480,17 @@ export default function CreatorProfileScreen() {
                   </Text>
                   {/* Visible to whoever is looking, not only to the author.
                       "40 people cooked this" is the strongest thing a reader can
-                      be told about a recipe, and it is the reason to open it. */}
-                  <EngagementRow
-                    engagement={engagement.perRecipe[recipe.id] ?? EMPTY_ENGAGEMENT}
-                    size="sm"
-                  />
+                      be told about a recipe, and it is the reason to open it.
+                      Wrapped, because the card clips its children and the title
+                      and meta above carry their own padding — without this the
+                      number sat flush against the card edge, out of line with
+                      every line above it. */}
+                  <View style={styles.recipeStatsWrap}>
+                    <EngagementRow
+                      engagement={engagement.perRecipe[recipe.id] ?? EMPTY_ENGAGEMENT}
+                      size="sm"
+                    />
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -565,6 +571,6 @@ const styles = StyleSheet.create({
   premiumBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(13,43,99,0.85)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
   premiumBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
   recipeTitle: { fontSize: 14, fontWeight: '600', color: '#1A1A1A', padding: 10, paddingBottom: 4 },
-  recipeStats: { fontSize: 11, color: '#B84B08', fontWeight: '700', marginTop: 3 },
-  recipeMeta: { fontSize: 12, color: '#888', paddingHorizontal: 10, paddingBottom: 10 },
+  recipeMeta: { fontSize: 12, color: '#888', paddingHorizontal: 10, paddingBottom: 6 },
+  recipeStatsWrap: { paddingHorizontal: 10, paddingBottom: 10 },
 });
