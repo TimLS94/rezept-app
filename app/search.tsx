@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { fetchCookCounts } from '../lib/engagement';
+import EngagementRow from '../components/EngagementRow';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -23,6 +25,9 @@ type Creator = {
 };
 
 export default function SearchScreen() {
+  // Cook counts for the tiles, in one call rather than one per card.
+  const [cooks, setCooks] = useState<Record<string, number>>({});
+  useEffect(() => { fetchCookCounts().then(setCooks).catch(() => {}); }, []);
   const [query, setQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [uploaded, setUploaded] = useState<Recipe[]>([]);
@@ -172,6 +177,7 @@ export default function SearchScreen() {
                   <Image source={{ uri: recipe.image }} style={styles.cardImage} />
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={2}>{recipe.title}</Text>
+                    <EngagementRow engagement={{ cooked: cooks[recipe.id] ?? 0, favorited: 0, saved: 0 }} size="sm" />
                     <Text style={styles.cardMeta}>
                       {recipe.prepTime + recipe.cookTime} min • {recipe.calories} cal
                     </Text>

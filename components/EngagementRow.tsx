@@ -25,36 +25,30 @@ export default function EngagementRow({
   /** Centred under a profile, left-aligned under a card. */
   align?: 'left' | 'center';
 }) {
-  const items = [
-    { key: 'cooked', icon: 'flame' as const, n: engagement.cooked },
-    { key: 'favorited', icon: 'heart' as const, n: engagement.favorited },
-    { key: 'saved', icon: 'bookmark' as const, n: engagement.saved },
-  ].filter(i => i.n > 0);
-
-  if (!items.length) return null;
+  // Cooks only.
+  //
+  // This showed three figures — cooked, liked, saved — and the two extra ones
+  // cost more than they gave. A like is a tap and a save is a bookmark; neither
+  // says the recipe worked. Cooking it means somebody shopped for it and spent
+  // an evening on it, and next to that number the other two only made it
+  // smaller. Likes and saves are still counted and still on the profile totals;
+  // they are just not what a recipe card is for.
+  if (engagement.cooked <= 0) return null;
 
   const sm = size === 'sm';
   return (
-    <View
-      style={[
-        s.row,
-        { gap: sm ? 10 : 14, justifyContent: align === 'center' ? 'center' : 'flex-start' },
-      ]}
-    >
-      {items.map(i => (
-        <View key={i.key} style={s.item}>
-          <Ionicons name={i.icon} size={sm ? 12 : 14} color="#C2410C" />
-          <Text style={[s.count, sm && s.countSm]}>{compactCount(i.n)}</Text>
-        </View>
-      ))}
+    <View style={[s.row, { justifyContent: align === 'center' ? 'center' : 'flex-start' }]}>
+      <Ionicons name="flame" size={sm ? 12 : 14} color="#C2410C" />
+      <Text style={[s.count, sm && s.countSm]}>
+        {compactCount(engagement.cooked)} {engagement.cooked === 1 ? 'cook' : 'cooks'}
+      </Text>
     </View>
   );
 }
 
 
 const s = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   count: { fontSize: 13, fontWeight: '700', color: '#C2410C' },
   countSm: { fontSize: 11 },
 });

@@ -6,6 +6,7 @@
 //
 // See supabase/functions/ai-gateway/index.ts.
 import { supabase } from './supabase';
+import { AppState } from 'react-native';
 
 export type GatewayResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -73,7 +74,29 @@ export async function callGateway<T = any>(
     settle({ ok: false, error: reason });
   };
 
-  const timer = setTimeout(() => stop('timeout'), limit);
+  // The clock only runs while the app is in front.
+  //
+  // A plain setTimeout counts wall time, and iOS suspends everything the moment
+  // someone switches apps. Answer a message during a video import, come back,
+  // and the timer fires the instant JavaScript resumes — the extraction is
+  // reported as timed out having never had the chance. Waiting three minutes is
+  // exactly when people do look at something else.
+  //
+  // So the budget is spent in foreground milliseconds: the timer is cleared on
+  // the way out and restarted with whatever was left on the way back in.
+  let remaining = limit;
+  let startedAt = Date.now();
+  let timer = setTimeout(() => stop('timeout'), remaining);
+
+  const appStateSub = AppState.addEventListener('change', next => {
+    if (next === 'active') {
+      startedAt = Date.now();
+      timer = setTimeout(() => stop('timeout'), remaining);
+    } else {
+      clearTimeout(timer);
+      remaining = Math.max(1_000, remaining - (Date.now() - startedAt));
+    }
+  });
   if (externalSignal) {
     if (externalSignal.aborted) stop('cancelled');
     else externalSignal.addEventListener('abort', () => stop('cancelled'));
@@ -112,6 +135,9 @@ export async function callGateway<T = any>(
     return { ok: false, error: e?.message ?? 'gateway-unreachable' };
   } finally {
     clearTimeout(timer);
+    // Without this the subscription outlives the call, and every import ever
+    // started keeps a listener alive for the rest of the session.
+    appStateSub.remove();
   }
 }
 

@@ -62,3 +62,29 @@ export function compactCount(n: number): string {
   const k = n / 1000;
   return `${k < 10 ? k.toFixed(1).replace(/\.0$/, '') : Math.round(k)}k`;
 }
+
+/**
+ * How often every recipe has been cooked, as one call.
+ *
+ * The card lists — Discover, Search, Home — show the number on each tile, and
+ * asking per tile would be one round trip per search result. Cached briefly:
+ * the figure does not change between two taps, and these screens reload on
+ * every focus.
+ */
+let cookCache: { at: number; data: Record<string, number> } | null = null;
+const COOK_CACHE_MS = 60_000;
+
+export async function fetchCookCounts(): Promise<Record<string, number>> {
+  if (cookCache && Date.now() - cookCache.at < COOK_CACHE_MS) return cookCache.data;
+  const { data, error } = await supabase.rpc('cook_counts');
+  // An older database without the function should show no numbers, not break
+  // the screen that asked.
+  if (error || !data) return cookCache?.data ?? {};
+  cookCache = { at: Date.now(), data: data as Record<string, number> };
+  return cookCache.data;
+}
+
+/** After cooking something, so the tile does not keep the old number. */
+export function invalidateCookCounts() {
+  cookCache = null;
+}

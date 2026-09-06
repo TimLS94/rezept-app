@@ -51,3 +51,19 @@ returns jsonb language sql stable security definer set search_path = public as $
 $$;
 
 commit;
+
+-- ── Kochzahlen für viele Rezepte auf einmal ────────────────────────────────
+-- Discover, Suche und Home zeigen die Zahl an jeder Kachel. Eine Abfrage je
+-- Kachel wäre bei Suchtreffern eine Abfrage je Treffer; das hier ist eine für
+-- alle. Gibt nur eine Zuordnung id → Anzahl zurück, nie wer gekocht hat.
+create or replace function public.cook_counts()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_object_agg(recipe_id, n), '{}'::jsonb)
+  from (
+    select recipe_id, count(*) as n
+    from public.cook_log
+    where recipe_id is not null
+    group by recipe_id
+  ) t;
+$$;
+grant execute on function public.cook_counts() to authenticated, anon;

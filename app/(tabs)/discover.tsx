@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { fetchCookCounts } from '../../lib/engagement';
+import EngagementRow from '../../components/EngagementRow';
 import {
   View,
   Text,
@@ -33,6 +35,9 @@ const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25;
 
 export default function DiscoverScreen() {
+  // Cook counts for the tiles, in one call rather than one per card.
+  const [cooks, setCooks] = useState<Record<string, number>>({});
+  useEffect(() => { fetchCookCounts().then(setCooks).catch(() => {}); }, []);
   const { addFavorite, favorites, loaded: favLoaded } = useFavorites();
   const { isGuest } = useAuth();
   const [activeFilters, setActiveFilters] = useState<DietaryTag[]>([]);
@@ -379,6 +384,7 @@ export default function DiscoverScreen() {
                       <Text style={styles.viewProfileArrow}>›</Text>
                     </TouchableOpacity>
                     <Text style={styles.cardTitle}>{recipe.title}</Text>
+                    <EngagementRow engagement={{ cooked: cooks[recipe.id] ?? 0, favorited: 0, saved: 0 }} size="sm" />
                     <View style={styles.cardMeta}>
                       <Text style={styles.cardMetaText}>⏱ {recipe.prepTime + recipe.cookTime} min</Text>
                       <Text style={styles.cardMetaText}>📊 {recipe.difficulty}</Text>
