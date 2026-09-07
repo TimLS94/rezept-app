@@ -123,9 +123,8 @@ export default function CookbookRecipeScreen() {
   const [addingToCart, setAddingToCart] = useState(false);
 
   const addToCart = async () => {
-    if (addingToCart) return;
+    if (!recipe || addingToCart) return;
     setAddingToCart(true);
-    if (!recipe) return;
     const result = await addRecipesToShoppingList([{ recipe: myRecipeToRecipe(recipe) }]);
     setAddingToCart(false);
     if ('error' in result) {
@@ -352,9 +351,13 @@ export default function CookbookRecipeScreen() {
                 onPress={addToCart}
                 disabled={addingToCart}
               >
+                {addingToCart ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
                 <Text style={styles.cartButtonText}>
-                  {addingToCart ? 'Adding…' : addedToCart ? '✓ Added to shopping list' : '🛒 Add to shopping list'}
+                  {addedToCart ? '✓ Added to shopping list' : '🛒 Add to shopping list'}
                 </Text>
+                )}
               </TouchableOpacity>
             </>
           )}

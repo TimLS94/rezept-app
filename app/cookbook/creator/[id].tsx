@@ -152,9 +152,10 @@ export default function CookbookCreatorRecipeScreen() {
   const [addingToCart, setAddingToCart] = useState(false);
 
   const addToCart = async () => {
-    if (addingToCart) return;
-    setAddingToCart(true);
-    if (!displayRecipe) return;
+    // Every early exit before the flag is set. Setting it first left the
+    // button disabled for good on a locked or missing recipe: the guard
+    // returned, and nothing ever cleared it again.
+    if (!displayRecipe || addingToCart) return;
 
     // A locked recipe arrives with three teaser ingredients, so shopping from
     // it would produce a partial list that looks complete.
@@ -171,6 +172,7 @@ export default function CookbookCreatorRecipeScreen() {
     // matter what happened, so a rejected write looked like a success and the
     // list stayed empty. That is what "adding from the cookbook does nothing"
     // was.
+    setAddingToCart(true);
     const result = await addRecipesToShoppingList([{ recipe: displayRecipe }]);
     setAddingToCart(false);
     if ('error' in result) {
@@ -410,9 +412,13 @@ export default function CookbookCreatorRecipeScreen() {
           onPress={addToCart}
           disabled={addedToCart || addingToCart}
         >
+          {addingToCart ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
           <Text style={[styles.cartButtonText, addedToCart && styles.cartButtonTextDone]}>
-            {addingToCart ? 'Adding…' : addedToCart ? '✓ Added' : '🛒 Shopping List'}
+            {addedToCart ? '✓ Added' : '🛒 Shopping List'}
           </Text>
+          )}
         </TouchableOpacity>
       </View>
 

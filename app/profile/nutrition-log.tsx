@@ -5,7 +5,7 @@
 // as "your day" when it only knows about SpoonDrop meals would be a quiet lie.
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../../lib/theme';
 import { HEADER_TOP } from '../../lib/layout';
@@ -158,6 +158,23 @@ export default function NutritionLogScreen() {
             </View>
           </View>
 
+          {/* A ring with no target can never fill: pct is value/goal, and
+              without a goal it is zero however much you cooked. It looked
+              broken — the number in the middle climbed while the ring stayed
+              empty — when nothing was wrong except that nobody had said what
+              the day should add up to. Say so, and offer the way there. */}
+          {!goals.calories && (
+            <TouchableOpacity
+              style={styles.setGoals}
+              onPress={() => router.push('/profile/nutrition')}
+            >
+              <Text style={styles.setGoalsTitle}>Set a daily target</Text>
+              <Text style={styles.setGoalsBody}>
+                The ring fills against a goal. Without one it stays empty, however much you cook.
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Said plainly and permanently, not buried in a settings page. */}
           <Text style={styles.disclaimer}>
             Counts meals you cooked or ticked off in SpoonDrop. Anything you ate elsewhere is
@@ -272,6 +289,12 @@ const styles = StyleSheet.create({
   macroTrack: { height: 5, borderRadius: 3, backgroundColor: '#F3EDE4', overflow: 'hidden' },
   macroFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.orange },
 
+  setGoals: {
+    backgroundColor: '#FFF4EC', borderRadius: 14, padding: 16,
+    borderWidth: 1, borderColor: '#F6D8C0', marginBottom: 16,
+  },
+  setGoalsTitle: { fontFamily: FONTS.semibold, fontSize: 15, color: '#B84B08' },
+  setGoalsBody: { fontSize: 13, color: '#7A6A5E', marginTop: 5, lineHeight: 18 },
   disclaimer: { fontSize: 12, color: COLORS.warmGray, lineHeight: 17, marginTop: 12 },
   unknownNote: { fontSize: 12.5, color: '#8A4B1E', lineHeight: 18, marginTop: 10, backgroundColor: '#FFF3E9', padding: 12, borderRadius: 12 },
 

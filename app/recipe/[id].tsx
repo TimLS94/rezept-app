@@ -940,7 +940,7 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 24, fontWeight: '700', color: '#FFF', marginBottom: 10 },
   heroMeta: { flexDirection: 'row' },
   metaItem: { color: 'rgba(255,255,255,0.9)', fontSize: 14, marginRight: 16 },
-  influencerBar: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  influencerBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 10, backgroundColor: '#FFF' },
   influencerAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
   influencerName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
   influencerHandle: { fontSize: 12, color: '#888' },
@@ -970,11 +970,15 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: '#FFF' },
   tabText: { fontSize: 14, color: '#888', fontWeight: '500' },
   tabTextActive: { color: '#1A1A1A', fontWeight: '600' },
+  // No negative margin. marginTop: -4 pulled this up into the creator bar
+  // above, which carries a bottom border — so the count sat on the line and
+  // overlapped it. It is its own strip now, continuing the white block above
+  // rather than floating between two backgrounds.
   engagementRow: {
-    flexDirection: 'row', gap: 16, flexWrap: 'wrap',
-    paddingHorizontal: 20, paddingBottom: 14, marginTop: -4,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 16, paddingTop: 2, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
   },
-  engagementItem: { fontSize: 13, color: '#7A7A7A', fontWeight: '600' },
   equipmentRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap',
     marginHorizontal: 20, marginBottom: 12, paddingVertical: 10, paddingHorizontal: 14,
