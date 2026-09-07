@@ -45,7 +45,11 @@ export async function addRecipesToShoppingList(
   // sign it was doing anything. The work was never the problem; the waiting in
   // single file was.
   const toInsert: any[] = [];
-  const toUpdate: { id: string; amount: number }[] = [];
+  // The existing rows whose amount changed, as whole rows. Whole, because the
+  // write below is an upsert and Postgres validates the insert branch before
+  // it resolves the conflict — a partial row would fail on the NOT NULL
+  // columns it left out, even though no insert ever happens.
+  const touched: any[] = [];
 
   for (const { recipe, servings, ingredients } of meals) {
     // A recipe with servings 0 would make every amount Infinity.
@@ -68,12 +72,14 @@ export async function addRecipesToShoppingList(
 
       if (existing) {
         // The running total is kept on the working copy so a second mention of
-        // the same ingredient in a later meal adds to it rather than queuing a
-        // second update that would overwrite the first.
+        // the same ingredient in a later meal adds to it rather than being
+        // written twice with the second overwriting the first.
         existing.amount = Number(existing.amount) + amount;
-        const queued = toUpdate.find(u => u.id === existing.id);
-        if (queued) queued.amount = existing.amount;
-        else toUpdate.push({ id: existing.id, amount: existing.amount });
+        // A row with no id has not been written yet — it is one of the inserts
+        // queued below, and the object is the same one, so raising its amount
+        // is the whole update. Sending it to the upsert would try to insert a
+        // row whose id is not a uuid.
+        if (existing.id && !touched.includes(existing)) touched.push(existing);
       } else {
         const newItem = {
           user_id: user.id,
@@ -86,36 +92,34 @@ export async function addRecipesToShoppingList(
           checked: false,
         };
         toInsert.push(newItem);
-        // Pushed to the working copy immediately, so the same ingredient in the
-        // next meal merges into this one instead of becoming a second row.
-        working.push({ ...newItem, id: `pending-${toInsert.length}` });
+        // The same object, not a copy: the next meal's matching ingredient
+        // finds it here and raises its amount, and because it is the very row
+        // queued for insert, no second write is needed. It carries no id, which
+        // is what marks it as unwritten above.
+        working.push(newItem);
       }
     }
   }
 
-  // One insert for every new row, and the updates in parallel rather than in
-  // sequence. Two waits instead of twenty.
-  const [insertRes, updateResults] = await Promise.all([
+  // Two calls, whatever the recipe holds: one insert for the new rows, one
+  // upsert for the changed ones. The updates were briefly N parallel requests,
+  // which is faster than N sequential ones and still N — a fifty-ingredient
+  // week would open fifty connections to save one list.
+  const [insertRes, upsertRes] = await Promise.all([
     toInsert.length
       ? supabase.from('shopping_items').insert(toInsert).select()
       : Promise.resolve({ data: [], error: null } as any),
-    Promise.all(
-      toUpdate.map(u =>
-        supabase.from('shopping_items').update({ amount: u.amount }).eq('id', u.id),
-      ),
-    ),
+    touched.length
+      ? supabase.from('shopping_items').upsert(touched).select()
+      : Promise.resolve({ data: [], error: null } as any),
   ]);
 
   // Count what actually landed, not what was attempted. Reporting the intent
   // is how a rejected write used to look like a success.
   if (insertRes.error) failure ??= insertRes.error.message;
+  if (upsertRes.error) failure ??= upsertRes.error.message;
   const added = insertRes.data?.length ?? 0;
-
-  let merged = 0;
-  for (const r of updateResults) {
-    if (r.error) failure ??= r.error.message;
-    else merged++;
-  }
+  const merged = upsertRes.data?.length ?? 0;
 
   return { added, merged, skipped, failure };
 }
