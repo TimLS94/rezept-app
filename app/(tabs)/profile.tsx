@@ -455,13 +455,15 @@ export default function ProfileScreen() {
               below every recipe on the page, so the more recipes somebody has,
               the further they scroll to leave — the one thing that should not
               get harder the more you use the app. */}
+          <View style={styles.headerSignOutWrap}>
           <TouchableOpacity
             style={styles.headerSignOut}
             onPress={handleLogout}
             accessibilityLabel="Sign out"
           >
-            <Ionicons name="log-out-outline" size={22} color="#E53935" />
+            <Ionicons name="log-out-outline" size={19} color="#6B6B6B" />
           </TouchableOpacity>
+          </View>
         </View>
 
         {isCreator ? (
@@ -867,8 +869,14 @@ const styles = StyleSheet.create({
   creatorTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', marginBottom: 2 },
   creatorSubtitle: { fontSize: 13, color: '#F2701E' },
   creatorArrow: { fontSize: 20, color: '#F2701E' },
+  // A tinted circle, matching the Studio's search button, rather than a bare
+  // red glyph hanging off the corner. The red belonged to the action, not to
+  // the affordance — and the confirmation dialog carries that weight already,
+  // with the destructive styling where the decision actually happens.
+  headerSignOutWrap: { width: 60, alignItems: 'flex-end' },
   headerSignOut: {
-    width: 60, alignItems: 'flex-end', justifyContent: 'center', paddingVertical: 4,
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F1EC',
   },
   logoutButton: { marginHorizontal: 20, padding: 16, borderRadius: 12, backgroundColor: '#FFF', alignItems: 'center', borderWidth: 1, borderColor: '#E53935' },
   logoutText: { fontSize: 16, fontWeight: '600', color: '#E53935' },
