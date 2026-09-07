@@ -6,7 +6,7 @@
 // depending on which screen you found it on. This is that row, once, so both
 // screens genuinely behave the same.
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Recipe } from '../data/recipes';
@@ -107,12 +107,20 @@ export default function RecipeActions({
         />
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.act, justAdded && styles.actDone]} onPress={addToCart}>
+      {/* The busy state existed but nothing showed it: the icon sat unchanged
+          while the write ran, so a tap looked ignored. */}
+      <TouchableOpacity
+        style={[styles.act, justAdded && styles.actDone]}
+        onPress={addToCart}
+        disabled={busy}
+      >
+        {busy ? <ActivityIndicator size="small" color={COLORS.navy} /> : (
         <Ionicons
           name={justAdded ? 'checkmark' : 'cart-outline'}
           size={17}
           color={justAdded ? COLORS.green : COLORS.navy}
         />
+        )}
       </TouchableOpacity>
 
       {onRemove && (

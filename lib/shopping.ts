@@ -34,10 +34,18 @@ export async function addRecipesToShoppingList(
 
   // Local working copy so ingredients shared across the planned meals merge too.
   const working = [...(existingItems || [])];
-  let added = 0;
-  let merged = 0;
   let skipped = 0;
   let failure: string | undefined;
+
+  // Everything is worked out in memory first, then written in two calls.
+  //
+  // This used to await a round trip PER INGREDIENT, inside a nested loop. A
+  // twenty-ingredient recipe was twenty sequential requests to a database in
+  // us-west-1 — three to six seconds from Europe, for a button that gave no
+  // sign it was doing anything. The work was never the problem; the waiting in
+  // single file was.
+  const toInsert: any[] = [];
+  const toUpdate: { id: string; amount: number }[] = [];
 
   for (const { recipe, servings, ingredients } of meals) {
     // A recipe with servings 0 would make every amount Infinity.
@@ -59,14 +67,13 @@ export async function addRecipesToShoppingList(
       );
 
       if (existing) {
-        const next = Number(existing.amount) + amount;
-        const { error } = await supabase
-          .from('shopping_items')
-          .update({ amount: next })
-          .eq('id', existing.id);
-        if (error) { failure ??= error.message; continue; }
-        existing.amount = next;
-        merged++;
+        // The running total is kept on the working copy so a second mention of
+        // the same ingredient in a later meal adds to it rather than queuing a
+        // second update that would overwrite the first.
+        existing.amount = Number(existing.amount) + amount;
+        const queued = toUpdate.find(u => u.id === existing.id);
+        if (queued) queued.amount = existing.amount;
+        else toUpdate.push({ id: existing.id, amount: existing.amount });
       } else {
         const newItem = {
           user_id: user.id,
@@ -78,19 +85,36 @@ export async function addRecipesToShoppingList(
           category: ing.category ?? 'other',
           checked: false,
         };
-        const { data, error } = await supabase
-          .from('shopping_items')
-          .insert(newItem)
-          .select()
-          .single();
-        // Count what actually landed. `added++` used to run whether or not
-        // the insert succeeded, so a rejected row was still reported as added
-        // and the failure never reached anyone.
-        if (error || !data) { failure ??= error?.message ?? 'insert-failed'; continue; }
-        working.push(data);
-        added++;
+        toInsert.push(newItem);
+        // Pushed to the working copy immediately, so the same ingredient in the
+        // next meal merges into this one instead of becoming a second row.
+        working.push({ ...newItem, id: `pending-${toInsert.length}` });
       }
     }
+  }
+
+  // One insert for every new row, and the updates in parallel rather than in
+  // sequence. Two waits instead of twenty.
+  const [insertRes, updateResults] = await Promise.all([
+    toInsert.length
+      ? supabase.from('shopping_items').insert(toInsert).select()
+      : Promise.resolve({ data: [], error: null } as any),
+    Promise.all(
+      toUpdate.map(u =>
+        supabase.from('shopping_items').update({ amount: u.amount }).eq('id', u.id),
+      ),
+    ),
+  ]);
+
+  // Count what actually landed, not what was attempted. Reporting the intent
+  // is how a rejected write used to look like a success.
+  if (insertRes.error) failure ??= insertRes.error.message;
+  const added = insertRes.data?.length ?? 0;
+
+  let merged = 0;
+  for (const r of updateResults) {
+    if (r.error) failure ??= r.error.message;
+    else merged++;
   }
 
   return { added, merged, skipped, failure };

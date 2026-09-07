@@ -311,8 +311,14 @@ export default function CreatorProfileScreen() {
               style={styles.avatar}
             />
           </TouchableOpacity>
-          <Text style={styles.name}>{creator.full_name || 'Creator'}</Text>
-          <Text style={styles.handle}>@{creator.username || handle}</Text>
+          {/* The route param is a username or an id, and it was printed as the
+              handle whichever it was — so a profile with no username showed
+              "@d778ebec-8319-49cd-…", an internal id dressed up as a name. No
+              username, no handle line. */}
+          <Text style={styles.name}>
+            {creator.full_name || creator.username || 'Creator'}
+          </Text>
+          {!!creator.username && <Text style={styles.handle}>@{creator.username}</Text>}
           
           {creator.bio && (
             <Text style={styles.bio}>{creator.bio}</Text>
