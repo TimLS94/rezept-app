@@ -39,6 +39,17 @@ alter table public.profiles
 create policy "Anyone can view creator profiles" on public.profiles
   for select using (is_creator = true);
 
+-- Und das Leserecht auf die Spalte zurück.
+--
+-- Dropping a column drops its grants with it, and profiles has no table-level
+-- SELECT any more — only column grants (harden_profile_reads.sql). So the
+-- rebuilt column came back readable by nobody, and Postgres refuses the whole
+-- query over one missing column: `.eq('is_creator', true)` failed with
+-- "permission denied for table profiles", the client swallowed it, and the
+-- creator directory went empty. The same shape as the nutrition column before
+-- it — a rebuilt column is a new column, whatever its name.
+grant select (is_creator) on public.profiles to anon, authenticated;
+
 commit;
 
 -- ── Prüfen ──────────────────────────────────────────────────────────────────
