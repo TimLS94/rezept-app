@@ -22,10 +22,10 @@ import {
   type CreatorEngagement,
 } from '../../lib/engagement';
 import EngagementRow from '../../components/EngagementRow';
+import Avatar from '../../components/Avatar';
 import { Recipe } from '../../data/recipes';
 import { HEADER_TOP } from '../../lib/layout';
 
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200';
 
 export default function CreatorStudioScreen() {
   const { user, role } = useAuth();
@@ -118,7 +118,7 @@ export default function CreatorStudioScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile card */}
         <View style={styles.profileCard}>
-          <Image source={{ uri: profile.avatarUrl || DEFAULT_AVATAR }} style={styles.avatar} />
+          <Avatar uri={profile.avatarUrl} name={displayName} size={84} />
           <View style={styles.nameRow}>
             <Text style={styles.name}>{displayName}</Text>
             <View style={styles.badge}>

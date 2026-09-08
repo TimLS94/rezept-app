@@ -1,8 +1,11 @@
 import { supabase, getCurrentUser } from './supabase';
 import { RECIPES, Recipe, Ingredient, DietaryTag } from '../data/recipes';
 
-const DEFAULT_AVATAR =
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200';
+// Empty, not a stock photograph. This handed back a picture of one particular
+// smiling stranger for every creator who had not uploaded one, and it was then
+// rendered as that creator's face. What "no picture" looks like is a decision
+// for the component: components/Avatar draws an initial.
+const DEFAULT_AVATAR = '';
 
 // Map a Supabase `recipes` row into the app's Recipe shape.
 export function mapDbRecipe(row: any): Recipe {

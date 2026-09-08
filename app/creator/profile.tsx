@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Avatar from '../../components/Avatar';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/auth';
@@ -7,7 +8,6 @@ import { getCreatorProfile, updateCreatorProfile, CreatorProfile, emptyCreatorPr
 import { RECIPE_PRICE_TIERS, CREATOR_SUB_TIERS, feeBreakdown, usd } from '../../lib/pricing';
 import { HEADER_TOP } from '../../lib/layout';
 
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200';
 
 export default function EditCreatorProfileScreen() {
   const { refresh } = useAuth();
@@ -76,7 +76,7 @@ export default function EditCreatorProfileScreen() {
         {/* Avatar */}
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={changeAvatar} disabled={uploading}>
-            <Image source={{ uri: profile.avatarUrl || DEFAULT_AVATAR }} style={styles.avatar} />
+            <Avatar uri={profile.avatarUrl} name={profile.fullName} size={96} />
             <View style={styles.avatarEdit}>
               <Text style={styles.avatarEditText}>{uploading ? '…' : '✏️'}</Text>
             </View>

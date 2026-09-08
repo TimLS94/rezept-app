@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Avatar from '../components/Avatar';
 import {
   View,
   Text,
@@ -22,8 +23,6 @@ import { restorePurchases, grantPlatformEntitlement, revokePlatformEntitlement }
 import Paywall from '../components/Paywall';
 import { HEADER_TOP } from '../lib/layout';
 
-const DEFAULT_AVATAR =
-  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
 
 export default function SettingsScreen() {
   const { isPremium, role, refresh } = useAuth();
@@ -278,10 +277,7 @@ export default function SettingsScreen() {
         {isCreator && (<>
         {/* Profile picture */}
         <View style={styles.avatarWrap}>
-          <Image
-            source={{ uri: avatarUrl.trim() || DEFAULT_AVATAR }}
-            style={styles.avatar}
-          />
+            <Avatar uri={avatarUrl.trim()} name={fullName} size={96} />
           <TouchableOpacity style={styles.avatarButton} onPress={chooseAvatar} disabled={uploadingAvatar}>
             {uploadingAvatar ? (
               <ActivityIndicator color="#F2701E" />

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import Avatar from '../components/Avatar';
 import { fetchCookCounts } from '../lib/engagement';
 import EngagementRow from '../components/EngagementRow';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
@@ -211,9 +212,10 @@ export default function SearchScreen() {
                 style={styles.creatorCard}
                 onPress={() => router.push(`/creator/${creator.username || creator.id}`)}
               >
-                <Image
-                  source={{ uri: creator.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200' }}
-                  style={styles.creatorAvatar}
+                <Avatar
+                  uri={creator.avatar_url}
+                  name={creator.full_name || creator.username}
+                  size={48}
                 />
                 <View style={styles.creatorInfo}>
                   <Text style={styles.creatorName}>{creator.full_name || 'Creator'}</Text>

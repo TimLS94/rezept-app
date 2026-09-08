@@ -158,7 +158,8 @@ export function myRecipeToRecipe(myRecipe: MyRecipe): Recipe {
     influencer: {
       name: 'My Recipe',
       handle: '@me',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
+      // No picture is no picture; Avatar draws the initial.
+      avatar: '',
     },
     source: 'mine',
     nutrition: myRecipe.nutrition,

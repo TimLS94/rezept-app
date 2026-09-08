@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import Avatar from '../../components/Avatar';
 import { 
   View, 
   Text, 
@@ -512,7 +513,7 @@ export default function RecipeDetailScreen() {
             writing reads as a verdict, when it only means the app is new. */}
         {/* Influencer */}
         <View style={styles.influencerBar}>
-          <Image source={{ uri: recipe.influencer.avatar }} style={styles.influencerAvatar} />
+          <Avatar uri={recipe.influencer.avatar} name={recipe.influencer.name} size={40} />
           <TouchableOpacity
             style={{ flex: 1 }}
             onPress={() => router.push(`/creator/${recipe.influencer.id || recipe.influencer.handle.replace(/^@/, '')}`)}

@@ -28,7 +28,6 @@ import { HEADER_TOP } from '../../lib/layout';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -51,7 +50,6 @@ const QUICK_ACTIONS: { icon: IoniconName; label: string; route: string }[] = [
 export default function HomeScreen() {
   const { isGuest } = useAuth();
   const [name, setName] = useState<string>('');
-  const [avatar, setAvatar] = useState<string>(DEFAULT_AVATAR);
   const [picks, setPicks] = useState<Recipe[]>([]);
   const [cursor, setCursor] = useState(0);
   // recipe id → share of its ingredients your last fridge scan covered.
@@ -75,7 +73,6 @@ export default function HomeScreen() {
         const profile = await fetchMyProfile();
         if (active && profile) {
           setName((profile.full_name || '').split(' ')[0]);
-          if (profile.avatar_url) setAvatar(profile.avatar_url);
         }
 
         // Suggestions come from what the user actually has: their cookbook
@@ -179,13 +176,13 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {/* The wordmark alone. There was an avatar here, and its default was a
+            stock photograph of a stranger — so anyone who had not uploaded a
+            picture, which is nearly everyone, saw someone else's face standing
+            in for their own. It led to Profile, which the tab bar already does
+            from every screen, so there was nothing to keep. */}
         <View style={styles.topBar}>
           <Text style={styles.wordmark}>SPOON<Text style={styles.wordmarkAccent}>DROP</Text></Text>
-          <View style={styles.topRight}>
-            <TouchableOpacity onPress={() => router.push('/profile')}>
-              <Image source={{ uri: avatar }} style={styles.avatar} />
-            </TouchableOpacity>
-          </View>
         </View>
 
         <Text style={styles.greeting}>
@@ -400,9 +397,7 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   wordmark: { fontFamily: FONTS.display, fontSize: 19, color: COLORS.navy, letterSpacing: 0.5 },
   wordmarkAccent: { color: COLORS.orange },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   iconBtn: { padding: 4 },
-  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEE' },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

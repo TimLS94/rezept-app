@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Avatar from '../../components/Avatar';
 import { fetchCookCounts } from '../../lib/engagement';
 import EngagementRow from '../../components/EngagementRow';
 import {
@@ -376,7 +377,7 @@ export default function DiscoverScreen() {
                       style={styles.influencerRow}
                       onPress={() => router.push(`/creator/${recipe.influencer.id || recipe.influencer.handle.replace('@', '')}`)}
                     >
-                      <Image source={{ uri: recipe.influencer.avatar }} style={styles.influencerAvatar} />
+                      <Avatar uri={recipe.influencer.avatar} name={recipe.influencer.name} size={28} />
                       <View>
                         <Text style={styles.influencerName}>{recipe.influencer.name}</Text>
                         <Text style={styles.influencerHandle}>{recipe.influencer.handle}</Text>

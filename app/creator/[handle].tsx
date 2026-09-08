@@ -6,6 +6,7 @@ import {
   type CreatorEngagement,
 } from '../../lib/engagement';
 import ImageViewer from '../../components/ImageViewer';
+import Avatar from '../../components/Avatar';
 import EngagementRow from '../../components/EngagementRow';
 import {
   View,
@@ -299,16 +300,15 @@ export default function CreatorProfileScreen() {
               one recipe photos already use. */}
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() =>
-              setViewerUri(
-                creator.avatar_url ||
-                  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
-              )
-            }
+            disabled={!creator.avatar_url}
+            onPress={() => creator.avatar_url && setViewerUri(creator.avatar_url)}
           >
-            <Image
-              source={{ uri: creator.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200' }}
-              style={styles.avatar}
+            {/* Only a real picture opens full screen — there is nothing to
+                enlarge about a letter on a circle. */}
+            <Avatar
+              uri={creator.avatar_url}
+              name={creator.full_name || creator.username}
+              size={100}
             />
           </TouchableOpacity>
           {/* The route param is a username or an id, and it was printed as the
