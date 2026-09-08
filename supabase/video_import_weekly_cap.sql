@@ -38,9 +38,11 @@ returns int language sql stable security definer set search_path = public as $$
     when coalesce((select role from public.profiles where id = auth.uid()), 'user')
          in ('creator', 'admin')
     then case public.import_bucket(p_kind)
-           -- Instagram bleibt bei 5: die echte Decke ist der RapidAPI-Tarif,
-           -- der monatlich zählt, nicht wir.
-           when 'instagram' then 5
+           -- 5 stammte aus dem BASIC-Tarif mit 20 Aufrufen pro MONAT für die
+           -- ganze App — bei dieser Decke wäre ein einziger Creator das ganze
+           -- Kontingent gewesen. Der Tarif ist inzwischen größer, also gilt
+           -- wieder unsere eigene Grenze statt der des Anbieters.
+           when 'instagram' then 100
            when 'video'     then 100
            else 300
          end
