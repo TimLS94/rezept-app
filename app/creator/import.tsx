@@ -135,6 +135,16 @@ export default function ImportRecipeScreen() {
         Alert.alert('No video', 'Please select a video');
         return;
       }
+      // Checked before the call is spent. Video imports booked no allowance at
+      // all — only the per-day AI caps applied, so the weekly number existed
+      // nowhere and the most expensive operation we run was the least
+      // accounted for.
+      const videoQuota = await getImportQuota('video');
+      if (videoQuota.remaining <= 0) {
+        setError(quotaText(videoQuota));
+        return;
+      }
+
       setStep('extracting');
       const aiResult = await extractRecipeFromVideoAudio(videoUri);
       if (!aiResult.success) {
@@ -142,6 +152,9 @@ export default function ImportRecipeScreen() {
         setStep('input');
         return;
       }
+      // Booked only once a recipe actually came back. A transcription that
+      // failed cost us the call but should not cost the creator their week.
+      await recordImport('video');
       setRecipe(aiResult.recipe);
       setStep('review');
       return;

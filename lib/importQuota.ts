@@ -13,9 +13,14 @@
 import { supabase } from './supabase';
 
 /** Which allowance an import comes out of. */
-export type ImportKind = 'instagram' | 'screenshot' | 'camera' | 'text';
+export type ImportKind = 'instagram' | 'video' | 'screenshot' | 'camera' | 'text';
 
 export const INSTAGRAM_LIMIT = 3; // per rolling 7 days, enforced in the DB
+// Video is its own allowance. It shared the "everything else" bucket with text
+// and screenshots, which is the wrong neighbour: a text import is one model
+// call, a video is a download, an upload and a model watching every other
+// frame — the most expensive call we make, sharing a limit with the cheapest.
+export const VIDEO_LIMIT = 2;
 export const OTHER_LIMIT = 10;
 
 export type ImportQuota = {
@@ -27,7 +32,9 @@ export type ImportQuota = {
 };
 
 export function limitFor(kind: ImportKind): number {
-  return kind === 'instagram' ? INSTAGRAM_LIMIT : OTHER_LIMIT;
+  if (kind === 'instagram') return INSTAGRAM_LIMIT;
+  if (kind === 'video') return VIDEO_LIMIT;
+  return OTHER_LIMIT;
 }
 
 const permissive = (kind: ImportKind): ImportQuota => ({
@@ -60,7 +67,10 @@ export async function recordImport(kind: ImportKind): Promise<ImportQuota & { ok
 
 /** "Two of three Instagram imports left", or when the next one frees up. */
 export function quotaText(q: ImportQuota): string {
-  const what = q.kind === 'instagram' ? 'Instagram imports' : 'imports';
+  const what =
+    q.kind === 'instagram' ? 'Instagram imports'
+    : q.kind === 'video' ? 'video imports'
+    : 'imports';
   if (q.remaining > 0) return `${q.remaining} of ${q.limit} ${what} left this week`;
   if (!q.resets_at) return `You get ${q.limit} ${what} every 7 days.`;
   const days = Math.max(
