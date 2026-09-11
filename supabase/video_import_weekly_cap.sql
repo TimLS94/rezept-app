@@ -42,9 +42,14 @@ returns int language sql stable security definer set search_path = public as $$
            -- ganze App — bei dieser Decke wäre ein einziger Creator das ganze
            -- Kontingent gewesen. Der Tarif ist inzwischen größer, also gilt
            -- wieder unsere eigene Grenze statt der des Anbieters.
-           when 'instagram' then 100
+           -- 700 = 100 pro Tag über sieben Tage. Die Woche soll den Tag nicht
+           -- abschneiden: bei einem Wochenwert von 100 wäre nach dem ersten
+           -- vollen Tag Schluss gewesen, obwohl der Tag 100 erlaubt. Das
+           -- eigentliche Limit ist jetzt das tägliche; die Woche fängt nur
+           -- einen Ausreißer ab.
+           when 'instagram' then 700
            when 'video'     then 100
-           else 300
+           else 700
          end
     else case public.import_bucket(p_kind)
            when 'instagram' then 3
@@ -112,7 +117,8 @@ returns int language sql stable security definer set search_path = public as $$
       when 'recipe-from-video'   then 30
       when 'recipe-from-text'    then 300
       when 'recipe-from-images'  then 100
-      when 'instagram-post'      then 30
+      -- RapidAPI Pro: 100 Instagram-Abrufe am Tag je Creator.
+      when 'instagram-post'      then 100
       else 20
     end
     else case p_op
