@@ -79,15 +79,26 @@ export default function LoginScreen() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: true },
+      // Someone recovering an account must not be able to create a new one by
+      // mistyping their address. With shouldCreateUser on, a typo signed them
+      // into a fresh empty account that looked like their own with everything
+      // gone — the worst possible answer to "I forgot my password". While
+      // signing up, creating the account is the entire point.
+      options: { shouldCreateUser: !isLogin },
     });
     setLoading(false);
     if (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Could not send the code', error.message);
       return;
     }
     setOtpSent(true);
-    Alert.alert('Check your email', `We sent a 6-digit code to ${email}.`);
+    Alert.alert(
+      'Check your email',
+      `We sent a 6-digit code to ${email}.` +
+        (isLogin
+          ? '\n\nSigning in with the code does not change your password. To set a new one, open Settings once you are in.'
+          : ''),
+    );
   };
 
   const verifyCode = async () => {
@@ -244,11 +255,19 @@ export default function LoginScreen() {
                 />
               </View>
 
+              {/* "Email me a login code instead" is what this did, and it is
+                  not what anyone locked out is looking for. Someone who has
+                  forgotten their password scans for those words; a passwordless
+                  sign-in reads as a different feature and they never try it.
+                  Same mechanism, findable name — and it says what happens next,
+                  because a code is not the reset people expect. */}
               <TouchableOpacity
                 style={styles.forgotPassword}
                 onPress={() => { setMode('code'); setOtpSent(false); }}
               >
-                <Text style={styles.forgotPasswordText}>Email me a login code instead</Text>
+                <Text style={styles.forgotPasswordText}>
+                  {isLogin ? 'Forgot your password?' : 'Email me a login code instead'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity

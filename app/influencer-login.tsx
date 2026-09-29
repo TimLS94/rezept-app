@@ -76,7 +76,9 @@ export default function InfluencerLoginScreen() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: true },
+      // Same reasoning as the main login: a mistyped address during recovery
+      // must not quietly create a second account.
+      options: { shouldCreateUser: !isLogin },
     });
     setLoading(false);
     if (error) {
@@ -174,7 +176,9 @@ export default function InfluencerLoginScreen() {
                 style={styles.forgotPassword}
                 onPress={() => { setMode('code'); setOtpSent(false); }}
               >
-                <Text style={styles.forgotPasswordText}>Email me a login code instead</Text>
+                <Text style={styles.forgotPasswordText}>
+                  {isLogin ? 'Forgot your password?' : 'Email me a login code instead'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
