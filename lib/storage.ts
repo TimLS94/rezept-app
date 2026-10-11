@@ -67,3 +67,52 @@ export async function uploadBase64Image(
   if (error) return null;
   return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
+
+/**
+ * Copy a remote image into our own storage and return the new URL.
+ *
+ * Instagram's thumbnails are signed and short-lived. Storing the link it hands
+ * back meant every imported recipe looked right for a few hours and then lost
+ * its picture for good — the CDN answers 403 once the signature expires, and
+ * by then the recipe is in people's cookbooks with a hole where the photo was.
+ *
+ * So the picture is taken at import, while the link still works. Returns null
+ * on any failure; the caller keeps whatever it had rather than losing the
+ * recipe over a photograph.
+ */
+export async function uploadImageFromUrl(
+  url: string,
+  folder: 'recipes' | 'avatars'
+): Promise<string | null> {
+  if (!url || url.startsWith('data:')) return null;
+  // Already ours — copying it again would just make a second copy of the same
+  // bytes on every edit.
+  if (url.includes('/storage/v1/object/')) return url;
+
+  try {
+    // Fifteen seconds. The import is already a long wait and the picture is
+    // the least important part of it; a slow CDN must not hold up a recipe
+    // that has otherwise finished extracting.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    const res = await fetch(url, { signal: controller.signal }).finally(() =>
+      clearTimeout(timer),
+    );
+    if (!res.ok) return null;
+
+    const blob = await res.blob();
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('read-failed'));
+      // readAsDataURL gives "data:image/jpeg;base64,…"; the upload wants only
+      // the payload.
+      reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+      reader.readAsDataURL(blob);
+    });
+    if (!base64) return null;
+
+    return await uploadBase64Image(base64, folder);
+  } catch {
+    return null;
+  }
+}

@@ -21,7 +21,7 @@ import { fetchInstagramWithFallback, isValidInstagramUrl, buildExtractionContent
 import { getImportQuota, recordImport, quotaText } from '../../lib/importQuota';
 import { extractRecipeWithAI, extractRecipeFromImages, extractRecipeFromVideoAudio, ExtractedRecipe } from '../../lib/openai';
 import { createRecipe } from '../../lib/recipes';
-import { uploadBase64Image, pickAndUploadImage } from '../../lib/storage';
+import { uploadBase64Image, pickAndUploadImage, uploadImageFromUrl } from '../../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { DietaryTag, Ingredient, DIETARY_TAGS, CUISINES } from '../../data/recipes';
 import { HEADER_TOP } from '../../lib/layout';
@@ -221,7 +221,18 @@ export default function ImportRecipeScreen() {
     await recordImport('instagram');
 
     if (igResult.content.thumbnailUrl) {
+      // Shown straight away so the review step is not blank while the copy
+      // runs; replaced by our own URL as soon as there is one.
       setThumbnailUrl(igResult.content.thumbnailUrl);
+      // Instagram's thumbnail links are signed and expire within hours. Storing
+      // the link meant the recipe looked right at import and lost its picture
+      // for good a little later — 403 from the CDN, by which time it was
+      // already in people's cookbooks. The picture is taken now, while the
+      // link still works. A failure leaves the original in place rather than
+      // losing the import over a photograph.
+      uploadImageFromUrl(igResult.content.thumbnailUrl, 'recipes')
+        .then(saved => { if (saved) setThumbnailUrl(saved); })
+        .catch(() => {});
     }
 
     // Step 2: Extract recipe with AI

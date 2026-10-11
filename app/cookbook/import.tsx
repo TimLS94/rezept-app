@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { uploadImageFromUrl } from '../../lib/storage';
 import * as Clipboard from 'expo-clipboard';
 import {
   View,
@@ -298,7 +299,15 @@ export default function ImportRecipeScreen() {
         setStep('input');
         return;
       }
-      if (ig.content.thumbnailUrl) setThumbnailUrl(ig.content.thumbnailUrl);
+      if (ig.content.thumbnailUrl) {
+        // Shown immediately, then replaced by our own copy. Instagram's links
+        // are signed and expire within hours, so storing one means the recipe
+        // loses its picture shortly after it is saved.
+        setThumbnailUrl(ig.content.thumbnailUrl);
+        uploadImageFromUrl(ig.content.thumbnailUrl, 'recipes')
+          .then(saved => { if (saved) setThumbnailUrl(saved); })
+          .catch(() => {});
+      }
 
       // Everything at once, not one source until something sticks.
       //
