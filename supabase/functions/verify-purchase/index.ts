@@ -10,7 +10,15 @@
 // Secrets: REVENUECAT_SECRET_KEY (and the standard SUPABASE_* set).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const ENTITLEMENT = 'premium';
+// Must match ENTITLEMENT_ID in lib/purchases.ts exactly, space included.
+//
+// The two disagreed: the app asked RevenueCat for "Cook_App Pro" and this
+// asked for "premium". A purchase would have gone through, the app would have
+// unlocked itself on the client's answer, and this would have found no such
+// entitlement and written no row — so every server-side check (get_recipe_full,
+// cookable_recipes, save_recipe_to_cookbook) would have gone on refusing
+// someone who had just paid. Money taken, nothing granted.
+const ENTITLEMENT = 'Cook_App Pro';
 const STORE_FEE = 0.15; // App Store Small Business Program
 
 const corsHeaders = {
