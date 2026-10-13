@@ -34,9 +34,30 @@ const json = (body: unknown, status = 200) =>
 
 type Subscriber = {
   entitlements?: Record<string, { expires_date?: string | null; product_identifier?: string }>;
-  subscriptions?: Record<string, { expires_date?: string | null }>;
-  non_subscriptions?: Record<string, Array<{ id: string; purchase_date: string }>>;
+  subscriptions?: Record<string, { expires_date?: string | null; is_sandbox?: boolean }>;
+  non_subscriptions?: Record<string, Array<{ id: string; purchase_date: string; is_sandbox?: boolean }>>;
 };
+
+// Sandbox receipts are real receipts. Apple signs them, RevenueCat validates
+// them, and nothing in the payload stops us writing a genuine entitlement off
+// one — which is exactly what used to happen. With RevenueCat's sandbox access
+// set to "Anybody", a sandbox purchase bought Premium for free.
+//
+// Refused by default, so the safe state is the one that needs no action.
+// Testing turns it on explicitly:
+//
+//   npx supabase secrets set ALLOW_SANDBOX_PURCHASES=true
+//
+// and launch day is `secrets unset` — a line in the secrets list anyone can
+// see, rather than a flag buried in code that nobody remembers to flip.
+const ALLOW_SANDBOX = Deno.env.get('ALLOW_SANDBOX_PURCHASES') === 'true';
+
+/** Whether the purchase behind a product came from the sandbox. */
+function isSandboxPurchase(subscriber: Subscriber, productId: string | undefined): boolean {
+  if (!productId) return false;
+  if (subscriber.subscriptions?.[productId]?.is_sandbox) return true;
+  return (subscriber.non_subscriptions?.[productId] ?? []).some(p => p.is_sandbox);
+}
 
 async function fetchSubscriber(userId: string, secret: string): Promise<Subscriber | null> {
   const res = await fetch(
@@ -113,6 +134,9 @@ Deno.serve(async (req: Request) => {
     const ent = subscriber.entitlements?.[ENTITLEMENT];
     const active = !!ent && (!ent.expires_date || new Date(ent.expires_date).getTime() > Date.now());
     if (!active) return json({ ok: false, error: 'no_active_entitlement' }, 402);
+    if (!ALLOW_SANDBOX && isSandboxPurchase(subscriber, ent?.product_identifier)) {
+      return json({ ok: false, error: 'sandbox_purchase_refused' }, 402);
+    }
 
     const row = {
       user_id: user.id,
@@ -148,6 +172,9 @@ Deno.serve(async (req: Request) => {
     // equal and is refused.
     const purchases = subscriber.non_subscriptions?.[productId]?.length ?? 0;
     if (purchases === 0) return json({ ok: false, error: 'no_purchase_found' }, 402);
+    if (!ALLOW_SANDBOX && isSandboxPurchase(subscriber, productId)) {
+      return json({ ok: false, error: 'sandbox_purchase_refused' }, 402);
+    }
 
     const priceCents = Number(productId.slice(-3));
     const { count: spent } = await admin
@@ -203,6 +230,9 @@ Deno.serve(async (req: Request) => {
     const sub = subscriber.subscriptions?.[productId];
     const active = !!sub && (!sub.expires_date || new Date(sub.expires_date).getTime() > Date.now());
     if (!active) return json({ ok: false, error: 'no_active_subscription' }, 402);
+    if (!ALLOW_SANDBOX && isSandboxPurchase(subscriber, productId)) {
+      return json({ ok: false, error: 'sandbox_purchase_refused' }, 402);
+    }
 
     // NOTE: a store subscription product can only be active once per account,
     // so this tier can back exactly one creator at a time. Subscribing to a
