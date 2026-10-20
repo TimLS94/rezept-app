@@ -223,7 +223,11 @@ Deno.serve(async (req: Request) => {
   if (kind === 'creator') {
     const creatorId = String(body.creatorId ?? '');
     const productId = String(body.productId ?? '');
-    if (!creatorId || !/^creator_sub_\d{3}$/.test(productId)) {
+    // Three or four digits: the tier list in lib/pricing.ts runs to
+    // creator_sub_1499, and a three-digit pattern refused it — after the
+    // customer had already paid. The recipe side has no such tier, so it stays
+    // at three; widening it there would let a typo through as a real price.
+    if (!creatorId || !/^creator_sub_\d{3,4}$/.test(productId)) {
       return json({ ok: false, error: 'bad_request' }, 400);
     }
 
