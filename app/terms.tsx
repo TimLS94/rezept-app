@@ -50,7 +50,7 @@ export default function TermsOfServiceScreen() {
 
         <Text style={styles.sectionTitle}>5. Reporting Content and Copyright Complaints</Text>
         <Text style={styles.paragraph}>
-          If you believe content in the App is offensive, unsafe, or infringes your rights, tell us. Write to legal@spoondrop.app and include:{'\n\n'}
+          If you believe content in the App is offensive, unsafe, or infringes your rights, tell us. Every recipe has a "Report this recipe" action at the foot of its page. For rights complaints, or anything that needs explaining, write to legal@spoondrop.app and include:{'\n\n'}
           • The recipe title and the creator who published it{'\n'}
           • What is wrong with it{'\n'}
           • For a rights complaint, confirmation that you own the content or act for the owner{'\n'}

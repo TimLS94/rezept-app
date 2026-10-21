@@ -44,6 +44,7 @@ import NutritionStrip from '../../components/NutritionStrip';
 import { shareRecipe } from '../../lib/share';
 import { HEADER_TOP } from '../../lib/layout';
 import { caloriesLabel } from '../../lib/nutrition';
+import { reportRecipe, REPORT_REASONS } from '../../lib/reports';
 
 type FamilyMember = {
   id: string;
@@ -383,6 +384,34 @@ export default function RecipeDetailScreen() {
   // long enough to look like the tap had missed. The guard also stops a second
   // tap in that gap from adding everything twice.
   const [addingToList, setAddingToList] = useState(false);
+
+  // Guideline 1.2 wants a way to flag a recipe from inside the app, and the
+  // terms promise an answer in 48 hours. An Alert rather than a screen: the
+  // reasons are the whole form, and a form nobody reaches is worse than a
+  // list of four taps.
+  const reportThisRecipe = () => {
+    if (isGuest || !user) {
+      Alert.alert('Sign in to report', 'Reports are tied to an account so we can come back to you.');
+      return;
+    }
+    Alert.alert(
+      'Report this recipe',
+      'Tell us what is wrong with it. We look at every report within 48 hours.',
+      [
+        ...REPORT_REASONS.map(r => ({
+          text: r.label,
+          onPress: async () => {
+            const { error } = await reportRecipe(String(id), recipe?.title ?? null, r.id);
+            Alert.alert(
+              error ? 'Could not send that' : 'Thank you',
+              error ?? 'We review every report within 48 hours. If it breaks our rules, it comes down.',
+            );
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' as const },
+      ],
+    );
+  };
 
   const addToShoppingList = async () => {
     if (!recipe || addingToList) return;
@@ -802,6 +831,10 @@ export default function RecipeDetailScreen() {
         {/* Nutrition, with its provenance attached. */}
         <NutritionStrip nutrition={recipe.nutrition} calories={recipe.calories} />
 
+        <TouchableOpacity onPress={reportThisRecipe} style={styles.reportRow}>
+          <Text style={styles.reportText}>Report this recipe</Text>
+        </TouchableOpacity>
+
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
 
@@ -1000,6 +1033,8 @@ const styles = StyleSheet.create({
   stepImage: { width: '100%', height: 170, borderRadius: 12, marginTop: 10 },
   // Tall enough to clear the fixed bottom bar. At 100 the "Favorite" and
   // "Add to cookbook" buttons ended up underneath it and could not be reached.
+  reportRow: { alignItems: 'center', paddingVertical: 18 },
+  reportText: { fontSize: 13, color: '#9A9A9A', textDecorationLine: 'underline' },
   bottomSpacer: { height: 190 },
   statusScrim: {
     position: 'absolute',

@@ -23,9 +23,12 @@ import { supabase } from '../lib/supabase';
 import {
   listApplications, decideApplication, type PendingApplication,
 } from '../lib/creatorApplications';
+import { listReports, decideReport, type ContentReport } from '../lib/reports';
 import { COLORS, FONTS } from '../lib/theme';
 import { HEADER_TOP } from '../lib/layout';
 import { goBackOr } from '../lib/nav';
+
+const REASON_LABEL: Record<string, string> = { copyright: 'Rights complaint', unsafe: 'Unsafe to cook', offensive: 'Offensive', spam: 'Spam', other: 'Other' };
 
 const RANGES = [
   { hours: 24, label: '24h' },
@@ -38,6 +41,7 @@ export default function AdminScreen() {
   const [hours, setHours] = useState(24);
   const [data, setData] = useState<any>(null);
   const [apps, setApps] = useState<PendingApplication[]>([]);
+  const [reports, setReports] = useState<ContentReport[]>([]);
   const [deciding, setDeciding] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +66,8 @@ export default function AdminScreen() {
     // Applications are the one thing here that is a queue rather than a
     // reading: somebody is waiting on the other end of each row.
     setApps(await listApplications('pending'));
+    // The queue the terms put a clock on: 48 hours from the report.
+    setReports(await listReports('open'));
     setLoading(false);
   }, [hours]);
 
@@ -85,6 +91,34 @@ export default function AdminScreen() {
               return;
             }
             setApps(prev => prev.filter(a => a.user_id !== app.user_id));
+          },
+        },
+      ],
+    );
+  };
+
+  const judge = (r: ContentReport, remove: boolean) => {
+    Alert.alert(
+      remove ? 'Take this recipe down?' : 'Dismiss this report?',
+      remove
+        ? 'It is archived first, so this can be undone from removed_recipes. Buyers keep their purchase.'
+        : 'The recipe stays up and the report is closed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: remove ? 'Take down' : 'Dismiss',
+          style: remove ? 'destructive' : 'default',
+          onPress: async () => {
+            setDeciding(r.id);
+            const res = await decideReport(r.id, remove);
+            setDeciding(null);
+            if (res.error) {
+              Alert.alert('Could not save', res.error);
+              return;
+            }
+            // A takedown answers every open report about the same recipe.
+            setReports(prev => prev.filter(x =>
+              remove ? x.recipe_id !== r.recipe_id : x.id !== r.id));
           },
         },
       ],
@@ -172,6 +206,45 @@ export default function AdminScreen() {
                   >
                     <Text style={styles.approveText}>
                       {deciding === a.user_id ? '…' : 'Approve'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
+
+          <Text style={styles.section}>
+            Reported recipes{reports.length ? ` (${reports.length})` : ''}
+          </Text>
+          {reports.length === 0 ? (
+            <Text style={styles.empty}>Nothing reported.</Text>
+          ) : (
+            reports.map(r => (
+              <View key={r.id} style={styles.appCard}>
+                <Text style={styles.rowTitle}>{r.recipe_title || r.recipe_id}</Text>
+                <Text style={styles.rowMeta}>
+                  {REASON_LABEL[r.reason] ?? r.reason}
+                  {r.creator ? ` · by ${r.creator}` : ''}
+                  {' · '}{new Date(r.created_at).toLocaleDateString()}
+                  {r.recipe_exists ? '' : ' · already gone'}
+                </Text>
+                {r.detail ? <Text style={styles.pitch}>{r.detail}</Text> : null}
+                {r.reporter ? <Text style={styles.links}>Reported by {r.reporter}</Text> : null}
+                <View style={styles.appActions}>
+                  <TouchableOpacity
+                    style={[styles.appBtn, styles.approve]}
+                    onPress={() => judge(r, false)}
+                    disabled={deciding === r.id}
+                  >
+                    <Text style={styles.approveText}>Dismiss</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.appBtn, styles.reject]}
+                    onPress={() => judge(r, true)}
+                    disabled={deciding === r.id || !r.recipe_exists}
+                  >
+                    <Text style={styles.rejectText}>
+                      {deciding === r.id ? '\u2026' : 'Take down'}
                     </Text>
                   </TouchableOpacity>
                 </View>
