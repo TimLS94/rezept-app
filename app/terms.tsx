@@ -14,7 +14,7 @@ export default function TermsOfServiceScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.lastUpdated}>Last updated: July 27, 2026</Text>
+        <Text style={styles.lastUpdated}>Last updated: October 21, 2026</Text>
 
         <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
         <Text style={styles.paragraph}>
@@ -48,7 +48,19 @@ export default function TermsOfServiceScreen() {
           • We may remove content that violates these terms
         </Text>
 
-        <Text style={styles.sectionTitle}>5. Creator Accounts</Text>
+        <Text style={styles.sectionTitle}>5. Reporting Content and Copyright Complaints</Text>
+        <Text style={styles.paragraph}>
+          If you believe content in the App is offensive, unsafe, or infringes your rights, tell us. Write to legal@spoondrop.app and include:{'\n\n'}
+          • The recipe title and the creator who published it{'\n'}
+          • What is wrong with it{'\n'}
+          • For a rights complaint, confirmation that you own the content or act for the owner{'\n'}
+          • An address we can reply to
+        </Text>
+        <Text style={styles.paragraph}>
+          We review every report within 48 hours. Content we find to be infringing, unsafe, or in breach of these terms is removed and the creator is notified. Creators who repeatedly infringe the rights of others lose their creator account.
+        </Text>
+
+        <Text style={styles.sectionTitle}>6. Creator Accounts</Text>
         <Text style={styles.paragraph}>
           Creator accounts are granted at our discretion. Creators agree to:{'\n\n'}
           • Only upload original content or content they have rights to share{'\n'}
@@ -57,7 +69,7 @@ export default function TermsOfServiceScreen() {
           • Not use the platform for spam or unauthorized advertising
         </Text>
 
-        <Text style={styles.sectionTitle}>6. Prohibited Uses</Text>
+        <Text style={styles.sectionTitle}>7. Prohibited Uses</Text>
         <Text style={styles.paragraph}>
           You may not:{'\n\n'}
           • Use the App for any illegal purpose{'\n'}
@@ -67,7 +79,7 @@ export default function TermsOfServiceScreen() {
           • Interfere with the proper functioning of the App
         </Text>
 
-        <Text style={styles.sectionTitle}>7. AI-Generated Content</Text>
+        <Text style={styles.sectionTitle}>8. AI-Generated Content</Text>
         <Text style={styles.paragraph}>
           The App uses AI to help extract and format recipes. While we strive for accuracy:{'\n\n'}
           • AI-generated content may contain errors{'\n'}
@@ -76,14 +88,14 @@ export default function TermsOfServiceScreen() {
           • Check for allergens and dietary restrictions manually
         </Text>
 
-        <Text style={styles.sectionTitle}>8. Intellectual Property</Text>
+        <Text style={styles.sectionTitle}>9. Intellectual Property</Text>
         <Text style={styles.paragraph}>
           • The App and its original content are owned by SpoonDrop{'\n'}
           • Our trademarks may not be used without permission{'\n'}
           • Recipe content uploaded by creators remains their property
         </Text>
 
-        <Text style={styles.sectionTitle}>9. Disclaimer of Warranties</Text>
+        <Text style={styles.sectionTitle}>10. Disclaimer of Warranties</Text>
         <Text style={styles.paragraph}>
           THE APP IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. WE DO NOT GUARANTEE THAT:{'\n\n'}
           • The App will be uninterrupted or error-free{'\n'}
@@ -92,27 +104,27 @@ export default function TermsOfServiceScreen() {
           • The App will meet your specific requirements
         </Text>
 
-        <Text style={styles.sectionTitle}>10. Limitation of Liability</Text>
+        <Text style={styles.sectionTitle}>11. Limitation of Liability</Text>
         <Text style={styles.paragraph}>
-          TO THE MAXIMUM EXTENT PERMITTED BY LAW, FEEDFAMILY SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO PERSONAL INJURY, ALLERGIC REACTIONS, OR FOOD-RELATED ILLNESS.
+          TO THE MAXIMUM EXTENT PERMITTED BY LAW, SPOONDROP SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO PERSONAL INJURY, ALLERGIC REACTIONS, OR FOOD-RELATED ILLNESS.
         </Text>
 
-        <Text style={styles.sectionTitle}>11. Termination</Text>
+        <Text style={styles.sectionTitle}>12. Termination</Text>
         <Text style={styles.paragraph}>
           We may terminate or suspend your account at any time for violations of these terms. You may delete your account at any time through the App settings.
         </Text>
 
-        <Text style={styles.sectionTitle}>12. Changes to Terms</Text>
+        <Text style={styles.sectionTitle}>13. Changes to Terms</Text>
         <Text style={styles.paragraph}>
           We reserve the right to modify these terms at any time. Continued use of the App after changes constitutes acceptance of the new terms.
         </Text>
 
-        <Text style={styles.sectionTitle}>13. Governing Law</Text>
+        <Text style={styles.sectionTitle}>14. Governing Law</Text>
         <Text style={styles.paragraph}>
-          These terms shall be governed by the laws of [Your State/Country], without regard to conflict of law principles.
+          These terms shall be governed by the laws of Germany, without regard to conflict of law principles.
         </Text>
 
-        <Text style={styles.sectionTitle}>14. Contact</Text>
+        <Text style={styles.sectionTitle}>15. Contact</Text>
         <Text style={styles.paragraph}>
           For questions about these Terms, contact us at:{'\n\n'}
           Email: legal@spoondrop.app{'\n\n'}
