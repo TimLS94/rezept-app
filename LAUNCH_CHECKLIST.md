@@ -6,6 +6,89 @@ Status verified against the live project on 2026-08-06.
 
 ---
 
+## 🔜 Open before submitting — as of 2026-10-24
+
+The list below is current. Everything further down was written on 2026-08-06
+and parts of it have since been done; trust this section over that one.
+
+### Must be done, or the submission fails
+
+- [ ] **No mailbox exists for the domain.** `dig +short MX spoondrop.app`
+      returns nothing, so mail to `support@`, `privacy@` and `legal@` bounces.
+      Three documents now name those addresses: the terms promise `legal@`
+      answers **within 48 hours**, the privacy policy names `privacy@` for
+      data requests, and the App Store support URL names `support@`. A rights
+      complaint nobody receives is the exact thing the new terms section was
+      written to prevent.
+      → ImprovMX (free): two MX records and one TXT at Netlify, forwarding to
+        Gmail. Cloudflare Email Routing also works but means moving the DNS.
+
+- [ ] **Run `supabase/content_reports.sql`** in the SQL editor. Until it runs,
+      the report button says so and offers the email address instead.
+
+- [ ] **SMTP (Resend) is not configured.** Nobody can register and nobody can
+      reset a password — which also means the App Review demo account has to
+      exist and be confirmed before submitting, because the reviewer cannot
+      create one.
+
+- [ ] **Demo account for App Review**, confirmed, with its credentials in the
+      review notes (`store/appstore-metadata.md` holds the draft).
+
+- [ ] **Screenshots**: 1206 x 2622 (iPhone) and, while
+      `ios.supportsTablet` is true, 2064 x 2752 (iPad 13").
+      `python3 store/make-screenshots.py <folder>` makes both from phone
+      captures.
+
+- [ ] **Decide on iPad.** `supportsTablet: true` means a reviewer opens the
+      app on a 13" iPad and sees a stretched phone layout — a known rejection
+      under guideline 4.0. Setting it false removes both the layout risk and
+      the iPad screenshot requirement, and costs one build.
+
+### Should be done, and is cheap
+
+- [ ] **Data export is promised but not built.** `app/privacy.tsx` lists
+      "Export your data" as a right. Apple does not require the feature and
+      answering a request by hand is lawful, but the promise is already in
+      writing. `expo-file-system` and `expo-sharing` are installed, so an
+      `export_account()` RPC plus a button in Settings ships over OTA.
+
+- [ ] **The privacy policy is missing three third parties.** It lists
+      Supabase, Google and Groq/OpenAI, but not RevenueCat (user id, purchase
+      history), not Stripe (creator payout data), and not the error log
+      (`app_errors` stores a stack trace next to a user id). Apple compares
+      the privacy label against the linked policy, and a gap between them is
+      its own rejection reason.
+
+- [ ] **A takedown clause for rights holders in the terms.** Section 5 now
+      describes reporting; what it does not describe is what happens to a
+      creator who keeps infringing, beyond losing the account.
+
+### Before the switch to Lion LLC
+
+- [ ] An app can only be transferred once a version has been released, and the
+      bundle id is bound to the team that uploaded a build — so 1.0 ships from
+      the personal account and moves afterwards.
+- [ ] **Ask Apple Developer Support whether an app with auto-renewable
+      subscriptions can be transferred.** Sources conflict and the answer
+      decides the whole plan.
+- [ ] Governing law in the terms moves from Germany to the LLC's state.
+- [ ] Address in `app/imprint.tsx`, `app/terms.tsx`, `app/privacy.tsx` and the
+      six website files.
+- [ ] `TEAMID` in `website/.well-known/apple-app-site-association`.
+
+### Still true from the older list
+
+- [ ] `npx supabase secrets unset ALLOW_SANDBOX_PURCHASES`, then redeploy
+      `verify-purchase`.
+- [ ] `STRIPE_SECRET_KEY` is unset; Karley's account has
+      `payouts_enabled: false`.
+- [ ] 29 imported recipes have dead Instagram image URLs. Unrecoverable — the
+      source URL was never stored — so they need re-importing or new photos.
+- [ ] The creator application flow (apply → admin approves → role changes) has
+      never been run end to end.
+
+---
+
 ## ✅ Done (verified)
 
 - [x] Core functionality (browse, save, plan, shop)
