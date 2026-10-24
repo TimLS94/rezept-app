@@ -53,3 +53,6 @@ yarn-error.*
 # Niemals ins Repo — siehe den .env.bak-Vorfall.
 backup-*.sql
 *.dump
+
+# Store screenshots are generated from phone captures, not source.
+store/screenshots/
