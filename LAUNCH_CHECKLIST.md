@@ -65,12 +65,40 @@ and parts of it have since been done; trust this section over that one.
 
 ### Before the switch to Lion LLC
 
-- [ ] An app can only be transferred once a version has been released, and the
-      bundle id is bound to the team that uploaded a build — so 1.0 ships from
-      the personal account and moves afterwards.
-- [ ] **Ask Apple Developer Support whether an app with auto-renewable
-      subscriptions can be transferred.** Sources conflict and the answer
-      decides the whole plan.
+Checked against Apple's own criteria on 2026-10-24, so the plan is settled:
+1.0 ships from the personal account and moves afterwards. An app is
+transferable only once **at least one version has been released** to the App
+Store, and the bundle id is bound to the team that uploaded a build. Apps with
+auto-renewable subscriptions ARE transferable — the claim to the contrary was
+outdated — they just need an app-specific shared secret handed over.
+
+Carried over: bundle id, ratings, reviews, in-app purchases, existing users
+and their updates, analytics history. Kept by the sender: historical sales and
+payment data, which matters for the books.
+
+Before initiating:
+
+- [ ] **TestFlight has to be switched off** — every build and tester removed
+      and the Test Information fields cleared. This is the step that surprises
+      people, because it means the beta ends before the handover.
+- [ ] Both accounts must have accepted the current paid and free agreements,
+      and neither may be mid-change.
+- [ ] No in-app purchase product id may collide with one in the LLC's account.
+      Nothing else may be called `premium_monthly` over there.
+- [ ] The app may not sit in any review state at the time — not Waiting for
+      Review, In Review, Accepted or Pending Release.
+
+Redone afterwards by the recipient:
+
+- [ ] **Sign in with Apple**: a transfer identifier has to be generated for
+      every existing user, and any app grouping ungrouped first — otherwise
+      those accounts do not survive. `ios.usesAppleSignIn` is true, so this
+      applies.
+- [ ] Push certificates, App Groups and keychain groups carry the old Team ID.
+- [ ] RevenueCat: new App Store Connect API key and a new shared secret. The
+      webhook transfers with the app unless deleted first.
+- [ ] EAS credentials, since the signing team changes.
+- [ ] Promo codes cannot be generated after a transfer.
 - [ ] Governing law in the terms moves from Germany to the LLC's state.
 - [ ] Address in `app/imprint.tsx`, `app/terms.tsx`, `app/privacy.tsx` and the
       six website files.
