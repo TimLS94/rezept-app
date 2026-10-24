@@ -170,6 +170,13 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
     if (code === 'no-key') {
       return { success: false, error: technicalError('T-0003', useAScreenshot) };
     }
+    // Bright Data stopped waiting, or refused. Either way it is the lookup
+    // service having a bad time, not this post — the same thing the notice
+    // already says, so it gets the same surface rather than a support code
+    // nobody can act on.
+    if (code?.startsWith('brightdata')) {
+      return { success: false, error: SERVICE_DOWN };
+    }
     // Anything else. The raw code is worth having, but in the log rather than
     // in front of someone trying to save a recipe.
     console.warn('Instagram lookup failed:', res.error);

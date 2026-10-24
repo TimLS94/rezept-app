@@ -14,13 +14,77 @@
 //      open LLM endpoint that happens to need a login.
 //
 // Secrets (supabase secrets set ...):
-//   GEMINI_API_KEY, GROQ_API_KEY, RAPIDAPI_KEY, RAPIDAPI_HOST
+//   GEMINI_API_KEY, GROQ_API_KEY, RAPIDAPI_KEY, RAPIDAPI_HOST,
+//   BRIGHTDATA_TOKEN, BRIGHTDATA_DATASET
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') || '';
 const RAPIDAPI_KEY = Deno.env.get('RAPIDAPI_KEY') || '';
 const RAPIDAPI_HOST = Deno.env.get('RAPIDAPI_HOST') || 'instagram-scraper-stable-api.p.rapidapi.com';
+
+// Bright Data, used for Instagram posts when a token is present.
+//
+// The token's presence IS the switch. Nothing else selects the provider, so
+// deploying this file changes no behaviour until the secret is set, and
+// unsetting the secret is a complete rollback without a deploy.
+//
+// Why move at all: the previous scraper has been answering "Media data not
+// found. Try again later." to every shortcode for hours, including posts that
+// have been public since 2019, and it bills monthly whether it answers or
+// not. Bright Data bills per successful record, so an outage like today's
+// costs nothing.
+const BRIGHTDATA_TOKEN = Deno.env.get('BRIGHTDATA_TOKEN') || '';
+// The Instagram "posts" dataset. Overridable because a dataset id is the kind
+// of thing a vendor renumbers.
+const BRIGHTDATA_DATASET = Deno.env.get('BRIGHTDATA_DATASET') || 'gd_lk5ns7kz21pck8jpis';
+
+/**
+ * Reshape a Bright Data record into what the app already reads.
+ *
+ * The normalising happens here rather than in the app on purpose: every
+ * version ever shipped talks to today's gateway, and most of them will never
+ * be updated again. A provider swap has to be invisible to all of them, which
+ * means the response shape cannot change.
+ *
+ * Field names are guessed generously in both directions. A missing caption is
+ * the one failure that looks like success — the import runs, finds nothing,
+ * and tells the user their post had no recipe in it.
+ */
+function fromBrightData(r: Record<string, unknown>): Record<string, unknown> {
+  const pick = (...keys: string[]) => {
+    for (const k of keys) {
+      const v = r[k];
+      if (typeof v === 'string' && v.trim()) return v;
+    }
+    return '';
+  };
+  const firstUrl = (v: unknown): string => {
+    if (typeof v === 'string') return v;
+    if (Array.isArray(v) && v.length) {
+      const f = v[0];
+      if (typeof f === 'string') return f;
+      if (f && typeof f === 'object') return String((f as any).url ?? '');
+    }
+    return '';
+  };
+
+  const video = firstUrl(r.videos ?? r.video_url ?? r.video);
+  const photo = firstUrl(r.photos ?? r.images ?? r.display_url);
+
+  return {
+    caption: pick('description', 'caption', 'post_content', 'title', 'text'),
+    user: { username: pick('user_posted', 'username', 'user_name', 'owner_username') },
+    display_url: photo || pick('thumbnail', 'thumbnail_url', 'image_url'),
+    thumbnail_url: pick('thumbnail', 'thumbnail_url') || photo,
+    is_video: Boolean(video),
+    video_url: video,
+    // The app picks the smallest rendition at least 480px wide and falls back
+    // to the first. One entry with no width means it takes this one, which is
+    // the only one on offer.
+    video_versions: video ? [{ url: video }] : [],
+  };
+}
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_URL =
@@ -317,6 +381,52 @@ async function runOp(op: string, body: Record<string, any>) {
       const shortcode = String(body.shortcode ?? '').trim();
       // Anchored and character-limited: this value goes into a URL we call.
       if (!/^[A-Za-z0-9_-]{1,32}$/.test(shortcode)) return json({ error: 'bad-shortcode' }, 400);
+
+      if (BRIGHTDATA_TOKEN) {
+        // Bright Data takes a URL where the old provider took a code. The app
+        // sends a code and older versions always will, so the URL is rebuilt
+        // here. /p/ serves reels too, which is why the app never had to say
+        // which kind it had.
+        const bd = await fetch(
+          `https://api.brightdata.com/datasets/v3/scrape?dataset_id=${BRIGHTDATA_DATASET}&format=json`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${BRIGHTDATA_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify([{ url: `https://www.instagram.com/p/${shortcode}` }]),
+          },
+        );
+        if (!bd.ok) {
+          const detail = await bd.text().catch(() => '');
+          console.warn('brightdata', bd.status, detail.slice(0, 300));
+          return json({ error: `brightdata-${bd.status}` }, bd.status === 429 ? 429 : 502);
+        }
+
+        const payload = await bd.json().catch(() => null);
+
+        // Past a minute Bright Data stops waiting and hands back a job id
+        // instead of a record. Polling it would mean holding the request open
+        // for longer than anyone stares at a spinner, so this is reported as
+        // the slow path it is and the screenshot route is offered instead.
+        if (payload && !Array.isArray(payload) && payload.snapshot_id) {
+          return json({ error: 'brightdata-slow', snapshot_id: payload.snapshot_id }, 504);
+        }
+
+        const record = Array.isArray(payload) ? payload[0] : payload;
+        if (!record || typeof record !== 'object') {
+          return json({ ok: true, data: { error: 'Media data not found. Try again later.' } });
+        }
+        // A per-record complaint is the provider talking about this one post,
+        // so it travels in the body the app already inspects rather than
+        // becoming a transport error.
+        if (typeof (record as any).error === 'string' || typeof (record as any).warning === 'string') {
+          return json({ ok: true, data: { error: (record as any).error ?? (record as any).warning } });
+        }
+        return json({ ok: true, data: fromBrightData(record as Record<string, unknown>) });
+      }
+
       if (!RAPIDAPI_KEY) return json({ error: 'no-key' }, 503);
       const res = await fetch(
         `https://${RAPIDAPI_HOST}/get_media_data_v2.php?media_code=${shortcode}`,
