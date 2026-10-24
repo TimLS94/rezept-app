@@ -86,6 +86,57 @@ shopping list.
 Entitlement served to the client: "Cook_App Pro" (lib/purchases.ts and
 supabase/functions/verify-purchase/index.ts must agree — they diverged once).
 
+## App Privacy — the answers, and why
+
+Answered 2026-10-24. Kept because a move to another developer account means
+answering all of it again, and because the label has to keep matching the
+privacy policy as the app changes.
+
+Tracking is No for every type: there is no advertising or analytics SDK in
+package.json, nothing is shared with a data broker, and so no ATT prompt is
+needed. Linked to identity is Yes for every type — every table carries a
+user_id, including app_errors and service_events.
+
+    Name                      App Functionality
+    Email Address             App Functionality, Developer's Marketing
+    Health                    App Functionality, Product Personalization
+    Photos or Videos          App Functionality
+    Other User Content        App Functionality, Product Personalization
+    User ID                   App Functionality, Analytics
+    Purchases                 App Functionality, Analytics
+    Product Interaction       App Functionality, Analytics
+    Crash Data                App Functionality
+    Performance Data          App Functionality
+    Other Diagnostic Data     App Functionality
+
+Health is the one judgment call. It is declared because profiles.preferences
+and profiles.dietary_restrictions hold a person's allergies, the onboarding
+stores a lose/maintain/gain weight goal, and family_members holds an age,
+gender and weight per person — including children. Apple's definition reaches
+"any other user provided health or medical data", which does not require
+HealthKit. The nutrition log is NOT a reason: lib/nutritionLog.ts stores
+nothing of its own, it adds up cook_log.
+
+Analytics is on User ID, Purchases and Product Interaction because the
+dashboard measures audience size and usage from them (total_users, signups,
+active_premium, imports, fridge scans). It is deliberately NOT on the three
+diagnostic types: Apple's own example text for App Functionality names
+"minimize app crashes" and "improve scalability and performance", and a stack
+trace says nothing about anyone's behaviour.
+
+NOT declared:
+
+  - Payment Info. Apple's own wording settles it: payment details entered
+    outside the app, with no developer access, are not collected. Card details
+    go to Apple, creator bank details go to Stripe's hosted onboarding, and
+    neither reaches this database.
+  - Environment Scanning. The fridge photo is image recognition of a user's
+    surroundings, but lib/fridge.ts keeps only the detected ingredients, and
+    data that merely passes through is not collected.
+  - Search History. Searches are never stored.
+  - Sensitive Info. No religious diets are offered, so nothing implies belief.
+  - Precise or Coarse Location. The app has no location code at all.
+
 ## NOTE — moving to Lion LLC
 
 Apple binds a bundle ID to the team that registered it, and a build has
