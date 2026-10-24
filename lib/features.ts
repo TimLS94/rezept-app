@@ -38,7 +38,14 @@ export const FEATURES = {
   //
   // The screenshot, camera and text routes are unaffected and raise none of
   // this: the person supplies the content, and Instagram is never contacted.
-  instagramLinkImport: false,
+  // ON FOR TESTING ONLY — currently verifying the Bright Data swap.
+  //
+  // This must go back to false and be published to the production channel
+  // BEFORE the app is submitted. A submitted build fetches the newest update
+  // on its channel at launch, so what App Review sees is the state of the
+  // channel on the day they look, not the state on the day the build was
+  // made. Leaving this on would put guideline 5.2.2 in front of them.
+  instagramLinkImport: true,
 
   // Open recipe uploads to every signed-in user. Off for now — only accounts
   // with the 'creator' (or 'admin') role can upload. Marketplace opens in V1.5.
