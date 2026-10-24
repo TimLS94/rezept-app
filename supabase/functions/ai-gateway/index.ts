@@ -52,36 +52,63 @@ const BRIGHTDATA_DATASET = Deno.env.get('BRIGHTDATA_DATASET') || 'gd_lk5ns7kz21p
  * and tells the user their post had no recipe in it.
  */
 function fromBrightData(r: Record<string, unknown>): Record<string, unknown> {
-  const pick = (...keys: string[]) => {
+  const str = (...keys: string[]) => {
     for (const k of keys) {
       const v = r[k];
-      if (typeof v === 'string' && v.trim()) return v;
+      if (typeof v === 'string' && v.trim()) return v.trim();
     }
     return '';
   };
-  const firstUrl = (v: unknown): string => {
-    if (typeof v === 'string') return v;
-    if (Array.isArray(v) && v.length) {
-      const f = v[0];
-      if (typeof f === 'string') return f;
-      if (f && typeof f === 'object') return String((f as any).url ?? '');
-    }
-    return '';
+  // Media arrives as [{url, id, type}] under several names, so one reader
+  // handles all of them.
+  const urlsFrom = (v: unknown, type?: string): string[] => {
+    if (typeof v === 'string') return [v];
+    if (!Array.isArray(v)) return [];
+    return v
+      .map(e => {
+        if (typeof e === 'string') return e;
+        if (!e || typeof e !== 'object') return '';
+        const o = e as Record<string, unknown>;
+        if (type && String(o.type ?? '').toLowerCase() !== type) return '';
+        return String(o.url ?? '');
+      })
+      .filter(Boolean);
   };
 
-  const video = firstUrl(r.videos ?? r.video_url ?? r.video);
-  const photo = firstUrl(r.photos ?? r.images ?? r.display_url);
+  const video =
+    urlsFrom(r.videos)[0] ||
+    str('video_url') ||
+    urlsFrom(r.post_content, 'video')[0] ||
+    '';
+
+  const image =
+    urlsFrom(r.images)[0] ||
+    str('thumbnail', 'display_url') ||
+    urlsFrom(r.thumbnail_array)[0] ||
+    urlsFrom(r.post_content, 'photo')[0] ||
+    '';
+
+  // user_posted is the handle. When it is missing the profile URL still
+  // carries it as its last path segment.
+  const username =
+    str('user_posted', 'username', 'user_name', 'owner_username') ||
+    (str('profile_url').split('/').filter(Boolean).pop() ?? '');
+
+  // Deliberately NOT falling back to alt_text. Instagram generates that
+  // ("Photo by Just An Egg on January 04, 2019"), so using it as a caption
+  // would hand the model a sentence about a photo and ask it for a recipe —
+  // producing a confident invention instead of an honest "no recipe here".
+  const caption = str('description', 'caption', 'caption_text', 'text', 'title');
+
+  const isVideo = Boolean(video) || /video|reel/i.test(str('content_type', 'product_type'));
 
   return {
-    caption: pick('description', 'caption', 'post_content', 'title', 'text'),
-    user: { username: pick('user_posted', 'username', 'user_name', 'owner_username') },
-    display_url: photo || pick('thumbnail', 'thumbnail_url', 'image_url'),
-    thumbnail_url: pick('thumbnail', 'thumbnail_url') || photo,
-    is_video: Boolean(video),
+    caption,
+    user: { username },
+    display_url: image,
+    thumbnail_url: str('thumbnail') || image,
+    is_video: isVideo,
     video_url: video,
-    // The app picks the smallest rendition at least 480px wide and falls back
-    // to the first. One entry with no width means it takes this one, which is
-    // the only one on offer.
     video_versions: video ? [{ url: video }] : [],
   };
 }
