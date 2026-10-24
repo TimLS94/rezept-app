@@ -148,7 +148,10 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
   // The RapidAPI key lives in the gateway now. It is a paid subscription with a
   // shared quota, and it used to sit in the app bundle where anyone could spend
   // it.
-  const res = await callGateway<{ data: any }>('instagram-post', { shortcode });
+  // The URL as well as the code. The lookup service fetches a page rather
+  // than looking a code up, and a reel lives at /reel/ — so the path matters
+  // and only the caller knows which one it had.
+  const res = await callGateway<{ data: any }>('instagram-post', { shortcode, url });
   if (!res.ok) {
     if (isQuotaError(res.error)) return { success: false, error: QUOTA_MESSAGE };
     // Three distinct failures on our side, three codes. The user is told the

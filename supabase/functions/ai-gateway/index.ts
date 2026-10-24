@@ -409,6 +409,15 @@ async function runOp(op: string, body: Record<string, any>) {
       // Anchored and character-limited: this value goes into a URL we call.
       if (!/^[A-Za-z0-9_-]{1,32}$/.test(shortcode)) return json({ error: 'bad-shortcode' }, 400);
 
+      // Anchored to instagram.com and to the four post paths: this string is
+      // sent to a scraper as the thing to go and fetch, so it may not become
+      // a way to point that scraper anywhere a caller likes.
+      const sentUrl = String(body.url ?? '').trim();
+      const postUrl =
+        /^https:\/\/(www\.)?instagram\.com\/(p|reel|reels|tv)\/[\w-]{1,32}\/?$/.test(sentUrl)
+          ? sentUrl
+          : `https://www.instagram.com/p/${shortcode}`;
+
       if (BRIGHTDATA_TOKEN) {
         // Bright Data takes a URL where the old provider took a code. The app
         // sends a code and older versions always will, so the URL is rebuilt
@@ -422,7 +431,11 @@ async function runOp(op: string, body: Record<string, any>) {
               Authorization: `Bearer ${BRIGHTDATA_TOKEN}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify([{ url: `https://www.instagram.com/p/${shortcode}` }]),
+            // The real URL when the client sent one, because a reel lives at
+            // /reel/ and it is not established that /p/ reaches it. Older
+            // builds send only the code and always will, so /p/ stays the
+            // fallback rather than the default.
+            body: JSON.stringify([{ url: postUrl }]),
           },
         );
         if (!bd.ok) {
