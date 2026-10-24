@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FEATURES } from '../../lib/features';
 import { isServiceNotice } from '../../lib/instagram';
 import ServiceNotice from '../../components/ServiceNotice';
 import {
@@ -49,7 +50,7 @@ const numText = (n: number | null | undefined): string => (n ? String(n) : '');
 export default function ImportRecipeScreen() {
   const { role } = useAuth();
   const [step, setStep] = useState<Step>('input');
-  const [inputMode, setInputMode] = useState<InputMode>('url');
+  const [inputMode, setInputMode] = useState<InputMode>('screenshot');
   const [url, setUrl] = useState('');
   const [manualText, setManualText] = useState('');
   const [screenshots, setScreenshots] = useState<string[]>([]); // base64 images
@@ -362,14 +363,16 @@ export default function ImportRecipeScreen() {
 
             {/* Mode Toggle */}
             <View style={styles.modeToggle}>
-              <TouchableOpacity
-                style={[styles.modeButton, inputMode === 'url' && styles.modeButtonActive]}
-                onPress={() => setInputMode('url')}
-              >
-                <Text style={[styles.modeButtonText, inputMode === 'url' && styles.modeButtonTextActive]}>
-                  🔗 Instagram
-                </Text>
-              </TouchableOpacity>
+              {FEATURES.instagramLinkImport && (
+                <TouchableOpacity
+                  style={[styles.modeButton, inputMode === 'url' && styles.modeButtonActive]}
+                  onPress={() => setInputMode('url')}
+                >
+                  <Text style={[styles.modeButtonText, inputMode === 'url' && styles.modeButtonTextActive]}>
+                    🔗 Instagram
+                  </Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[styles.modeButton, inputMode === 'screenshot' && styles.modeButtonActive]}
                 onPress={() => setInputMode('screenshot')}

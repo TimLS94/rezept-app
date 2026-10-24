@@ -22,6 +22,24 @@ export const FEATURES = {
   // than saying "coming soon". Flip this to true once the key is set.
   partnerCheckout: false,
 
+  // Import a recipe by pasting an Instagram link.
+  //
+  // Off for the 1.0 submission, for two reasons that happen to point the same
+  // way. App Review guideline 5.2.2 wants an app that reads a third-party
+  // service to be "specifically permitted to do so under the service's terms
+  // of use", and authorisation produced on request — reading instagram.com
+  // through a scraper is not permitted and there is no authorisation to show.
+  // And the scraper has been answering "Media data not found. Try again
+  // later." to every shortcode, so the feature is not working anyway.
+  //
+  // Nothing is deleted: the screens, lib/instagram.ts and the gateway route
+  // all stay. This hides the tab, which is enough to keep it out of review,
+  // and flipping it back is an over-the-air update rather than a build.
+  //
+  // The screenshot, camera and text routes are unaffected and raise none of
+  // this: the person supplies the content, and Instagram is never contacted.
+  instagramLinkImport: false,
+
   // Open recipe uploads to every signed-in user. Off for now — only accounts
   // with the 'creator' (or 'admin') role can upload. Marketplace opens in V1.5.
   publicRecipeUploads: false,

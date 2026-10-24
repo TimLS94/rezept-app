@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { FEATURES } from '../../lib/features';
 import { isServiceNotice } from '../../lib/instagram';
 import ServiceNotice from '../../components/ServiceNotice';
 import { uploadImageFromUrl } from '../../lib/storage';
@@ -605,14 +606,16 @@ export default function ImportRecipeScreen() {
 
             {/* Mode Toggle */}
             <View style={styles.modeToggle}>
-              <TouchableOpacity
-                style={[styles.modeButton, inputMode === 'link' && styles.modeButtonActive]}
-                onPress={() => setInputMode('link')}
-              >
-                <Text style={[styles.modeButtonText, inputMode === 'link' && styles.modeButtonTextActive]}>
-                  🔗 Link
-                </Text>
-              </TouchableOpacity>
+              {FEATURES.instagramLinkImport && (
+                <TouchableOpacity
+                  style={[styles.modeButton, inputMode === 'link' && styles.modeButtonActive]}
+                  onPress={() => setInputMode('link')}
+                >
+                  <Text style={[styles.modeButtonText, inputMode === 'link' && styles.modeButtonTextActive]}>
+                    🔗 Link
+                  </Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[styles.modeButton, inputMode === 'screenshot' && styles.modeButtonActive]}
                 onPress={() => setInputMode('screenshot')}
