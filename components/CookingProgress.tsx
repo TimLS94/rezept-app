@@ -28,23 +28,74 @@ export function estimateSeconds(videoSeconds?: number): number {
   return Math.round(25 + footage * 1.2);
 }
 
-const STAGES = [
+export type Stage = { until: number; icon: string; label: string };
+
+/** Watching a reel: fetch, watch, read, plate. */
+export const REEL_STAGES: Stage[] = [
   { until: 0.18, icon: '📥', label: 'Fetching the reel' },
   { until: 0.45, icon: '👀', label: 'Watching it' },
   { until: 0.80, icon: '📝', label: 'Reading the steps' },
   { until: 1.00, icon: '🍽️', label: 'Plating it up' },
 ];
 
+/**
+ * Reading a post's caption. Shorter, and a different set of steps.
+ *
+ * The labels are warmer than the reel's, but each one still names the thing
+ * that is actually happening at that point. A rotating list of jokes is
+ * pleasant for ten seconds and infuriating at forty, because by then the
+ * person wants to know whether anything is happening at all — and a line
+ * that describes real work answers that while a joke does not.
+ */
+export const CAPTION_STAGES: Stage[] = [
+  { until: 0.25, icon: '🔗', label: 'Opening the post' },
+  { until: 0.55, icon: '📖', label: 'Reading the caption' },
+  { until: 0.85, icon: '🔪', label: 'Chopping it into steps' },
+  { until: 1.00, icon: '🍽️', label: 'Plating it up' },
+];
+
+/** Roughly how long reading a caption takes, end to end. */
+export function estimateCaptionSeconds(): number {
+  // The lookup is the slow half and it is allowed up to a minute; the model
+  // reading a caption afterwards is quick. Generous on purpose — an estimate
+  // that runs out early is worse than one that finishes ahead of itself.
+  return 22;
+}
+
+/** "about 40 seconds left", and what to say once that has run out. */
+function remainingLabel(left: number): string {
+  if (left > 90) return `about ${Math.round(left / 60)} minutes left`;
+  if (left > 45) return 'about a minute left';
+  if (left > 12) return `about ${Math.round(left / 5) * 5} seconds left`;
+  if (left > 3) return 'a few seconds left';
+  // Past the estimate. Saying "0 seconds" next to a spinner that is still
+  // going reads as broken, and a negative number reads as worse.
+  return 'any moment now';
+}
+
 export default function CookingProgress({
-  seconds, done,
+  seconds, done, stages = REEL_STAGES,
 }: {
   /** The estimate this bar should pace itself against. */
   seconds: number;
   /** Set once the answer is in, so the bar can finish honestly. */
   done?: boolean;
+  /** Which set of steps to narrate. */
+  stages?: Stage[];
 }) {
   const progress = useRef(new Animated.Value(0)).current;
   const [stage, setStage] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  // Counted here rather than read off the animation: the bar eases, so its
+  // position is not proportional to time and would give a countdown that
+  // slows down as it goes.
+  useEffect(() => {
+    if (done) return;
+    const started = Date.now();
+    const id = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [done]);
 
   useEffect(() => {
     // Ease out rather than run linearly: the last stretch is the model
@@ -71,16 +122,16 @@ export default function CookingProgress({
     // One listener, and setState only when the stage actually changes —
     // otherwise this re-renders on every animation frame.
     const id = progress.addListener(({ value }) => {
-      const found = STAGES.findIndex(s => value <= s.until);
+      const found = stages.findIndex(s => value <= s.until);
       setStage(prev => {
-        const next = found === -1 ? STAGES.length - 1 : found;
+        const next = found === -1 ? stages.length - 1 : found;
         return next === prev ? prev : next;
       });
     });
     return () => progress.removeListener(id);
-  }, [progress]);
+  }, [progress, stages]);
 
-  const current = STAGES[stage];
+  const current = stages[stage];
   const width = progress.interpolate({
     inputRange: [0, 1],
     outputRange: ['0%', '100%'],
@@ -95,8 +146,7 @@ export default function CookingProgress({
         <Animated.View style={[styles.fill, { width }]} />
       </View>
       <Text style={styles.note}>
-        About {seconds < 60 ? `${seconds} seconds` : `${Math.round(seconds / 60)} minutes`} for
-        a reel this long. It is an estimate, not a countdown.
+        {done ? 'Done' : remainingLabel(seconds - elapsed)} — an estimate, not a countdown.
       </Text>
     </View>
   );

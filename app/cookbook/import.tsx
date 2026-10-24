@@ -40,7 +40,9 @@ import { cleanEquipment } from '../../components/EquipmentList';
 import RecipeEditor, { EditableRecipe } from '../../components/RecipeEditor';
 import { HEADER_TOP } from '../../lib/layout';
 import { goBackOr } from '../../lib/nav';
-import CookingProgress, { estimateSeconds } from '../../components/CookingProgress';
+import CookingProgress, {
+  estimateSeconds, estimateCaptionSeconds, REEL_STAGES, CAPTION_STAGES,
+} from '../../components/CookingProgress';
 
 type Step = 'input' | 'extracting' | 'review' | 'saving';
 // Import modes: an Instagram link, a screenshot from the gallery, a camera
@@ -873,14 +875,21 @@ Steps:
             <Text style={styles.loadingText}>
               {watching
                 ? 'Reading the caption, the text on screen and what is said in the reel — all together. A long reel can take a couple of minutes.'
-                : 'AI is analyzing the post. This may take a few seconds.'}
+                : 'Reading the post and turning it into something you can cook from.'}
             </Text>
+
+            {/* Reading a caption used to be a two-second affair, which is why
+                it only ever had a spinner. The lookup behind it now takes its
+                time, and an unexplained twenty seconds feels broken. */}
+            {!watching && (
+              <CookingProgress seconds={estimateCaptionSeconds()} stages={CAPTION_STAGES} />
+            )}
 
             {/* Watching a reel is the only wait long enough to need pacing.
                 A bar for a two-second caption read would be theatre. */}
             {watching ? (
               <>
-                <CookingProgress seconds={estimateSeconds(videoSeconds)} />
+                <CookingProgress seconds={estimateSeconds(videoSeconds)} stages={REEL_STAGES} />
                 <Text style={styles.elapsed}>
                   {elapsed < 60
                     ? `${elapsed}s so far`

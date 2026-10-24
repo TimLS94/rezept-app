@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import CookingProgress, {
+  estimateSeconds, estimateCaptionSeconds, REEL_STAGES, CAPTION_STAGES,
+} from '../../components/CookingProgress';
 import { FEATURES } from '../../lib/features';
 import { isServiceNotice } from '../../lib/instagram';
 import ServiceNotice from '../../components/ServiceNotice';
@@ -524,10 +527,22 @@ export default function ImportRecipeScreen() {
         {step === 'extracting' && (
           <View style={styles.loadingSection}>
             <ActivityIndicator size="large" color="#F2701E" />
-            <Text style={styles.loadingTitle}>Extracting Recipe...</Text>
-            <Text style={styles.loadingText}>
-              Analyzing the post content with AI. This may take a few seconds.
+            <Text style={styles.loadingTitle}>
+              {inputMode === 'video' ? 'Watching the video…' : 'Extracting Recipe...'}
             </Text>
+            <Text style={styles.loadingText}>
+              {inputMode === 'video'
+                ? 'Reading the caption, the text on screen and what is said — all together.'
+                : 'Reading the post and turning it into something you can cook from.'}
+            </Text>
+
+            {/* This screen is where 200 recipes get uploaded, one after
+                another, so it is the spinner someone sits in front of most. A
+                bare one says nothing about whether to keep waiting. */}
+            <CookingProgress
+              seconds={inputMode === 'video' ? estimateSeconds(undefined) : estimateCaptionSeconds()}
+              stages={inputMode === 'video' ? REEL_STAGES : CAPTION_STAGES}
+            />
             {thumbnailUrl ? (
               <Image source={{ uri: thumbnailUrl }} style={styles.thumbnail} />
             ) : null}
