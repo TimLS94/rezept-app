@@ -177,6 +177,24 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
   if (apiMessage || data?.status === 'error') {
     console.warn('Instagram lookup returned:', apiMessage);
 
+    // The scraper says "Media data not found. Try again later." when IT cannot
+    // reach Instagram — which happens to every post at once, and has nothing
+    // to do with the post. That string contains "not found", so it used to
+    // fall into the branch below and tell people their public recipe might be
+    // private or deleted. Blaming someone's post for an outage upstream sends
+    // them off to check a post that is fine.
+    //
+    // "Try again later" is the service admitting it, so that is what is
+    // matched on, before the test that would otherwise swallow it.
+    if (/try again later|temporarily unavailable|please retry/i.test(apiMessage ?? '')) {
+      return {
+        success: false,
+        error:
+          "Instagram link imports aren't working right now — that's on our side, not your post. " +
+          "A screenshot still works: pick Gallery or Camera above.",
+      };
+    }
+
     // A post that cannot be read is not our failure and does not want a
     // support code — it wants the one sentence that explains it.
     if (/not found|does not exist|private|unavailable|deleted/i.test(apiMessage ?? '')) {
