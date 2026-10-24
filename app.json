@@ -10,7 +10,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.spoondrop.app",
       "buildNumber": "2",
       "usesAppleSignIn": true,
