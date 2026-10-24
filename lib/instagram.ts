@@ -17,6 +17,20 @@ export type InstagramContent = {
   durationSeconds?: number;
 };
 
+/**
+ * Shown when the lookup service itself cannot reach Instagram.
+ *
+ * A constant rather than a literal because two screens have to recognise it:
+ * the error travels to them as a plain string, and they render this one on a
+ * notice rather than in the red box meant for things the user can fix.
+ */
+export const SERVICE_DOWN =
+  'instagram-service-unavailable';
+
+export function isServiceNotice(message: string | null | undefined): boolean {
+  return message === SERVICE_DOWN;
+}
+
 export type InstagramResult =
   | { success: true; content: InstagramContent }
   | { success: false; error: string };
@@ -187,12 +201,7 @@ export async function fetchInstagramViaRapidAPI(url: string): Promise<InstagramR
     // "Try again later" is the service admitting it, so that is what is
     // matched on, before the test that would otherwise swallow it.
     if (/try again later|temporarily unavailable|please retry/i.test(apiMessage ?? '')) {
-      return {
-        success: false,
-        error:
-          "Instagram link imports aren't working right now — that's on our side, not your post. " +
-          "A screenshot still works: pick Gallery or Camera above.",
-      };
+      return { success: false, error: SERVICE_DOWN };
     }
 
     // A post that cannot be read is not our failure and does not want a

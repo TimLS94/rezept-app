@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { isServiceNotice } from '../../lib/instagram';
+import ServiceNotice from '../../components/ServiceNotice';
 import {
   View,
   Text,
@@ -485,9 +487,19 @@ export default function ImportRecipeScreen() {
             )}
 
             {error ? (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>⚠️ {error}</Text>
-              </View>
+              isServiceNotice(error) ? (
+                <ServiceNotice
+                  title="Instagram links are down right now"
+                  body={"The service we read Instagram posts through can't reach Instagram at the moment. "
+                      + "It's not your post and it's not your account — we're watching it, and it usually "
+                      + "comes back on its own."}
+                  action="A screenshot works just as well — pick Gallery or Camera above."
+                />
+              ) : (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>⚠️ {error}</Text>
+                </View>
+              )
             ) : null}
 
             <TouchableOpacity style={styles.primaryButton} onPress={handleImport}>
