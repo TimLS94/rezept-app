@@ -20,8 +20,8 @@ Files come out numbered in the order they sort, which is the order App Store
 Connect will show them in. Name the inputs 1-discover.png, 2-recipe.png and so
 on and the store page tells the story you meant.
 """
-import os, sys, glob
-from PIL import Image, ImageDraw, ImageFilter
+import io, os, sys, glob
+from PIL import Image, ImageCms, ImageDraw, ImageFilter
 
 IPHONE = (1206, 2622)
 IPAD = (2064, 2752)
@@ -29,6 +29,27 @@ CREAM = (255, 249, 242)   # COLORS.cream
 INK = (20, 20, 20)        # COLORS.ink
 
 VALID = (".png", ".jpg", ".jpeg", ".heic")
+
+
+def to_srgb(img):
+    """Convert out of the phone's Display P3 and drop the profile.
+
+    App Store Connect refuses some uploads with an embedded profile, and the
+    failure arrives as "an error occurred" with nothing to go on. Converting
+    rather than simply stripping matters: dropping a P3 profile leaves the
+    numbers alone and they get read as sRGB, which quietly desaturates every
+    photo in the set.
+    """
+    icc = img.info.get("icc_profile")
+    if icc:
+        try:
+            src = ImageCms.ImageCmsProfile(io.BytesIO(icc))
+            img = ImageCms.profileToProfile(
+                img, src, ImageCms.createProfile("sRGB"), outputMode="RGB")
+        except Exception:
+            pass
+    img.info.pop("icc_profile", None)
+    return img
 
 
 def cover(img, size):
@@ -91,7 +112,7 @@ def main():
 
     for i, f in enumerate(files, 1):
         try:
-            img = Image.open(f).convert("RGB")
+            img = to_srgb(Image.open(f).convert("RGB"))
         except Exception as e:
             print(f"  skipped {os.path.basename(f)}: {e}")
             continue
