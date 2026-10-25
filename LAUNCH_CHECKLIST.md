@@ -34,15 +34,15 @@ and parts of it have since been done; trust this section over that one.
 - [ ] **Demo account for App Review**, confirmed, with its credentials in the
       review notes (`store/appstore-metadata.md` holds the draft).
 
-- [ ] **Screenshots**: 1206 x 2622 (iPhone) and, while
-      `ios.supportsTablet` is true, 2064 x 2752 (iPad 13").
-      `python3 store/make-screenshots.py <folder>` makes both from phone
-      captures.
+- [x] ~~Screenshots.~~ Five are generated at 1206 x 2622 in
+      store/screenshots/iphone-6.3, converted to sRGB because an embedded
+      Display P3 profile made App Store Connect refuse the upload. iPad is no
+      longer required. Still to upload, and worth retaking without the iOS
+      picture-in-picture tab that sits at the right edge of all of them.
 
-- [ ] **Decide on iPad.** `supportsTablet: true` means a reviewer opens the
-      app on a 13" iPad and sees a stretched phone layout — a known rejection
-      under guideline 4.0. Setting it false removes both the layout risk and
-      the iPad screenshot requirement, and costs one build.
+- [x] ~~Decide on iPad.~~ Done 2026-10-24: `supportsTablet` is false and
+      build 8 carries it, so the iPad screenshot slot is gone along with the
+      layout risk. iPad comes back in a later version with a layout of its own.
 
 ### Should be done, and is cheap
 
