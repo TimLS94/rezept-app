@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
+import { reportError } from '../lib/errorLog';
 import {
   getPremiumPriceStrings, purchasePremium, restorePurchases, syncEntitlements,
   grantPlatformEntitlement, purchasesAvailable, purchaseUnavailableReason,
+  purchaseDiagnostics, countAvailablePackages,
   type PremiumPlan,
 } from '../lib/purchases';
 import {
@@ -57,7 +59,7 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
     );
   }, [visible]);
 
-  const handleResult = (result: string, successMsg: string) => {
+  const handleResult = async (result: string, successMsg: string) => {
     if (result === 'success') {
       onSubscribed?.();
       onClose();
@@ -67,6 +69,13 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
       // button further down the sheet is easy to miss — this is the moment the
       // tester actually wants it.
       const reason = purchaseUnavailableReason();
+      // Into app_errors, where the dashboard can show it. The alert tells the
+      // person what to do; this tells us why, which is a different question
+      // and not one to answer by asking them to read error codes aloud.
+      reportError('handled', `purchase unavailable: ${reason}`, {
+        ...purchaseDiagnostics(),
+        offeringPackages: await countAvailablePackages(),
+      });
       Alert.alert(
         'Not available here',
         reason === 'expo-go'

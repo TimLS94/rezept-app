@@ -90,6 +90,43 @@ export type UnavailableReason =
  * worse than being told nothing: it sends you to check the one thing that was
  * never the problem.
  */
+/**
+ * The raw state behind purchaseUnavailableReason(), for the error log.
+ *
+ * The reason alone has stopped being enough: two of them have been alternating
+ * across restarts, which no single explanation covers. These are the values
+ * the decision is actually made from, so the log answers the question instead
+ * of narrowing it.
+ *
+ * The key is reported by prefix only. The whole point of the check is which
+ * kind of key it is, and the key itself does not belong in a table.
+ */
+/** How many packages the store actually served, across every offering. */
+export async function countAvailablePackages(): Promise<number> {
+  const P = loadSDK();
+  if (!P || !(await ensureConfigured())) return -1;
+  try {
+    const offerings = await P.getOfferings();
+    return Object.values(offerings?.all ?? {})
+      .reduce((n: number, o: any) => n + (o?.availablePackages?.length ?? 0), 0);
+  } catch {
+    return -2;
+  }
+}
+
+export function purchaseDiagnostics(): Record<string, unknown> {
+  const k = apiKey();
+  return {
+    expoGo: isExpoGo,
+    executionEnvironment: Constants.executionEnvironment,
+    sdkLoaded: !!loadSDK(),
+    keyPrefix: k.slice(0, 5),
+    keyIsProduction: apiKeyIsProduction(k),
+    configured,
+    platform: Platform.OS,
+  };
+}
+
 export function purchaseUnavailableReason(): UnavailableReason {
   if (isExpoGo) return 'expo-go';
   if (!loadSDK()) return 'no-module';
