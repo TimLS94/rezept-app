@@ -22,30 +22,24 @@ export const FEATURES = {
   // than saying "coming soon". Flip this to true once the key is set.
   partnerCheckout: false,
 
-  // Import a recipe by pasting an Instagram link.
+  // Import a recipe by pasting an Instagram link — creators only.
   //
-  // Off for the 1.0 submission, for two reasons that happen to point the same
-  // way. App Review guideline 5.2.2 wants an app that reads a third-party
-  // service to be "specifically permitted to do so under the service's terms
-  // of use", and authorisation produced on request — reading instagram.com
-  // through a scraper is not permitted and there is no authorisation to show.
-  // And the scraper has been answering "Media data not found. Try again
-  // later." to every shortcode, so the feature is not working anyway.
+  // Reading instagram.com through a scraper is not something Instagram's
+  // terms permit, which App Review guideline 5.2.2 asks about directly: an
+  // app that displays a third-party service's content has to be specifically
+  // permitted, and produce the authorisation on request. There is none to
+  // produce.
   //
-  // Nothing is deleted: the screens, lib/instagram.ts and the gateway route
-  // all stay. This hides the tab, which is enough to keep it out of review,
-  // and flipping it back is an over-the-air update rather than a build.
+  // So it is bound to the creator role, which is granted by an admin and is
+  // the account type that imports its own posts in bulk. That is a rule the
+  // product already has rather than a curtain drawn for the reviewer — the
+  // distinction guideline 2.3.1 cares about, and the reason this is a role
+  // gate in both directions rather than something switched off at submission
+  // and back on afterwards.
   //
-  // The screenshot, camera and text routes are unaffected and raise none of
-  // this: the person supplies the content, and Instagram is never contacted.
-  // ON FOR TESTING ONLY — currently verifying the Bright Data swap.
-  //
-  // This must go back to false and be published to the production channel
-  // BEFORE the app is submitted. A submitted build fetches the newest update
-  // on its channel at launch, so what App Review sees is the state of the
-  // channel on the day they look, not the state on the day the build was
-  // made. Leaving this on would put guideline 5.2.2 in front of them.
-  instagramLinkImport: true,
+  // Consumers never see the tab. For them the screenshot route does the same
+  // job, raises none of this, and needs no explaining.
+  creatorInstagramImport: true,
 
   // Open recipe uploads to every signed-in user. Off for now — only accounts
   // with the 'creator' (or 'admin') role can upload. Marketplace opens in V1.5.

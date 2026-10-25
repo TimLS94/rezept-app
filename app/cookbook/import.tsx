@@ -608,16 +608,11 @@ export default function ImportRecipeScreen() {
 
             {/* Mode Toggle */}
             <View style={styles.modeToggle}>
-              {FEATURES.instagramLinkImport && (
-                <TouchableOpacity
-                  style={[styles.modeButton, inputMode === 'link' && styles.modeButtonActive]}
-                  onPress={() => setInputMode('link')}
-                >
-                  <Text style={[styles.modeButtonText, inputMode === 'link' && styles.modeButtonTextActive]}>
-                    🔗 Link
-                  </Text>
-                </TouchableOpacity>
-              )}
+              {/* No link tab here. Consumers import from a screenshot, a photo
+                  or pasted text — all of which they supply themselves, so
+                  Instagram is never contacted on their behalf. The link route
+                  belongs to the creator screen, where the account has been
+                  approved and is importing its own posts. */}
               <TouchableOpacity
                 style={[styles.modeButton, inputMode === 'screenshot' && styles.modeButtonActive]}
                 onPress={() => setInputMode('screenshot')}

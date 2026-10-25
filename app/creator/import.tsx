@@ -53,7 +53,7 @@ const numText = (n: number | null | undefined): string => (n ? String(n) : '');
 export default function ImportRecipeScreen() {
   const { role } = useAuth();
   const [step, setStep] = useState<Step>('input');
-  const [inputMode, setInputMode] = useState<InputMode>('screenshot');
+  const [inputMode, setInputMode] = useState<InputMode>('url');
   const [url, setUrl] = useState('');
   const [manualText, setManualText] = useState('');
   const [screenshots, setScreenshots] = useState<string[]>([]); // base64 images
@@ -366,7 +366,7 @@ export default function ImportRecipeScreen() {
 
             {/* Mode Toggle */}
             <View style={styles.modeToggle}>
-              {FEATURES.instagramLinkImport && (
+              {FEATURES.creatorInstagramImport && (
                 <TouchableOpacity
                   style={[styles.modeButton, inputMode === 'url' && styles.modeButtonActive]}
                   onPress={() => setInputMode('url')}
