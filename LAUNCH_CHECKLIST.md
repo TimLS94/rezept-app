@@ -106,8 +106,18 @@ Redone afterwards by the recipient:
 
 ### Still true from the older list
 
-- [ ] `npx supabase secrets unset ALLOW_SANDBOX_PURCHASES`, then redeploy
-      `verify-purchase`.
+- [ ] **ALLOW_SANDBOX_PURCHASES — order matters, and the obvious order is
+      wrong.** App Review tests in-app purchases in the sandbox, so the
+      reviewer's purchases ARE sandbox purchases. With the flag off,
+      verify-purchase answers them with `sandbox_purchase_refused` and the
+      reviewer buys Premium and receives nothing — a certain rejection under
+      guideline 2.1.
+      → ON while the app is in review. OFF only after it is approved, before
+        release. And ON again for every later update, because each one is
+        reviewed in the sandbox too.
+      → Not a toggle anyone will remember forever. Worth replacing with
+        something that allows sandbox purchases only for named accounts, so
+        there is nothing to switch.
 - [ ] `STRIPE_SECRET_KEY` is unset; Karley's account has
       `payouts_enabled: false`.
 - [ ] 29 imported recipes have dead Instagram image URLs. Unrecoverable — the
