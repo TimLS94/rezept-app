@@ -34,5 +34,8 @@ export default function Index() {
   }
 
   if (!onboarded) return <Redirect href="/onboarding" />;
-  return <Redirect href={canUploadRecipes(role) ? '/creator' : '/home'} />;
+  // Creators land in the Studio because that is their whole use of the app.
+  // An admin's is not: they run the place and need to see what everyone else
+  // sees, so they start where the users start. The Studio is a tab away.
+  return <Redirect href={role === 'creator' ? '/creator' : '/home'} />;
 }

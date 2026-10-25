@@ -109,7 +109,15 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<ProfileStats>({ liked: 0, cooked: 0, collections: 0, following: 0 });
   useEffect(() => { fetchProfileStats().then(setStats).catch(() => {}); }, []);
   const { role, isGuest } = useAuth();
-  const isCreator = canUploadRecipes(role);
+  // Which profile to show is a question about identity, not about
+  // permission, and canUploadRecipes() answers the second one. An admin may
+  // upload, so this screen greeted them with "Creator Profile" and the
+  // creator's stats instead of their own — the same conflation that had the
+  // tab bar hiding the app from them.
+  //
+  // An admin gets the ordinary profile here. The creator tools are not lost:
+  // the Studio tab is still theirs, which is where those tools belong.
+  const isCreator = role === 'creator';
   
   // Shared state
   const [loading, setLoading] = useState(true);

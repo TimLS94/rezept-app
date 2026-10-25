@@ -26,7 +26,10 @@ import { HEADER_TOP } from '../lib/layout';
 
 export default function SettingsScreen() {
   const { isPremium, role, refresh } = useAuth();
-  const isCreator = canUploadRecipes(role);
+  // The public profile block — avatar, display name, @handle — exists
+  // because a creator's page is seen by strangers. An admin has no public
+  // page, so showing it there asks them to maintain something nobody reads.
+  const isCreator = role === 'creator';
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
