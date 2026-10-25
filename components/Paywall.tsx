@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
 import {
   getPremiumPriceStrings, purchasePremium, restorePurchases, syncEntitlements,
-  grantPlatformEntitlement, purchasesAvailable, type PremiumPlan,
+  grantPlatformEntitlement, purchasesAvailable, purchaseUnavailableReason,
+  type PremiumPlan,
 } from '../lib/purchases';
 import {
   PREMIUM_INCLUDES, PREMIUM_EXCLUDES, PREMIUM_MONTHLY_CENTS, PREMIUM_YEARLY_CENTS,
@@ -65,9 +66,16 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
       // In a dev build, put the testing shortcut straight into the alert. The
       // button further down the sheet is easy to miss — this is the moment the
       // tester actually wants it.
+      const reason = purchaseUnavailableReason();
       Alert.alert(
         'Not available here',
-        'Expo Go has no in-app purchase module, so buying only works in a dev or store build.',
+        reason === 'expo-go'
+          ? 'Expo Go has no in-app purchase module, so buying only works in a dev or store build.'
+          : reason === 'no-module'
+            ? 'This build does not include the purchase module. It needs a new build, not an update.'
+            : reason === 'test-key'
+              ? 'This build carries a test billing key, so purchases are switched off. It needs rebuilding with the production key.'
+              : 'Purchases are not available right now. Please try again later.',
         __DEV__
           ? [{ text: 'OK', style: 'cancel' }, { text: 'Unlock anyway (dev)', onPress: devUnlock }]
           : [{ text: 'OK' }],

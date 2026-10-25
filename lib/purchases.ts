@@ -78,6 +78,24 @@ export function purchasesAvailable(): boolean {
   return !!loadSDK() && apiKeyIsProduction(apiKey());
 }
 
+export type UnavailableReason = 'expo-go' | 'no-module' | 'test-key' | null;
+
+/**
+ * Why buying is off, when it is off.
+ *
+ * Three different faults produced one sentence — "Expo Go has no in-app
+ * purchase module" — including in a TestFlight build, where Expo Go is not
+ * involved and the sentence is simply untrue. Being told the wrong cause is
+ * worse than being told nothing: it sends you to check the one thing that was
+ * never the problem.
+ */
+export function purchaseUnavailableReason(): UnavailableReason {
+  if (isExpoGo) return 'expo-go';
+  if (!loadSDK()) return 'no-module';
+  if (!apiKeyIsProduction(apiKey())) return 'test-key';
+  return null;
+}
+
 export async function initPurchases(userId?: string): Promise<void> {
   const P = loadSDK();
   if (!P || !purchasesAvailable()) return;
