@@ -101,16 +101,32 @@ export type UnavailableReason =
  * The key is reported by prefix only. The whole point of the check is which
  * kind of key it is, and the key itself does not belong in a table.
  */
-/** How many packages the store actually served, across every offering. */
-export async function countAvailablePackages(): Promise<number> {
+/**
+ * What the store served, and what it said if it refused.
+ *
+ * The count alone turned out not to be enough: getOfferings() does not return
+ * an empty list when products cannot be fetched, it throws — and RevenueCat's
+ * message names the reason precisely, which is worth more than the fact that
+ * something went wrong.
+ */
+export async function offeringsProbe(): Promise<{
+  count: number;
+  error?: string;
+  code?: string | number;
+}> {
   const P = loadSDK();
-  if (!P || !(await ensureConfigured())) return -1;
+  if (!P || !(await ensureConfigured())) return { count: -1, error: 'not configured' };
   try {
     const offerings = await P.getOfferings();
-    return Object.values(offerings?.all ?? {})
+    const count = Object.values(offerings?.all ?? {})
       .reduce((n: number, o: any) => n + (o?.availablePackages?.length ?? 0), 0);
-  } catch {
-    return -2;
+    return { count, code: offerings?.current ? 'has-current' : 'no-current' };
+  } catch (e: any) {
+    return {
+      count: -2,
+      error: String(e?.message ?? e).slice(0, 400),
+      code: e?.code ?? e?.userInfo?.readableErrorCode,
+    };
   }
 }
 

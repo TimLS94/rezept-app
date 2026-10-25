@@ -6,7 +6,7 @@ import { reportError } from '../lib/errorLog';
 import {
   getPremiumPriceStrings, purchasePremium, restorePurchases, syncEntitlements,
   grantPlatformEntitlement, purchasesAvailable, purchaseUnavailableReason,
-  purchaseDiagnostics, countAvailablePackages,
+  purchaseDiagnostics, offeringsProbe,
   type PremiumPlan,
 } from '../lib/purchases';
 import {
@@ -74,7 +74,7 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
       // and not one to answer by asking them to read error codes aloud.
       reportError('handled', `purchase unavailable: ${reason}`, {
         ...purchaseDiagnostics(),
-        offeringPackages: await countAvailablePackages(),
+        offerings: await offeringsProbe(),
       });
       Alert.alert(
         'Not available here',
