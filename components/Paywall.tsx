@@ -75,7 +75,9 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
             ? 'This build does not include the purchase module. It needs a new build, not an update.'
             : reason === 'test-key'
               ? 'This build carries a test billing key, so purchases are switched off. It needs rebuilding with the production key.'
-              : 'Purchases are not available right now. Please try again later.',
+              : reason === 'not-configured'
+                ? 'The billing service has not started yet. Sign out and back in, then try again.'
+                : 'No subscription is on sale right now. The products exist but no offering is serving them.',
         __DEV__
           ? [{ text: 'OK', style: 'cancel' }, { text: 'Unlock anyway (dev)', onPress: devUnlock }]
           : [{ text: 'OK' }],

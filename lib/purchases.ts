@@ -78,7 +78,8 @@ export function purchasesAvailable(): boolean {
   return !!loadSDK() && apiKeyIsProduction(apiKey());
 }
 
-export type UnavailableReason = 'expo-go' | 'no-module' | 'test-key' | null;
+export type UnavailableReason =
+  | 'expo-go' | 'no-module' | 'test-key' | 'not-configured' | 'no-offering';
 
 /**
  * Why buying is off, when it is off.
@@ -93,7 +94,13 @@ export function purchaseUnavailableReason(): UnavailableReason {
   if (isExpoGo) return 'expo-go';
   if (!loadSDK()) return 'no-module';
   if (!apiKeyIsProduction(apiKey())) return 'test-key';
-  return null;
+  // configure() runs at sign-in. Not having run is a different fault from
+  // not being able to run, and it was reported as neither.
+  if (!configured) return 'not-configured';
+  // Everything on this side is in order, so the gap is on the store's: the
+  // products exist but no offering serves them, which is the one failure the
+  // app cannot see from here and the dashboard shows at a glance.
+  return 'no-offering';
 }
 
 export async function initPurchases(userId?: string): Promise<void> {
