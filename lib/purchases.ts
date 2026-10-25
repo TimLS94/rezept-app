@@ -103,6 +103,33 @@ export function purchaseUnavailableReason(): UnavailableReason {
   return 'no-offering';
 }
 
+/**
+ * Configure the SDK if it is not configured yet, and say whether it is now.
+ *
+ * initPurchases() runs once, at sign-in, and gives up silently if anything is
+ * not ready. On a fresh install that is the first launch, before the
+ * over-the-air bundle has arrived — so the key in memory is the inert
+ * fallback, configure is skipped, and nothing ever tries again. The update
+ * lands with the real key, and the session it landed in still cannot sell
+ * anything.
+ *
+ * Every path that needs the SDK now asks for it instead of assuming an
+ * earlier call succeeded.
+ */
+async function ensureConfigured(): Promise<boolean> {
+  if (configured) return true;
+  const P = loadSDK();
+  if (!P || !purchasesAvailable()) return false;
+  try {
+    const { data } = await supabase.auth.getUser();
+    P.configure({ apiKey: apiKey(), appUserID: data?.user?.id });
+    configured = true;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function initPurchases(userId?: string): Promise<void> {
   const P = loadSDK();
   if (!P || !purchasesAvailable()) return;
@@ -146,7 +173,7 @@ export type PremiumPlan = 'monthly' | 'annual';
  */
 export async function getPremiumPackages(): Promise<Partial<Record<PremiumPlan, any>>> {
   const P = loadSDK();
-  if (!P || !configured) return {};
+  if (!P || !(await ensureConfigured())) return {};
   try {
     const offerings = await P.getOfferings();
     const packages: any[] = offerings?.current?.availablePackages ?? [];
@@ -189,7 +216,7 @@ export type PurchaseResult = 'success' | 'cancelled' | 'unavailable' | 'error';
 
 export async function purchasePremium(plan: PremiumPlan = 'annual'): Promise<PurchaseResult> {
   const P = loadSDK();
-  if (!P || !configured) return 'unavailable';
+  if (!P || !(await ensureConfigured())) return 'unavailable';
   try {
     const packages = await getPremiumPackages();
     // The chosen plan, or the other one if the offering only has one. Buying
@@ -258,7 +285,7 @@ async function verifyPurchase(payload: Record<string, unknown>): Promise<{ ok: b
 
 async function purchaseByProductId(productId: string): Promise<PurchaseResult> {
   const P = loadSDK();
-  if (!P || !configured) return 'unavailable';
+  if (!P || !(await ensureConfigured())) return 'unavailable';
   try {
     const offerings = await P.getOfferings();
     const packages: any[] = Object.values(offerings?.all ?? {})
