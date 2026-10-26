@@ -23,7 +23,7 @@ import { supabase } from '../../lib/supabase';
 import { Recipe, DIETARY_TAGS, DietaryTag } from '../../data/recipes';
 import { mapDbRecipe, RECIPE_LIST_COLUMNS } from '../../lib/recipes';
 import { useAuth } from '../../lib/auth';
-import { purchaseCreatorSubscription } from '../../lib/purchases';
+import { purchaseCreatorSubscription, storePriceString } from '../../lib/purchases';
 import { usd, findCreatorSubTier } from '../../lib/pricing';
 import { Alert } from 'react-native';
 import { HEADER_TOP } from '../../lib/layout';
@@ -191,6 +191,26 @@ export default function CreatorProfileScreen() {
   };
 
   const isOwnProfile = !!user && !!creator && user.id === creator.id;
+
+  // What the App Store will charge, in the reader's own currency. The figure
+  // in the database picks a product; it is not a statement about its price.
+  // A reader in Germany was being shown "$4.99" above a sheet asking for
+  // 5,99 €.
+  const [storePrice, setStorePrice] = useState<string | null>(null);
+  useEffect(() => {
+    const cents = creator?.subscription_price_cents;
+    const tier = cents != null ? findCreatorSubTier(cents) : null;
+    if (!tier) return;
+    let alive = true;
+    storePriceString(tier.productId).then(p => { if (alive) setStorePrice(p); });
+    return () => { alive = false; };
+  }, [creator?.subscription_price_cents]);
+
+  // Falls back to the stored figure rather than showing a gap: a missing
+  // price reads as broken, a stale one only reads as wrong once you tap.
+  const memberPrice = storePrice ?? (
+    creator?.subscription_price_cents != null ? usd(creator.subscription_price_cents) : ''
+  );
 
   const subscribeToCreator = async () => {
     if (!user) { router.push('/login'); return; }
@@ -365,7 +385,7 @@ export default function CreatorProfileScreen() {
           {creator.subscription_enabled && creator.subscription_price_cents != null && !isOwnProfile && (
             <View style={styles.memberCard}>
               <Text style={styles.memberTitle}>
-                {hasCreatorAccess ? '✓ You’re a member' : `Member · ${usd(creator.subscription_price_cents)}/month`}
+                {hasCreatorAccess ? '✓ You’re a member' : `Member · ${memberPrice}/month`}
               </Text>
               <Text style={styles.memberText}>
                 {hasCreatorAccess
@@ -379,7 +399,7 @@ export default function CreatorProfileScreen() {
                   disabled={subscribing}
                 >
                   <Text style={styles.memberButtonText}>
-                    {subscribing ? 'Subscribing…' : `Become a member · ${usd(creator.subscription_price_cents)}/mo`}
+                    {subscribing ? 'Subscribing…' : `Become a member · ${memberPrice}/mo`}
                   </Text>
                 </TouchableOpacity>
               )}
