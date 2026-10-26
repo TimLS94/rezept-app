@@ -14,7 +14,7 @@ export default function PrivacyPolicyScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.lastUpdated}>Last updated: July 27, 2026</Text>
+        <Text style={styles.lastUpdated}>Last updated: October 26, 2026</Text>
 
         <Text style={styles.sectionTitle}>1. Introduction</Text>
         <Text style={styles.paragraph}>
@@ -56,11 +56,23 @@ export default function PrivacyPolicyScreen() {
           We use the following third-party services:{'\n\n'}
           • <Text style={styles.bold}>Supabase</Text> - Authentication and data storage{'\n'}
           • <Text style={styles.bold}>Google</Text> - OAuth sign-in, Gemini AI for recipe extraction{'\n'}
-          • <Text style={styles.bold}>Groq/OpenAI</Text> - AI recipe extraction (optional){'\n\n'}
+          • <Text style={styles.bold}>Groq/OpenAI</Text> - AI recipe extraction (optional){'\n'}
+          • <Text style={styles.bold}>RevenueCat</Text> - Purchases. Receives your account id and what you bought, so the app knows what you have access to{'\n'}
+          • <Text style={styles.bold}>Bright Data</Text> - Reads a public Instagram post when a creator imports one by link{'\n'}
+          • <Text style={styles.bold}>Stripe</Text> - Creator payouts only. Bank details are entered on Stripe's own pages and never reach us{'\n\n'}
           Each service has its own privacy policy governing their use of your data.
         </Text>
 
-        <Text style={styles.sectionTitle}>5. Data Security</Text>
+        <Text style={styles.sectionTitle}>5. Diagnostics</Text>
+        <Text style={styles.paragraph}>
+          When the app hits an error it records what broke, so it can be fixed:{'\n\n'}
+          • The error and where in the app it happened{'\n'}
+          • Which version and which update were running{'\n'}
+          • Your account id, so a report can be matched to what you were doing{'\n\n'}
+          This is not used to build a profile of you, and it is never shared for advertising. We keep it because "it crashed sometimes" is not something anyone can fix.
+        </Text>
+
+        <Text style={styles.sectionTitle}>6. Data Security</Text>
         <Text style={styles.paragraph}>
           We implement industry-standard security measures including:{'\n\n'}
           • HTTPS encryption for all data transmission{'\n'}
@@ -69,7 +81,7 @@ export default function PrivacyPolicyScreen() {
           • No storage of payment information (handled by app stores)
         </Text>
 
-        <Text style={styles.sectionTitle}>6. Your Rights</Text>
+        <Text style={styles.sectionTitle}>7. Your Rights</Text>
         <Text style={styles.paragraph}>
           You have the right to:{'\n\n'}
           • Access your personal data{'\n'}
@@ -79,7 +91,7 @@ export default function PrivacyPolicyScreen() {
           • Opt out of marketing communications
         </Text>
 
-        <Text style={styles.sectionTitle}>7. California Privacy Rights (CCPA)</Text>
+        <Text style={styles.sectionTitle}>8. California Privacy Rights (CCPA)</Text>
         <Text style={styles.paragraph}>
           If you are a California resident, you have additional rights:{'\n\n'}
           • Right to know what personal information is collected{'\n'}
@@ -88,17 +100,17 @@ export default function PrivacyPolicyScreen() {
           <Text style={styles.bold}>We do not sell your personal information.</Text>
         </Text>
 
-        <Text style={styles.sectionTitle}>8. Children's Privacy</Text>
+        <Text style={styles.sectionTitle}>9. Children's Privacy</Text>
         <Text style={styles.paragraph}>
           Our app is not intended for children under 13. We do not knowingly collect personal information from children under 13. If you believe we have collected such information, please contact us.
         </Text>
 
-        <Text style={styles.sectionTitle}>9. Changes to This Policy</Text>
+        <Text style={styles.sectionTitle}>10. Changes to This Policy</Text>
         <Text style={styles.paragraph}>
           We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.
         </Text>
 
-        <Text style={styles.sectionTitle}>10. Contact Us</Text>
+        <Text style={styles.sectionTitle}>11. Contact Us</Text>
         <Text style={styles.paragraph}>
           If you have questions about this Privacy Policy, please contact us at:{'\n\n'}
           Email: privacy@spoondrop.app{'\n\n'}
