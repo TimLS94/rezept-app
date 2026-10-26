@@ -265,6 +265,40 @@ export async function getPremiumPriceStrings(): Promise<Partial<Record<PremiumPl
   };
 }
 
+/**
+ * What the store will actually charge for a product, as the store writes it.
+ *
+ * The app was printing its own number — usd(priceCents) out of the database —
+ * next to a button that hands over to Apple. Those agree only while nobody
+ * mistypes a price point in App Store Connect, and they already disagree for
+ * everyone outside the United States: a reader in Germany was shown "$4.99"
+ * and charged in euros.
+ *
+ * Asking the store removes both faults at once, and makes the tier list in
+ * pricing.ts what it should have been all along — a way to pick a product,
+ * not a claim about what it costs.
+ *
+ * Returns null when the store has nothing to say, and the caller keeps its
+ * own figure rather than showing a blank where a price belongs.
+ */
+export async function storePriceString(productId: string): Promise<string | null> {
+  const P = loadSDK();
+  if (!P || !(await ensureConfigured())) return null;
+  try {
+    const offerings = await P.getOfferings();
+    for (const o of Object.values(offerings?.all ?? {}) as any[]) {
+      for (const pkg of o?.availablePackages ?? []) {
+        if (pkg?.product?.identifier === productId) {
+          return pkg.product.priceString ?? null;
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export type PurchaseResult = 'success' | 'cancelled' | 'unavailable' | 'error';
 
 export async function purchasePremium(plan: PremiumPlan = 'annual'): Promise<PurchaseResult> {

@@ -37,7 +37,7 @@ import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { useFavorites } from '../../lib/favorites';
 import ImageViewer from '../../components/ImageViewer';
 import Paywall from '../../components/Paywall';
-import { purchaseRecipe, purchaseCreatorSubscription } from '../../lib/purchases';
+import { purchaseRecipe, purchaseCreatorSubscription, storePriceString } from '../../lib/purchases';
 import { usd, findRecipeTier, findCreatorSubTier } from '../../lib/pricing';
 import { goBackOr } from '../../lib/nav';
 import NutritionStrip from '../../components/NutritionStrip';
@@ -164,6 +164,26 @@ export default function RecipeDetailScreen() {
   // Which purchase is in flight, so all three buttons disable together and the
   // pressed one can show its own progress label.
   const [buying, setBuying] = useState<'recipe' | 'creator' | null>(null);
+
+  // What the store will charge, as the store writes it. The figures in
+  // pricing.ts pick a product; they are not a promise about its price, and
+  // outside the US they were never even the right currency.
+  const [storePrices, setStorePrices] = useState<{ recipe?: string; sub?: string }>({});
+  useEffect(() => {
+    const unlock = recipe?.unlockPriceCents;
+    const sub = recipe?.creatorSubPriceCents;
+    const rTier = unlock != null ? findRecipeTier(unlock) : null;
+    const sTier = sub != null ? findCreatorSubTier(sub) : null;
+    if (!rTier && !sTier) return;
+    let alive = true;
+    Promise.all([
+      rTier ? storePriceString(rTier.productId) : Promise.resolve(null),
+      sTier ? storePriceString(sTier.productId) : Promise.resolve(null),
+    ]).then(([r, sP]) => {
+      if (alive) setStorePrices({ recipe: r ?? undefined, sub: sP ?? undefined });
+    });
+    return () => { alive = false; };
+  }, [recipe?.unlockPriceCents, recipe?.creatorSubPriceCents]);
 
   // Whether this creator recipe sits in the user's cookbook. Purchases are in
   // there unconditionally; this tracks the free save on top of that.
@@ -706,7 +726,7 @@ export default function RecipeDetailScreen() {
                   disabled={buying !== null}
                 >
                   <Text style={styles.lockedButtonText}>
-                    {buying === 'recipe' ? 'Purchasing…' : `Buy this recipe · ${usd(recipe.unlockPriceCents)}`}
+                    {buying === 'recipe' ? 'Purchasing…' : `Buy this recipe · ${storePrices.recipe ?? usd(recipe.unlockPriceCents)}`}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -720,7 +740,7 @@ export default function RecipeDetailScreen() {
                   <Text style={styles.lockedButtonAltText}>
                     {buying === 'creator'
                       ? 'Subscribing…'
-                      : `All of ${recipe.influencer.name}'s recipes · ${usd(recipe.creatorSubPriceCents)}/mo`}
+                      : `All of ${recipe.influencer.name}'s recipes · ${storePrices.sub ?? usd(recipe.creatorSubPriceCents)}/mo`}
                   </Text>
                 </TouchableOpacity>
               )}
