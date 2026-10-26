@@ -50,14 +50,32 @@ def page(slug, title, desc, body):
 
 
 def extract(path):
-    """Pull the styled Text blocks out of a legal screen, in order."""
+    """Pull the styled Text blocks out of a legal screen, in order.
+
+    Depth-aware, because a paragraph may hold <Text style={styles.bold}>
+    inside it. Matching to the first </Text> with a regex stopped at that
+    nested tag instead of the paragraph's own close, so the third-party list
+    had been published as "We use the following services: Supabase" — the rest
+    silently dropped. Nothing in either file looked wrong; only the generated
+    page was short, and nobody reads their own privacy policy.
+    """
     src = open(path).read()
     body = src[src.index("<ScrollView"):src.index("const styles")]
     out = []
-    for m in re.finditer(
-        r"<Text style=\{styles\.(sectionTitle|subTitle|paragraph|lastUpdated)\}>(.*?)</Text>",
-        body, re.S):
-        kind, t = m.group(1), m.group(2)
+    open_re = re.compile(r"<Text style=\{styles\.(sectionTitle|subTitle|paragraph|lastUpdated)\}>")
+    tag_re = re.compile(r"<Text\b|</Text>")
+
+    for m in open_re.finditer(body):
+        kind = m.group(1)
+        i, depth = m.end(), 1
+        while depth:
+            t = tag_re.search(body, i)
+            if not t:
+                break
+            depth += 1 if t.group(0) == "<Text" else -1
+            i = t.end()
+        t = body[m.end():i - len("</Text>")] if depth == 0 else body[m.end():]
+
         t = t.replace("{'\\n\\n'}", "\n\n").replace("{'\\n'}", "\n").replace("{' '}", " ")
         t = re.sub(r"<Text[^>]*>", "", t).replace("</Text>", "")
         t = re.sub(r"\{[^{}]*\}", "", t)
