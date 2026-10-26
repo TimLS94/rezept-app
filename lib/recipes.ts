@@ -48,6 +48,9 @@ export function mapDbRecipe(row: any): Recipe {
       : row.cuisine ? [row.cuisine] : [],
     equipment: Array.isArray(row.equipment) ? row.equipment : [],
     isPaid: row.is_paid ?? false,
+    // Defaults to true so a row from before the column existed, or one read
+    // through a path that does not select it, is treated as published.
+    isActive: row.is_active ?? true,
     // Real counts (survive premium stripping) + server lock flag for the teaser.
     ingredientsCount: row.ingredients_count ?? (Array.isArray(row.ingredients) ? row.ingredients.length : 0),
     stepsCount: row.steps_count ?? (Array.isArray(row.instructions) ? row.instructions.length : 0),
@@ -65,7 +68,7 @@ export const RECIPE_LIST_COLUMNS =
   'id, title, description, image_url, prep_time, cook_time, servings, calories, cost, ' +
   'difficulty, tags, kid_approved, is_paid, price_cents, nutrition, cuisine, cuisines, equipment, ' +
   'influencer_id, influencer_name, ' +
-  'influencer_handle, influencer_avatar, created_at, ingredients_count, steps_count';
+  'influencer_handle, influencer_avatar, created_at, ingredients_count, steps_count, is_active';
 
 // Shared in-memory cache so Discover/Search/Home don't re-hit the network on
 // every mount. Short TTL; invalidated when a recipe is created/changed.
@@ -85,6 +88,10 @@ export async function fetchDbRecipes(force = false): Promise<Recipe[]> {
   const { data, error } = await supabase
     .from('recipes')
     .select(`${RECIPE_LIST_COLUMNS}, profiles:influencer_id(id, full_name, username, avatar_url)`)
+    // The policy already hides other people's inactive recipes. This hides
+    // your own as well, so Discover is the catalogue rather than a mirror of
+    // what you happen to have published.
+    .eq('is_active', true)
     .order('created_at', { ascending: false });
   if (error || !data) return recipeCache?.data ?? [];
   // Only surface uploads that actually carry ingredients (skips bare seed rows).
@@ -383,6 +390,26 @@ export async function createRecipe(input: NewRecipeInput): Promise<CreateResult>
 
 // Toggle a recipe's paywall flag. RLS ("Creators can update their own recipes")
 // restricts this to the recipe's author.
+/**
+ * Take a recipe out of the catalogue, or put it back.
+ *
+ * Deliberately not a delete. The reasons people want a recipe gone are mostly
+ * temporary — a dead image, a draft published early, a rights question being
+ * settled — and deleting loses the work along with the problem.
+ *
+ * Anyone who bought it keeps it: paid content is served by get_recipe_full(),
+ * which does not consult the catalogue policy.
+ */
+export async function setRecipeActive(
+  id: string,
+  active: boolean
+): Promise<{ ok: true } | { error: string }> {
+  const { error } = await supabase.from('recipes').update({ is_active: active }).eq('id', id);
+  if (error) return { error: error.message };
+  invalidateRecipeCache();
+  return { ok: true };
+}
+
 export async function setRecipePaid(
   id: string,
   isPaid: boolean

@@ -14,7 +14,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { usd } from '../../lib/pricing';
 import { useAuth, canUploadRecipes } from '../../lib/auth';
 import { getCreatorProfile, CreatorProfile, emptyCreatorProfile } from '../../lib/creatorProfile';
-import { fetchRecipesByCreator, setRecipePaid } from '../../lib/recipes';
+import { fetchRecipesByCreator, setRecipePaid, setRecipeActive } from '../../lib/recipes';
 import {
   fetchCreatorEngagement,
   compactCount,
@@ -100,6 +100,20 @@ export default function CreatorStudioScreen() {
     const res = await setRecipePaid(r.id, next);
     if ('error' in res) {
       setRecipes(prev => prev.map(x => (x.id === r.id ? { ...x, isPaid: !next } : x)));
+      Alert.alert('Could not update', res.error);
+    }
+  };
+
+  // Take a recipe out of the catalogue, or put it back. Optimistic like the
+  // paywall toggle, and reverting on failure for the same reason: a switch
+  // that shows the state it failed to reach is worse than one that does not
+  // move.
+  const toggleActive = async (r: Recipe) => {
+    const next = !(r.isActive ?? true);
+    setRecipes(prev => prev.map(x => (x.id === r.id ? { ...x, isActive: next } : x)));
+    const res = await setRecipeActive(r.id, next);
+    if ('error' in res) {
+      setRecipes(prev => prev.map(x => (x.id === r.id ? { ...x, isActive: !next } : x)));
       Alert.alert('Could not update', res.error);
     }
   };
@@ -214,13 +228,20 @@ export default function CreatorStudioScreen() {
             </Text>
           )}
           {recipes.length > 0 && (
-            <Text style={styles.sectionHint}>Tap 🔓/🔒 to set a recipe free or behind the paywall.</Text>
+            <Text style={styles.sectionHint}>
+              Tap 🔓/🔒 to set a recipe free or behind the paywall. Tap 👁 to take
+              it out of the catalogue — it stays here, and anyone who bought it
+              keeps it.
+            </Text>
           )}
           {recipes.length === 0 ? (
             <Text style={styles.emptyText}>No published recipes yet. Upload or import your first one above.</Text>
           ) : (
             recipes.map(r => (
-              <View key={r.id} style={styles.recipeRow}>
+              <View
+                key={r.id}
+                style={[styles.recipeRow, r.isActive === false && styles.recipeRowOff]}
+              >
                 <TouchableOpacity style={styles.recipeMain} onPress={() => router.push(`/recipe/${r.id}`)}>
                   <Image source={{ uri: r.image }} style={styles.recipeImage} />
                   <View style={styles.recipeBody}>
@@ -242,6 +263,16 @@ export default function CreatorStudioScreen() {
                       </View>
                     )}
                   </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.liveToggle, r.isActive === false && styles.liveToggleOff]}
+                  onPress={() => toggleActive(r)}
+                >
+                  <Text
+                    style={[styles.liveToggleText, r.isActive === false && styles.liveToggleTextOff]}
+                  >
+                    {r.isActive === false ? '🙈 Hidden' : '👁 Live'}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.payToggle, r.isPaid && styles.payToggleOn]}
@@ -318,6 +349,12 @@ const styles = StyleSheet.create({
   recipeMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   recipeImage: { width: 84, height: 84 },
   recipeBody: { flex: 1, padding: 10, justifyContent: 'center' },
+  // Dimmed rather than hidden: it is still yours, it is just not on sale.
+  recipeRowOff: { opacity: 0.55 },
+  liveToggle: { paddingHorizontal: 10, paddingVertical: 7, marginRight: 8, borderRadius: 10, borderWidth: 1, borderColor: '#D6E4F7', backgroundColor: '#EEF4FD' },
+  liveToggleOff: { borderColor: '#E0DED9', backgroundColor: '#F2F0EC' },
+  liveToggleText: { fontSize: 12, fontWeight: '700', color: '#2E6BBF' },
+  liveToggleTextOff: { color: '#8A8378' },
   payToggle: { paddingHorizontal: 10, paddingVertical: 7, marginRight: 10, borderRadius: 10, borderWidth: 1, borderColor: '#C8E6C9', backgroundColor: '#E8F5E9' },
   payToggleOn: { borderColor: '#FFD3C2', backgroundColor: '#FFF0EA' },
   payToggleText: { fontSize: 12, fontWeight: '700', color: '#3C8D40' },

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { exportMyData } from '../lib/dataExport';
 import Avatar from '../components/Avatar';
 import {
   View,
@@ -45,6 +46,19 @@ export default function SettingsScreen() {
    * a fix is two cold starts away and nothing on screen says whether it has
    * arrived. This collapses that into one tap and one honest answer.
    */
+  const [exporting, setExporting] = useState(false);
+
+  // The privacy policy has promised this since it was written. Doing it by
+  // hand was always allowed; having nothing behind the promise was the part
+  // that would have been noticed at the wrong moment.
+  const downloadMyData = async () => {
+    if (exporting) return;
+    setExporting(true);
+    const { error } = await exportMyData();
+    setExporting(false);
+    if (error) Alert.alert('Could not export', error);
+  };
+
   const checkForUpdate = async () => {
     if (checking) return;
     setChecking(true);
@@ -440,6 +454,22 @@ export default function SettingsScreen() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.legalLink} onPress={() => router.push('/imprint')}>
             <Text style={styles.legalLinkText}>Legal Notice (Impressum)</Text>
+            <Text style={styles.legalArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Your data — next to the legal pages that promise it, and above the
+            delete button, because the order people want is "let me see what
+            you have" and only then "now get rid of it". */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Your data</Text>
+          <Text style={styles.dangerText}>
+            A copy of everything stored under your account, as a file you can keep.
+          </Text>
+          <TouchableOpacity style={styles.legalLink} onPress={downloadMyData} disabled={exporting}>
+            <Text style={styles.legalLinkText}>
+              {exporting ? 'Preparing…' : 'Download my data'}
+            </Text>
             <Text style={styles.legalArrow}>›</Text>
           </TouchableOpacity>
         </View>

@@ -66,6 +66,8 @@ export type Recipe = {
   // Paywall: true = premium-only (creator-gated content). Optional so the local
   // seed catalogue (all free) doesn't need the field.
   isPaid?: boolean;
+  /** False when the creator has taken it out of the catalogue. */
+  isActive?: boolean;
   // Real counts from the server (survive premium stripping) for the paywall teaser.
   ingredientsCount?: number;
   stepsCount?: number;
