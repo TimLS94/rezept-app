@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import {
+  View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Alert,
+  ScrollView, Linking,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../lib/theme';
 import { reportError } from '../lib/errorLog';
+import SubscriptionLegal from './SubscriptionLegal';
 import {
   getPremiumPriceStrings, purchasePremium, restorePurchases, syncEntitlements,
   grantPlatformEntitlement, purchasesAvailable, purchaseUnavailableReason,
@@ -254,6 +258,8 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
           <Text style={styles.legal}>
             The subscription renews automatically until you cancel. Manage & cancel in your store settings.
           </Text>
+
+          <SubscriptionLegal />
           </ScrollView>
         </View>
       </View>

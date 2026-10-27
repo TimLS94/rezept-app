@@ -7,6 +7,7 @@ import {
 } from '../../lib/engagement';
 import ImageViewer from '../../components/ImageViewer';
 import Avatar from '../../components/Avatar';
+import SubscriptionLegal from '../../components/SubscriptionLegal';
 import EngagementRow from '../../components/EngagementRow';
 import {
   View,
@@ -393,15 +394,23 @@ export default function CreatorProfileScreen() {
                   : `Unlock every premium recipe by ${creator.full_name || 'this creator'} — including everything they publish next. Cancel anytime.`}
               </Text>
               {!hasCreatorAccess && (
-                <TouchableOpacity
-                  style={styles.memberButton}
-                  onPress={subscribeToCreator}
-                  disabled={subscribing}
-                >
-                  <Text style={styles.memberButtonText}>
-                    {subscribing ? 'Subscribing…' : `Become a member · ${memberPrice}/mo`}
+                <>
+                  <TouchableOpacity
+                    style={styles.memberButton}
+                    onPress={subscribeToCreator}
+                    disabled={subscribing}
+                  >
+                    <Text style={styles.memberButtonText}>
+                      {subscribing ? 'Subscribing…' : `Become a member · ${memberPrice}/mo`}
+                    </Text>
+                  </TouchableOpacity>
+                  {/* A membership renews by itself, so guideline 3.1.2 applies
+                      here exactly as it does on the Premium paywall. */}
+                  <Text style={styles.memberRenewal}>
+                    Renews monthly until cancelled. Manage & cancel in your store settings.
                   </Text>
-                </TouchableOpacity>
+                  <SubscriptionLegal compact />
+                </>
               )}
             </View>
           )}
@@ -570,6 +579,7 @@ const styles = StyleSheet.create({
   },
   memberTitle: { fontSize: 15, fontWeight: '700', color: '#0D2B63' },
   memberText: { fontSize: 13, color: '#6F6F6F', lineHeight: 19, marginTop: 5 },
+  memberRenewal: { fontSize: 11, color: '#8A8378', textAlign: 'center', marginTop: 10, lineHeight: 15 },
   memberButton: {
     backgroundColor: '#0D2B63', borderRadius: 12, paddingVertical: 13,
     alignItems: 'center', marginTop: 13,
