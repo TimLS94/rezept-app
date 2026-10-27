@@ -56,3 +56,8 @@ backup-*.sql
 
 # Store screenshots are generated from phone captures, not source.
 store/screenshots/
+
+# Play Console service account — full publishing rights, and eas.json
+# points at it by name, so it will exist here one day.
+google-service-account.json
+*service-account*.json

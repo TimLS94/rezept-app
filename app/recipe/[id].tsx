@@ -41,6 +41,7 @@ import { purchaseRecipe, purchaseCreatorSubscription, storePriceString } from '.
 import { usd, findRecipeTier, findCreatorSubTier } from '../../lib/pricing';
 import { goBackOr } from '../../lib/nav';
 import NutritionStrip from '../../components/NutritionStrip';
+import SubscriptionLegal from '../../components/SubscriptionLegal';
 import { shareRecipe } from '../../lib/share';
 import { HEADER_TOP } from '../../lib/layout';
 import { caloriesLabel } from '../../lib/nutrition';
@@ -745,6 +746,19 @@ export default function RecipeDetailScreen() {
                 </TouchableOpacity>
               )}
 
+              {/* Third place a subscription is sold, and the one easiest to
+                  forget — the other two are called "paywall" and "membership
+                  card", this one is a second button under a locked recipe.
+                  Guideline 3.1.2 does not care what the screen is called. */}
+              {recipe.creatorSubPriceCents != null && recipe.influencer.id && (
+                <>
+                  <Text style={styles.subRenewal}>
+                    Membership renews monthly until cancelled. Manage & cancel in your store settings.
+                  </Text>
+                  <SubscriptionLegal compact />
+                </>
+              )}
+
               {/* No "unlock with Premium" option here on purpose: app Premium
                   buys app features, not creator content. Offering it would take
                   money for something that wouldn't unlock this page. */}
@@ -1053,6 +1067,7 @@ const styles = StyleSheet.create({
   stepImage: { width: '100%', height: 170, borderRadius: 12, marginTop: 10 },
   // Tall enough to clear the fixed bottom bar. At 100 the "Favorite" and
   // "Add to cookbook" buttons ended up underneath it and could not be reached.
+  subRenewal: { fontSize: 11, color: '#8A8378', textAlign: 'center', marginTop: 12, lineHeight: 15, paddingHorizontal: 12 },
   reportRow: { alignItems: 'center', paddingVertical: 18 },
   reportText: { fontSize: 13, color: '#9A9A9A', textDecorationLine: 'underline' },
   bottomSpacer: { height: 190 },
