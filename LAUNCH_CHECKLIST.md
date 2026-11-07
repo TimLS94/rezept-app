@@ -35,11 +35,18 @@ changed after it is created and neither can its id, so this means new ids
 in lib/pricing.ts pointed at them. In-app purchases can be submitted on their
 own once the app is approved, so this costs no further app review.
 
-- [ ] Create five consumables in App Store Connect
-- [ ] Wire them into the RevenueCat `recipes` offering
-- [ ] Point RECIPE_PRICE_TIERS in lib/pricing.ts at the new ids
-- [ ] Widen the regex in verify-purchase, which anchors on recipe_unlock_
-- [ ] Remove the old non-consumables from sale once nothing references them
+- [ ] Create five consumables in App Store Connect: recipe_credit_099, _199,
+      _299, _499, _999. Localisation, review notes and screenshots can be
+      copied from the products they replace
+- [ ] Wire them into the RevenueCat `recipes` offering, replacing the
+      recipe_unlock_* products on the existing packages
+- [x] ~~Point RECIPE_PRICE_TIERS at the new ids~~ done
+- [x] ~~Widen the regex in verify-purchase~~ done — it takes both spellings
+      so a build still serving the old offering is not refused
+- [ ] Deploy verify-purchase, then publish an update
+- [ ] Remove the old non-consumables from the submission and from sale
+- [ ] Buy two recipes at the SAME price with one account. That is the case
+      that was broken, and nobody has ever run it
 
 ### One creator membership per tier, at a time
 

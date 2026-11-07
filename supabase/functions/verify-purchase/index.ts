@@ -160,7 +160,11 @@ Deno.serve(async (req: Request) => {
   if (kind === 'recipe') {
     const recipeId = String(body.recipeId ?? '');
     const productId = String(body.productId ?? '');
-    if (!recipeId || !/^recipe_unlock_\d{3}$/.test(productId)) {
+    // Both spellings: recipe_credit_* are the consumables that replaced the
+    // non-consumable recipe_unlock_*. The old ids are accepted while they are
+    // still on sale, so a build that has not fetched the new offering yet
+    // does not have its purchases refused.
+    if (!recipeId || !/^recipe_(unlock|credit)_\d{3}$/.test(productId)) {
       return json({ ok: false, error: 'bad_request' }, 400);
     }
 

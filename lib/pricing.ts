@@ -83,12 +83,27 @@ export type PriceTier = {
 };
 
 // One-off purchase of a single recipe (non-consumable — owned forever).
+// `credit`, not `unlock`, and the rename carries the whole fix.
+//
+// One recipe has one price; one price serves any number of recipes. So a
+// tier is bought once per recipe, and the server settles each unlock by
+// counting purchases of the tier against unlocks already spent at it.
+//
+// That only works if the product can be bought again. The first five were
+// created as non-consumables, which Apple sells once per account for good:
+// purchases stayed at 1 forever, and from the second recipe at a given price
+// the count never rose, so every further purchase was refused while Apple
+// charged nothing. Five recipes was the lifetime ceiling per customer.
+//
+// Neither a product's type nor its id can be changed after creation, so
+// these are new products — consumables. The old recipe_unlock_* ids are
+// retired rather than reused.
 export const RECIPE_PRICE_TIERS: PriceTier[] = [
-  { cents: 99, label: '$0.99', productId: 'recipe_unlock_099' },
-  { cents: 199, label: '$1.99', productId: 'recipe_unlock_199' },
-  { cents: 299, label: '$2.99', productId: 'recipe_unlock_299' },
-  { cents: 499, label: '$4.99', productId: 'recipe_unlock_499' },
-  { cents: 999, label: '$9.99', productId: 'recipe_unlock_999' },
+  { cents: 99, label: '$0.99', productId: 'recipe_credit_099' },
+  { cents: 199, label: '$1.99', productId: 'recipe_credit_199' },
+  { cents: 299, label: '$2.99', productId: 'recipe_credit_299' },
+  { cents: 499, label: '$4.99', productId: 'recipe_credit_499' },
+  { cents: 999, label: '$9.99', productId: 'recipe_credit_999' },
 ];
 
 // Monthly subscription to one creator — all of their paid recipes.
