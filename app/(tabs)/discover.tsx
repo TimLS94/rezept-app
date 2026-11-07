@@ -93,9 +93,19 @@ export default function DiscoverScreen() {
 
   const deck = useMemo(() => {
     if (!excluded) return []; // still loading the exclusion snapshot
-    // Only show free recipes the user hasn't already favorited or swiped.
+    // Paid recipes belong here too, marked with a lock.
+    //
+    // They used to be filtered out, on the reasoning that the deck is for
+    // browsing rather than buying. The cost of that was invisible until App
+    // Review went looking for a purchasable recipe in the one place the
+    // review notes named, found none, and rejected the app under 2.1(b) —
+    // the products worked, and nothing led anyone to them.
+    //
+    // A creator who sets a price is also the creator least likely to be
+    // discovered, which made the old rule a quiet tax on exactly the people
+    // the marketplace is for.
     const pool = [...uploaded, ...RECIPES].filter(
-      r => !r.isPaid && !excluded.has(r.id) && !swiped.has(r.id),
+      r => !excluded.has(r.id) && !swiped.has(r.id),
     );
     if (activeFilters.length === 0) return pool;
     return pool.filter(r => activeFilters.every(tag => r.dietary.includes(tag)));
@@ -384,7 +394,16 @@ export default function DiscoverScreen() {
                       </View>
                       <Text style={styles.viewProfileArrow}>›</Text>
                     </TouchableOpacity>
-                    <Text style={styles.cardTitle}>{recipe.title}</Text>
+                    <View style={styles.titleRow}>
+                      <Text style={[styles.cardTitle, styles.titleFlex]} numberOfLines={2}>
+                        {recipe.title}
+                      </Text>
+                      {recipe.isPaid && (
+                        <View style={styles.lockBadge}>
+                          <Text style={styles.lockBadgeText}>🔒</Text>
+                        </View>
+                      )}
+                    </View>
                     <EngagementRow engagement={{ cooked: cooks[recipe.id] ?? 0, favorited: 0, saved: 0 }} size="sm" />
                     <View style={styles.cardMeta}>
                       <Text style={styles.cardMetaText}>⏱ {recipe.prepTime + recipe.cookTime} min</Text>
@@ -491,6 +510,16 @@ const styles = StyleSheet.create({
   influencerName: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
   influencerHandle: { fontSize: 12, color: '#F2701E', fontWeight: '500' },
   viewProfileArrow: { fontSize: 24, color: 'rgba(255,255,255,0.55)', marginLeft: 'auto', paddingLeft: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  titleFlex: { flex: 1 },
+  // A lock, not a price. The figure on a card would be the creator's tier in
+  // dollars, and the App Store charges in the reader's own currency — the
+  // real number appears on the recipe page, which asks the store for it.
+  lockBadge: {
+    marginLeft: 8, marginTop: 2, paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 10, backgroundColor: 'rgba(242,112,30,0.16)',
+  },
+  lockBadgeText: { fontSize: 13 },
   cardTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 10 },
   // Wraps. Four facts do not fit across a card this wide, so the cost — the
   // last one added and the one people asked for — was running off the edge
