@@ -55,7 +55,12 @@ export function mapDbRecipe(row: any): Recipe {
     ingredientsCount: row.ingredients_count ?? (Array.isArray(row.ingredients) ? row.ingredients.length : 0),
     stepsCount: row.steps_count ?? (Array.isArray(row.instructions) ? row.instructions.length : 0),
     locked: row.locked ?? false,
-    unlockPriceCents: row.unlock_price_cents ?? null,
+    // Two names for one column: the list query selects price_cents, while
+    // get_recipe_full aliases it to unlock_price_cents. Reading only the
+    // alias meant every list view — the Studio included — believed no recipe
+    // had a price, which is why the Studio could mark one paid without
+    // noticing there was nothing to charge.
+    unlockPriceCents: row.unlock_price_cents ?? row.price_cents ?? null,
     creatorSubPriceCents: row.creator_subscription_price_cents ?? null,
   };
 }
@@ -410,11 +415,31 @@ export async function setRecipeActive(
   return { ok: true };
 }
 
+/**
+ * Put a recipe behind the paywall, or take it out.
+ *
+ * Turning it on requires a price, because the two were separate writes and
+ * nothing joined them: the Studio's lock toggled is_paid and never looked at
+ * price_cents, so a recipe could be locked with nothing to charge for it. It
+ * then showed as premium with no way to buy it — which is a broken product
+ * and, when App Review meets it, a 2.1(b) rejection.
+ *
+ * priceCents falls back to the creator's default. With neither, this refuses
+ * rather than creating the state again.
+ */
 export async function setRecipePaid(
   id: string,
-  isPaid: boolean
+  isPaid: boolean,
+  priceCents?: number | null,
 ): Promise<{ ok: true } | { error: string }> {
-  const { error } = await supabase.from('recipes').update({ is_paid: isPaid }).eq('id', id);
+  const patch: Record<string, unknown> = { is_paid: isPaid };
+  if (isPaid) {
+    if (priceCents == null) {
+      return { error: 'Set a price for this recipe first — Prices & memberships.' };
+    }
+    patch.price_cents = priceCents;
+  }
+  const { error } = await supabase.from('recipes').update(patch).eq('id', id);
   if (error) return { error: error.message };
   invalidateRecipeCache();
   return { ok: true };

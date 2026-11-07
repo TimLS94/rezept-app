@@ -94,10 +94,23 @@ export default function CreatorStudioScreen() {
   };
 
   // Flip a recipe between free and paywalled (optimistic, reverts on error).
+  //
+  // Locking it needs a price: its own, or the profile default. With neither,
+  // this stops rather than producing a recipe marked premium that nobody can
+  // buy — the state that got the app rejected.
   const togglePaid = async (r: Recipe) => {
     const next = !r.isPaid;
-    setRecipes(prev => prev.map(x => (x.id === r.id ? { ...x, isPaid: next } : x)));
-    const res = await setRecipePaid(r.id, next);
+    const price = r.unlockPriceCents ?? profile.defaultRecipePriceCents ?? null;
+    if (next && price == null) {
+      Alert.alert(
+        'Set a price first',
+        'This recipe has no price, and you have no default set. Open "Prices & memberships" and choose one, then lock it.',
+      );
+      return;
+    }
+    setRecipes(prev => prev.map(x =>
+      x.id === r.id ? { ...x, isPaid: next, unlockPriceCents: next ? price : x.unlockPriceCents } : x));
+    const res = await setRecipePaid(r.id, next, price);
     if ('error' in res) {
       setRecipes(prev => prev.map(x => (x.id === r.id ? { ...x, isPaid: !next } : x)));
       Alert.alert('Could not update', res.error);
