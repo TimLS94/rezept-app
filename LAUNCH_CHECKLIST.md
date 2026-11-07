@@ -6,6 +6,61 @@ Status verified against the live project on 2026-08-06.
 
 ---
 
+## 🚨 Found during the 2.1(b) rejection — 2026-11-07
+
+### A customer can buy one recipe per price tier. Ever.
+
+**This breaks real customers on their second purchase. It is the most
+serious thing on this list.**
+
+The five recipe_unlock_* products are **non-consumables** in App Store
+Connect. A non-consumable can be bought once per Apple ID, for good.
+verify-purchase, though, settles each unlock by counting: the store says how
+many times the tier was bought, the database says how many unlocks were
+already spent at it, and one more purchase than spent pays for this one.
+
+    first recipe at $2.99    purchases 1, spent 0  ->  granted
+    second recipe at $2.99   purchases 1, spent 1  ->  no_unspent_purchase
+
+So the second purchase at any tier is refused, Apple charges nothing because
+it considers the product already owned, and the customer is told nothing
+useful. Five recipes is the lifetime ceiling per account.
+
+App Review will probably not hit it — a reviewer buys one product per tier,
+and each of those is a first purchase. Customers hit it immediately.
+
+The fix is five new products as **consumables**. A product's type cannot be
+changed after it is created and neither can its id, so this means new ids
+(recipe_credit_099 and so on), new packages in RevenueCat, and the tier list
+in lib/pricing.ts pointed at them. In-app purchases can be submitted on their
+own once the app is approved, so this costs no further app review.
+
+- [ ] Create five consumables in App Store Connect
+- [ ] Wire them into the RevenueCat `recipes` offering
+- [ ] Point RECIPE_PRICE_TIERS in lib/pricing.ts at the new ids
+- [ ] Widen the regex in verify-purchase, which anchors on recipe_unlock_
+- [ ] Remove the old non-consumables from sale once nothing references them
+
+### One creator membership per tier, at a time
+
+Same shape, already noted in verify-purchase. A store subscription is active
+once per account, so a customer who wants two creators that both charge $4.99
+can only have one. Needs per-creator products, or one product with the
+creator chosen server-side.
+
+- [ ] Decide which, before a second creator sets the same price as the first
+
+### Smaller things seen while looking
+
+- [ ] A recipe titled "Test" is live in the catalogue
+- [ ] 101 recipes are visible again, so the 27 with dead Instagram images are
+      back. Worth a look before the reviewer sees them
+- [ ] The `creator_subs` offering in RevenueCat has never been checked
+      end to end. Five of the twelve products hang off it, and the `recipes`
+      offering turned out to have a package wired to the wrong product
+
+---
+
 ## 🔜 Open before submitting — as of 2026-10-24
 
 The list below is current. Everything further down was written on 2026-08-06
