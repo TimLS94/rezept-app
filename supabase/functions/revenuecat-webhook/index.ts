@@ -56,22 +56,39 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 3. Entitlement (access). Phase 1: app-wide 'platform' scope.
-  if (userId) {
+  // 3. Entitlement (access).
+  //
+  // WHICH entitlement a purchase grants is decided by the product, not by the
+  // fact that a purchase happened. This block used to write scope 'platform'
+  // for every event, whatever was bought. Two ways that gave the app away:
+  //
+  //   creator_sub_499   a $4.99 membership to one creator unlocked all of
+  //                     Premium, so nobody ever needed to buy Premium.
+  //   recipe_credit_099 a single $0.99 recipe did the same, because Apple
+  //                     reports consumables as NON_RENEWING_PURCHASE, which
+  //                     sits in ACTIVE below.
+  //
+  // It also meant a creator membership could never end: EXPIRATION expired the
+  // platform row and never touched the creator one.
+  const productId: string | null = e.product_id ?? null;
+  const isPlatformProduct = productId === 'premium_monthly' || productId === 'premium_yearly';
+  const isCreatorSub = !!productId && /^creator_sub_\d{3,4}$/.test(productId);
+
+  if (userId && (isPlatformProduct || isCreatorSub)) {
     let status: string | null = null;
     if (ACTIVE.includes(type)) status = 'active';
     else if (type === 'BILLING_ISSUE') status = 'grace';
     else if (type === 'EXPIRATION') status = 'expired';
     else if (type === 'CANCELLATION') status = null; // auto-renew off, keep access until expiry
 
-    if (status) {
+    if (status && isPlatformProduct) {
       // Manual upsert: onConflict can't dedupe on a NULL creator_id, so match the
       // existing platform row by hand and update it, otherwise insert.
       const row = {
         user_id: userId,
         scope: 'platform',
         creator_id: null,
-        product_id: e.product_id ?? null,
+        product_id: productId,
         store,
         rc_app_user_id: userId,
         status,
@@ -89,6 +106,27 @@ Deno.serve(async (req) => {
         await supabase.from('entitlements').update(row).eq('id', existing.id);
       } else {
         await supabase.from('entitlements').insert(row);
+      }
+    } else if (status && isCreatorSub) {
+      // RevenueCat does not know which creator was paid for — the tier product
+      // carries no creator id. verify-purchase wrote that row at purchase time
+      // with the creator attached, so renewals and expiry update it in place
+      // and never invent one. No row yet means the purchase has not been
+      // verified yet; verify-purchase creates it, so there is nothing to do.
+      const { data: rows } = await supabase
+        .from('entitlements')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('scope', 'creator')
+        .eq('product_id', productId);
+      for (const r of rows ?? []) {
+        await supabase.from('entitlements').update({
+          status,
+          store,
+          rc_app_user_id: userId,
+          current_period_end: periodEnd,
+          updated_at: new Date().toISOString(),
+        }).eq('id', r.id);
       }
     }
   }

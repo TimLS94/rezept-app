@@ -9,6 +9,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const ENTITLEMENT = 'Cook_App Pro'; // must match RevenueCat entitlement id + the app
 
+// Holding the entitlement is not on its own proof of Premium. Which products
+// map to "Cook_App Pro" is a setting in RevenueCat's dashboard, not in this
+// repo, and attaching a creator tier or a recipe credit to it there would hand
+// out the whole app for $0.99 with no code change. The product decides.
+const PLATFORM_PRODUCTS = ['premium_monthly', 'premium_yearly'];
+
 Deno.serve(async (req) => {
   const url = Deno.env.get('SUPABASE_URL')!;
   const anon = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -30,7 +36,9 @@ Deno.serve(async (req) => {
   const body = await rc.json().catch(() => null);
   const allEnts = body?.subscriber?.entitlements ?? {};
   const ent = allEnts[ENTITLEMENT];
-  const active = !!ent && (!ent.expires_date || new Date(ent.expires_date).getTime() > Date.now());
+  const entProduct: string | null = ent?.product_identifier ?? null;
+  const unexpired = !!ent && (!ent.expires_date || new Date(ent.expires_date).getTime() > Date.now());
+  const active = unexpired && !!entProduct && PLATFORM_PRODUCTS.includes(entProduct);
 
   // Upsert the platform entitlement (service role bypasses RLS).
   const admin = createClient(url, service);
@@ -60,10 +68,17 @@ Deno.serve(async (req) => {
   // returned) so mismatches are easy to spot during setup.
   return json({
     active,
-    error: writeError ?? (active ? undefined : (ent ? 'expired' : 'no_entitlement')),
+    error: writeError ?? (active
+      ? undefined
+      : !ent ? 'no_entitlement'
+      : !unexpired ? 'expired'
+      : 'not_a_platform_product'),
     app_user_id: user.id,
     entitlements_seen: Object.keys(allEnts),
     looking_for: ENTITLEMENT,
+    // Surfaced because 'not_a_platform_product' is a dashboard misconfiguration,
+    // and without the product id there is nothing to go on when it happens.
+    entitlement_product: entProduct,
   });
 });
 
