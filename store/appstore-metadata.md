@@ -70,13 +70,29 @@ shopping list.
 
 ## In-app purchases (12)
 
-    premium_monthly        $2.99/mo   auto-renewable, group "Premium"
-    premium_yearly        $29.99/yr   auto-renewable, group "Premium"
-    recipe_unlock_099       $0.99     non-consumable
-    recipe_unlock_199       $1.99     non-consumable
-    recipe_unlock_299       $2.99     non-consumable
-    recipe_unlock_499       $4.99     non-consumable
-    recipe_unlock_999       $9.99     non-consumable
+These ids are the ones App Store Connect holds, and nothing in this repo
+checks them: the app buys through RevenueCat offerings and never names a
+product. So this list is a note, not a source of truth, and it has been wrong.
+It said `premium_monthly` while the store sells `spoondrop_premium_monthly`,
+and code written against the note would have denied Premium to people who had
+paid for it. Before using an id from here, confirm it against a real row:
+
+    select distinct product_id, store from public.entitlements
+    where store in ('app_store', 'play_store');
+
+    spoondrop_premium_monthly  $2.99/mo   auto-renewable, group "Premium"
+      — confirmed against a live entitlement row, 2026-11-08
+    premium_yearly            $29.99/yr   auto-renewable, group "Premium"
+      — UNCONFIRMED. If monthly carries the prefix, this one probably reads
+        `spoondrop_premium_yearly`; nobody has bought it yet, so no row proves
+        it either way. Check App Store Connect before relying on it.
+    recipe_credit_099       $0.99     consumable
+    recipe_credit_199       $1.99     consumable
+    recipe_credit_299       $2.99     consumable
+    recipe_credit_499       $4.99     consumable
+    recipe_credit_999       $9.99     consumable
+      — the recipe_unlock_* ids listed here before were non-consumables, which
+        allowed one purchase per Apple ID for all time. See lib/pricing.ts.
     creator_sub_299         $2.99/mo  auto-renewable, group "Creator Memberships"
     creator_sub_499         $4.99/mo  auto-renewable, group "Creator Memberships"
     creator_sub_699         $6.99/mo  auto-renewable, group "Creator Memberships"
