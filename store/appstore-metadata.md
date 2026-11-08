@@ -125,10 +125,8 @@ paid for it. Before using an id from here, confirm it against a real row:
 
     spoondrop_premium_monthly  $2.99/mo   auto-renewable, group "Premium"
       — confirmed against a live entitlement row, 2026-11-08
-    premium_yearly            $29.99/yr   auto-renewable, group "Premium"
-      — UNCONFIRMED. If monthly carries the prefix, this one probably reads
-        `spoondrop_premium_yearly`; nobody has bought it yet, so no row proves
-        it either way. Check App Store Connect before relying on it.
+    spoondrop_premium_yearly  $29.99/yr   auto-renewable, group "Premium"
+      — confirmed against a live entitlement row, 2026-11-08
     recipe_credit_099       $0.99     consumable
     recipe_credit_199       $1.99     consumable
     recipe_credit_299       $2.99     consumable
