@@ -14,15 +14,20 @@
 -- ============================================================================
 
 -- ── Look first ─────────────────────────────────────────────────────────────
--- Platform entitlements whose product is not a platform product. Every row is
--- someone holding Premium they never bought.
+-- Platform entitlements written by a creator tier or a recipe credit. Every
+-- row is someone holding Premium they never bought.
+--
+-- Named positively, by the products that must never grant Premium, rather than
+-- "anything that is not premium_monthly". The first draft of this file did it
+-- the other way, and the real subscription product turned out to be called
+-- `spoondrop_premium_monthly` — so running it would have revoked Premium from
+-- a paying customer to fix a bug that gave Premium away.
 select u.email, e.product_id, e.store, e.status, e.current_period_end
 from public.entitlements e
 join auth.users u on u.id = e.user_id
 where e.scope = 'platform'
   and e.status <> 'expired'
-  and e.product_id is not null
-  and e.product_id not in ('premium_monthly', 'premium_yearly')
+  and e.product_id ~ '^(creator_sub_[0-9]{3,4}|recipe_(credit|unlock)_[0-9]{3})$'
   and e.store in ('app_store', 'play_store');
 
 -- ── Then revoke ────────────────────────────────────────────────────────────
@@ -37,6 +42,5 @@ update public.entitlements
 set status = 'expired', current_period_end = now(), updated_at = now()
 where scope = 'platform'
   and status <> 'expired'
-  and product_id is not null
-  and product_id not in ('premium_monthly', 'premium_yearly')
+  and product_id ~ '^(creator_sub_[0-9]{3,4}|recipe_(credit|unlock)_[0-9]{3})$'
   and store in ('app_store', 'play_store');

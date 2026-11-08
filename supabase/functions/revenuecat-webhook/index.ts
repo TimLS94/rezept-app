@@ -70,9 +70,21 @@ Deno.serve(async (req) => {
   //
   // It also meant a creator membership could never end: EXPIRATION expired the
   // platform row and never touched the creator one.
+  // Classified by what a product is NOT, deliberately. An allowlist of premium
+  // ids would have to name a string that lives in App Store Connect and
+  // nowhere in this repo: store/appstore-metadata.md records `premium_monthly`
+  // and the store actually sells `spoondrop_premium_monthly`, so an allowlist
+  // built from that note would have cut off a paying subscriber. Creator tiers
+  // and recipe credits are defined in lib/pricing.ts, so they are the side
+  // that can be matched reliably — and they are the side that caused the bug.
+  //
+  // The cost is that a product type added later defaults to Premium. That is
+  // the safer default of the two (it never denies access someone paid for),
+  // but it is a default, so a new kind of product belongs in this block.
   const productId: string | null = e.product_id ?? null;
-  const isPlatformProduct = productId === 'premium_monthly' || productId === 'premium_yearly';
   const isCreatorSub = !!productId && /^creator_sub_\d{3,4}$/.test(productId);
+  const isRecipeOneOff = !!productId && /^recipe_(credit|unlock)_\d{3}$/.test(productId);
+  const isPlatformProduct = !!productId && !isCreatorSub && !isRecipeOneOff;
 
   if (userId && (isPlatformProduct || isCreatorSub)) {
     let status: string | null = null;

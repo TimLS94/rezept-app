@@ -13,7 +13,12 @@ const ENTITLEMENT = 'Cook_App Pro'; // must match RevenueCat entitlement id + th
 // map to "Cook_App Pro" is a setting in RevenueCat's dashboard, not in this
 // repo, and attaching a creator tier or a recipe credit to it there would hand
 // out the whole app for $0.99 with no code change. The product decides.
-const PLATFORM_PRODUCTS = ['premium_monthly', 'premium_yearly'];
+//
+// Matched negatively, for the reason spelled out in revenuecat-webhook: the
+// premium product id lives only in App Store Connect, the note in
+// store/appstore-metadata.md disagrees with it, and an allowlist built from
+// that note would have revoked a paying subscriber's Premium.
+const NOT_PLATFORM = /^(creator_sub_\d{3,4}|recipe_(credit|unlock)_\d{3})$/;
 
 Deno.serve(async (req) => {
   const url = Deno.env.get('SUPABASE_URL')!;
@@ -38,7 +43,7 @@ Deno.serve(async (req) => {
   const ent = allEnts[ENTITLEMENT];
   const entProduct: string | null = ent?.product_identifier ?? null;
   const unexpired = !!ent && (!ent.expires_date || new Date(ent.expires_date).getTime() > Date.now());
-  const active = unexpired && !!entProduct && PLATFORM_PRODUCTS.includes(entProduct);
+  const active = unexpired && !!entProduct && !NOT_PLATFORM.test(entProduct);
 
   // Upsert the platform entitlement (service role bypasses RLS).
   const admin = createClient(url, service);
