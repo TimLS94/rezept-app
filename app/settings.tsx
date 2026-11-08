@@ -435,13 +435,25 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.restoreLink} onPress={handleRestore}>
             <Text style={styles.restoreLinkText}>Restore purchases</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.restoreLink} onPress={debugSync}>
-            <Text style={[styles.restoreLinkText, { color: '#888' }]}>Debug: unlock &amp; check status</Text>
-          </TouchableOpacity>
-          {isPremium && (
-            <TouchableOpacity style={styles.restoreLink} onPress={debugResetPremium}>
-              <Text style={[styles.restoreLinkText, { color: '#888' }]}>Debug: reset Premium (testing)</Text>
-            </TouchableOpacity>
+          {/* Developer controls, behind __DEV__ so they cannot ship.
+              They were visible in release builds until now, and the second
+              one appeared precisely when someone bought Premium — so an App
+              Review tester reached a dialog of raw entitlement JSON at the
+              moment they were checking the purchase worked. The unlock
+              itself was never open: the server refuses it unless
+              ALLOW_DEV_UNLOCK is set, and it is not. This is about what a
+              finished app shows, not about access. */}
+          {__DEV__ && (
+            <>
+              <TouchableOpacity style={styles.restoreLink} onPress={debugSync}>
+                <Text style={[styles.restoreLinkText, { color: '#888' }]}>Debug: unlock &amp; check status</Text>
+              </TouchableOpacity>
+              {isPremium && (
+                <TouchableOpacity style={styles.restoreLink} onPress={debugResetPremium}>
+                  <Text style={[styles.restoreLinkText, { color: '#888' }]}>Debug: reset Premium (testing)</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
 
