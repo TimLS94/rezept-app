@@ -325,7 +325,9 @@ export async function purchasePremium(plan: PremiumPlan = 'annual'): Promise<Pur
  * the only party that actually knows what was charged. A client-supplied
  * amount was, at best, a guess it had no authority to make.
  */
-export async function grantPlatformEntitlement(_product?: string): Promise<{ ok: boolean; error?: string }> {
+export async function grantPlatformEntitlement(
+  _product?: string,
+): Promise<{ ok: boolean; error?: string; detail?: string }> {
   // Ask for the dev path whenever a real receipt is impossible — Expo Go, or a
   // RevenueCat test key. That deliberately includes TestFlight: with a test key
   // the store cannot charge anything, so without this there is no way to switch
@@ -348,14 +350,20 @@ export async function grantPlatformEntitlement(_product?: string): Promise<{ ok:
  * bought; verify-purchase checks that claim against RevenueCat's record of the
  * account before writing. A client that lies gets a 402.
  */
-async function verifyPurchase(payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
+async function verifyPurchase(
+  payload: Record<string, unknown>,
+): Promise<{ ok: boolean; error?: string; detail?: string }> {
   try {
     const { data, error } = await supabase.functions.invoke('verify-purchase', { body: payload });
     if (error) {
-      const detail = await error?.context?.json?.().catch(() => null);
-      return { ok: false, error: detail?.error ?? error.message };
+      // A 4xx or 5xx arrives here as a FunctionsHttpError whose message is
+      // the status, not the reason. The reason is in the body, which has to
+      // be read off the response — and the body now carries a `detail`
+      // naming which refusal it was.
+      const body = await error?.context?.json?.().catch(() => null);
+      return { ok: false, error: body?.error ?? error.message, detail: body?.detail };
     }
-    return { ok: !!data?.ok, error: data?.error };
+    return { ok: !!data?.ok, error: data?.error, detail: data?.detail };
   } catch (e: any) {
     return { ok: false, error: e?.message || 'verify-unreachable' };
   }

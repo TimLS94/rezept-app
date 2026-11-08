@@ -59,14 +59,41 @@ function isSandboxPurchase(subscriber: Subscriber, productId: string | undefined
   return (subscriber.non_subscriptions?.[productId] ?? []).some(p => p.is_sandbox);
 }
 
+/** Why the lookup failed, when it did. Null while it has not failed yet. */
+let lastSubscriberError: string | null = null;
+
 async function fetchSubscriber(userId: string, secret: string): Promise<Subscriber | null> {
-  const res = await fetch(
-    `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
-    { headers: { Authorization: `Bearer ${secret}` } },
-  );
-  if (!res.ok) return null;
-  const body = await res.json().catch(() => null);
-  return body?.subscriber ?? null;
+  lastSubscriberError = null;
+  try {
+    const res = await fetch(
+      `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
+      { headers: { Authorization: `Bearer ${secret}` } },
+    );
+    if (!res.ok) {
+      // Every failure used to become the same null, and the caller turned
+      // that into "revenuecat_unavailable" — a sentence that fits a bad key,
+      // a rate limit and an outage equally, and tells you which of them it
+      // is not at all. Someone whose payment went through deserves better
+      // than a word, and so does whoever has to fix it.
+      const detail = (await res.text().catch(() => '')).slice(0, 300);
+      lastSubscriberError = `http_${res.status}`;
+      console.error('revenuecat subscriber lookup failed', res.status, detail);
+      return null;
+    }
+    const body = await res.json().catch(() => null);
+    if (!body?.subscriber) {
+      lastSubscriberError = 'no_subscriber_in_body';
+      console.error('revenuecat returned no subscriber', JSON.stringify(body).slice(0, 300));
+      return null;
+    }
+    return body.subscriber;
+  } catch (e) {
+    // A thrown fetch is a different fault from a refused one: no network, DNS,
+    // a timeout. It used to be indistinguishable.
+    lastSubscriberError = `fetch_threw:${String((e as Error)?.message ?? e).slice(0, 120)}`;
+    console.error('revenuecat fetch threw', e);
+    return null;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -124,7 +151,16 @@ Deno.serve(async (req: Request) => {
   if (!rcSecret) return json({ ok: false, error: 'not_configured' }, 503);
 
   const subscriber = await fetchSubscriber(user.id, rcSecret);
-  if (!subscriber) return json({ ok: false, error: 'revenuecat_unavailable' }, 502);
+  if (!subscriber) {
+    return json({
+      ok: false,
+      error: 'revenuecat_unavailable',
+      // Carried to the client so a failed unlock can be read from the app's
+      // own error log instead of needing someone to be watching the function
+      // logs at the moment it happens.
+      detail: lastSubscriberError,
+    }, 502);
+  }
 
   const admin = createClient(url, service);
   const kind = String(body.kind ?? '');

@@ -112,6 +112,16 @@ export default function Paywall({ visible, onClose, onSubscribed, creatorName }:
     await refresh();
     setBusy(false);
     if (!g.ok) {
+      // A failed unlock after a successful payment is the worst state the app
+      // can be in, and until now it left nothing behind. The detail says
+      // which of the many refusals it was — an HTTP status from RevenueCat,
+      // a thrown fetch, a missing subscriber — without which the next person
+      // looking at this is back to guessing.
+      reportError('handled', `unlock failed after purchase: ${g.error ?? 'unknown'}`, {
+        error: g.error ?? null,
+        detail: (g as any).detail ?? null,
+        ...purchaseDiagnostics(),
+      });
       Alert.alert(
         'Almost there',
         `Purchase succeeded, but unlocking failed: ${g.error ?? 'unknown'}.\n\nYour payment went through — the store has it. Restore Purchases in Settings once you're online again.`
