@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Linking } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { Recipe, DIETARY_TAGS, DietaryTag } from '../../data/recipes';
 import { mapDbRecipe, RECIPE_LIST_COLUMNS } from '../../lib/recipes';
@@ -393,6 +394,17 @@ export default function CreatorProfileScreen() {
                   ? `You have access to every paid recipe by ${creator.full_name || 'this creator'}.`
                   : `Unlock every paid recipe by ${creator.full_name || 'this creator'} — including everything they publish next. Cancel anytime.`}
               </Text>
+              {/* The page you joined on is the page you look for when you want
+                  out. Sending someone to hunt through Settings for something
+                  they started here is how a subscription starts feeling like
+                  a trap. */}
+              {hasCreatorAccess && (
+                <TouchableOpacity
+                  onPress={() => Linking.openURL('https://apps.apple.com/account/subscriptions')}
+                >
+                  <Text style={styles.manageMembership}>Manage or cancel membership ›</Text>
+                </TouchableOpacity>
+              )}
               {!hasCreatorAccess && (
                 <>
                   <TouchableOpacity
@@ -579,6 +591,7 @@ const styles = StyleSheet.create({
   },
   memberTitle: { fontSize: 15, fontWeight: '700', color: '#0D2B63' },
   memberText: { fontSize: 13, color: '#6F6F6F', lineHeight: 19, marginTop: 5 },
+  manageMembership: { fontSize: 13, color: '#F2701E', fontWeight: '600', textAlign: 'center', marginTop: 12 },
   memberRenewal: { fontSize: 11, color: '#8A8378', textAlign: 'center', marginTop: 10, lineHeight: 15 },
   memberButton: {
     backgroundColor: '#0D2B63', borderRadius: 12, paddingVertical: 13,

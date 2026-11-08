@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { fetchMemberships, renewsLabel, type Membership } from '../lib/memberships';
 import { exportMyData } from '../lib/dataExport';
 import Avatar from '../components/Avatar';
 import {
@@ -46,6 +47,9 @@ export default function SettingsScreen() {
    * a fix is two cold starts away and nothing on screen says whether it has
    * arrived. This collapses that into one tap and one honest answer.
    */
+  const [memberships, setMemberships] = useState<Membership[]>([]);
+  useEffect(() => { fetchMemberships().then(setMemberships); }, []);
+
   const [exporting, setExporting] = useState(false);
 
   // The privacy policy has promised this since it was written. Doing it by
@@ -458,6 +462,48 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* What you are paying for, and the way out.
+            The app took memberships and then never mentioned them again —
+            no list, no price, no route to the page that ends them. An app
+            cannot cancel a store subscription itself, but leaving someone to
+            find Apple's settings unaided is not the alternative. */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Subscriptions</Text>
+
+          <View style={styles.subRow}>
+            <Text style={styles.subName}>SpoonDrop Premium</Text>
+            <Text style={[styles.subState, isPremium && styles.subStateOn]}>
+              {isPremium ? 'Active' : 'Not active'}
+            </Text>
+          </View>
+
+          {memberships.map(m => (
+            <View key={m.creatorId} style={styles.subRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.subName}>{m.name}</Text>
+                <Text style={styles.subMeta}>
+                  {m.priceCents != null ? `$${(m.priceCents / 100).toFixed(2)}/mo` : 'Membership'}
+                  {renewsLabel(m.renewsAt) ? ` · renews ${renewsLabel(m.renewsAt)}` : ''}
+                </Text>
+              </View>
+              <Text style={[styles.subState, styles.subStateOn]}>Active</Text>
+            </View>
+          ))}
+
+          {memberships.length === 0 && (
+            <Text style={styles.subMeta}>No creator memberships.</Text>
+          )}
+
+          <TouchableOpacity style={styles.legalLink} onPress={manageSubscription}>
+            <Text style={styles.legalLinkText}>Manage or cancel in the App Store</Text>
+            <Text style={styles.legalArrow}>›</Text>
+          </TouchableOpacity>
+          <Text style={styles.subMeta}>
+            Subscriptions are billed by Apple, so they are cancelled there. Cancelling keeps
+            your access until the period you already paid for runs out.
+          </Text>
+        </View>
+
         {/* Your data — next to the legal pages that promise it, and above the
             delete button, because the order people want is "let me see what
             you have" and only then "now get rid of it". */}
@@ -557,6 +603,11 @@ const styles = StyleSheet.create({
   subFootnote: { fontSize: 11.5, color: '#999', lineHeight: 17, marginTop: 8 },
   restoreLink: { alignItems: 'center', paddingVertical: 12, marginTop: 6 },
   restoreLinkText: { fontSize: 14, color: '#0D2B63', fontWeight: '600' },
+  subRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F2EFE9' },
+  subName: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
+  subMeta: { fontSize: 12, color: '#8A8378', marginTop: 3, lineHeight: 17 },
+  subState: { fontSize: 12, fontWeight: '700', color: '#8A8378' },
+  subStateOn: { color: '#3C8D40' },
   versionContainer: { alignItems: 'center', marginTop: 24 },
   versionText: { fontSize: 13, color: '#AAA' },
   updateLink: { fontSize: 13, color: '#F2701E', fontWeight: '600', marginTop: 8 },
