@@ -57,10 +57,15 @@ Review notes (paste into the version page, replacing whatever is there):
 
     1. PREMIUM SUBSCRIPTION (auto-renewable, monthly / yearly)
        Profile tab > "Upgrade to Premium".
-       Unlocks recipe import (3 Instagram imports a week, plus 10 from
-       screenshots, photos or text), the fridge scan (3 a week) and the
-       meal planner. Premium does NOT unlock creators' paid recipes —
-       those are bought separately, below.
+       Unlocks recipe import from a screenshot, a photo or pasted text
+       (10 a week), the fridge scan (3 a week) and the meal planner.
+       Premium does NOT unlock creators' paid recipes — those are bought
+       separately, below.
+
+       Note on Instagram: consumers cannot import from an instagram.com
+       link. That route exists only for approved creator accounts
+       importing their own posts, which is why it is bound to a role an
+       admin grants rather than switched on and off (guideline 5.2.2).
 
     2. SINGLE RECIPE UNLOCK (consumable, five price tiers)
        Discover tab: paid recipes appear in the swipe deck with a lock

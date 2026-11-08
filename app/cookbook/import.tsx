@@ -169,15 +169,23 @@ export default function ImportRecipeScreen() {
 
   useEffect(() => {
     if (params.sharedUrl) {
-      // A link shared into the app now lands ready to import, rather than on
-      // an apology telling the user to go and take a screenshot instead.
-      setUrl(params.sharedUrl);
-      setInputMode('link');
+      // The mode toggle has no link tab for consumers, and the reason is in
+      // the comment above it: we do not contact Instagram on a consumer's
+      // behalf. The share sheet walked straight past that — a reel shared out
+      // of Instagram landed here in link mode and scraped it anyway, so the
+      // gate existed on one route and not the other.
+      if (canUploadRecipes(role)) {
+        setUrl(params.sharedUrl);
+        setInputMode('link');
+      } else {
+        setInputMode('screenshot');
+        setError("Links can't be imported here. Take a screenshot of the post and pick it below — it reads just as well.");
+      }
     } else if (params.sharedText) {
       setManualText(params.sharedText);
       setInputMode('text');
     }
-  }, [params.sharedUrl, params.sharedText]);
+  }, [params.sharedUrl, params.sharedText, role]);
 
   // Pick screenshots from gallery
   const pickScreenshots = async () => {
@@ -550,10 +558,9 @@ export default function ImportRecipeScreen() {
           <Text style={styles.guestIcon}>✨</Text>
           <Text style={styles.guestTitle}>Importing is a Premium feature</Text>
           <Text style={styles.guestText}>
-            Paste an Instagram link, a screenshot, a photo or plain text and it comes
-            back as a recipe you can cook from — ingredients, steps and all.
-            {'\n\n'}Three Instagram imports a week, plus ten from screenshots, photos
-            or text. They go into your own cookbook, with the link kept as the source.
+            Take a screenshot, a photo or paste plain text and it comes back as a
+            recipe you can cook from — ingredients, steps and all.
+            {'\n\n'}Ten imports a week. They go into your own cookbook.
           </Text>
           <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPaywall(true)}>
             <Text style={styles.primaryButtonText}>Unlock Premium</Text>
