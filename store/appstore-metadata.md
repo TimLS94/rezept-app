@@ -64,8 +64,10 @@ Review notes (paste into the version page, replacing whatever is there):
     2. SINGLE RECIPE UNLOCK (consumable, five price tiers)
        Discover tab: paid recipes appear in the swipe deck with a lock
        badge. Open one and tap "Buy this recipe - $X.XX".
-       Or: Search tab > "dadsfoodtoday" > open the creator profile, where
-       paid recipes are marked "Paid".
+       Or: Home tab > tap the "Search recipes and creators" bar > switch
+       to Creators > "dadsfoodtoday" > open the profile, where paid
+       recipes are marked "Paid". (There is no Search tab; search lives
+       on Home.)
        After buying, the recipe is permanently unlocked and appears under
        Cookbook > Creators, marked "Purchased".
 
@@ -85,6 +87,12 @@ Review notes (paste into the version page, replacing whatever is there):
 
     All purchases are digital content used inside the app, handled by Apple
     In-App Purchase via RevenueCat.
+
+NOTE: the text submitted on 8 November said "Search tab", and there is no
+Search tab — search is a bar on Home. The reviewer's primary path (Discover)
+was correct, so it was left standing rather than pulled from the queue, but
+it is the same class of error as the rejection below: a note describing a
+screen nobody checked against the app.
 
 NOTE on the previous rejection (2.1(b)): the earlier notes sent the reviewer
 to the Discover deck, which at the time filtered paid recipes out. Discover
