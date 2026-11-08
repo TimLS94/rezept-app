@@ -56,7 +56,10 @@ Review notes (paste into the version page, replacing whatever is there):
     find each one.
 
     1. PREMIUM SUBSCRIPTION (auto-renewable, monthly / yearly)
-       Profile tab > "Upgrade to Premium".
+       Profile tab > "Account & Settings" > Subscription >
+       "Unlock Premium".
+       The same paywall also opens from the fridge scan, the recipe
+       importer and the weekly planner when they are first used.
        Unlocks recipe import from a screenshot, a photo or pasted text
        (10 a week), the fridge scan (3 a week) and the meal planner.
        Premium does NOT unlock creators' paid recipes — those are bought
