@@ -210,6 +210,14 @@ Deno.serve(async (req: Request) => {
     // already spent at that tier. One more purchase than spent means this
     // request is paid for. Replaying the call a second time finds the counts
     // equal and is refused.
+    //
+    // KNOWN GAP — refunds. The store's count can go down; ours never does. A
+    // refunded credit lowers `purchases` while the recipe_purchases row stays,
+    // so that customer's next purchase at the same tier is refused with
+    // `no_unspent_purchase` until they have bought one more than they hold.
+    // It needs a refund webhook (REFUND / REFUND_REVERSED) that deletes the
+    // matching recipe_purchases row. Until then, a customer reporting "it says
+    // I already own it but I don't" after a refund is this, not a store fault.
     const purchases = subscriber.non_subscriptions?.[productId]?.length ?? 0;
     if (purchases === 0) return json({ ok: false, error: 'no_purchase_found' }, 402);
     if (!ALLOW_SANDBOX && isSandboxPurchase(subscriber, productId)) {

@@ -6,6 +6,30 @@ Status verified against the live project on 2026-08-06.
 
 ---
 
+## 🔭 Known gap — for 1.1
+
+### A refunded recipe credit blocks the next purchase at that tier
+
+verify-purchase settles a recipe unlock by counting: the store says how many
+times the tier was bought, recipe_purchases says how many were spent, and one
+more bought than spent pays for this one. Verified working on 2026-11-08 —
+three purchases at $0.99 and two at $1.99 on one account, which is what the
+move to consumables was for.
+
+A refund breaks the symmetry. Apple's count drops, ours does not, so the
+customer's next purchase at that tier is refused with `no_unspent_purchase`
+until they have bought one more than they hold. They paid, and the app tells
+them nothing useful.
+
+Not blocking for 1.0: it needs a refund to happen first, and nobody has bought
+anything yet. For 1.1, handle REFUND / REFUND_REVERSED in revenuecat-webhook
+and delete the matching recipe_purchases row — which also means deciding which
+row, since the tier does not say which recipe was refunded. Probably the most
+recent purchase at that price.
+
+The symptom to recognise in support: "it says I already bought it, but I don't
+have it", shortly after a refund.
+
 ## 🚨 Found during the 2.1(b) rejection — 2026-11-07
 
 ### A customer can buy one recipe per price tier. Ever.
