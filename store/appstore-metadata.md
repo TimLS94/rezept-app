@@ -57,9 +57,10 @@ Review notes (paste into the version page, replacing whatever is there):
 
     1. PREMIUM SUBSCRIPTION (auto-renewable, monthly / yearly)
        Profile tab > "Upgrade to Premium".
-       Unlocks unlimited recipe imports, the fridge scan and the AI meal
-       planner. Premium does NOT unlock creators' paid recipes — those are
-       bought separately, below.
+       Unlocks recipe import (3 Instagram imports a week, plus 10 from
+       screenshots, photos or text), the fridge scan (3 a week) and the
+       meal planner. Premium does NOT unlock creators' paid recipes —
+       those are bought separately, below.
 
     2. SINGLE RECIPE UNLOCK (consumable, five price tiers)
        Discover tab: paid recipes appear in the swipe deck with a lock
