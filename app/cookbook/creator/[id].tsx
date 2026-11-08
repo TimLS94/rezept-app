@@ -160,7 +160,7 @@ export default function CookbookCreatorRecipeScreen() {
     // A locked recipe arrives with three teaser ingredients, so shopping from
     // it would produce a partial list that looks complete.
     if (displayRecipe.locked) {
-      Alert.alert('Premium recipe', 'Join the membership to get the full ingredient list.');
+      Alert.alert('Paid recipe', 'Buy it, or join this creator\u2019s membership, to get the full ingredient list.');
       return;
     }
     if (displayRecipe.ingredients.length === 0) {

@@ -23,7 +23,7 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSubscribed?: () => void; // called after a successful purchase/restore
-  creatorName?: string;      // optional: whose premium recipe triggered the paywall
+  creatorName?: string;      // optional: whose paid recipe triggered the paywall
 };
 
 // Shown until the store returns the real localized prices. The launch offer is

@@ -713,7 +713,7 @@ export default function RecipeDetailScreen() {
 
             <View style={styles.lockedCard}>
               <Text style={styles.lockedIcon}>🔒</Text>
-              <Text style={styles.lockedTitle}>Premium recipe</Text>
+              <Text style={styles.lockedTitle}>Paid recipe</Text>
               <Text style={styles.lockedText}>
                 Unlock the full ingredient list and all step-by-step instructions.
               </Text>

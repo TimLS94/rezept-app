@@ -233,7 +233,7 @@ export default function CreatorProfileScreen() {
         setHasCreatorAccess(true);
         await refresh();
         await loadCreatorData(creator.id);   // premium teasers become full recipes
-        Alert.alert('You\u2019re in 🎉', `You now have access to every premium recipe by ${creator.full_name || 'this creator'}.`);
+        Alert.alert('You\u2019re in 🎉', `You now have access to every paid recipe by ${creator.full_name || 'this creator'}.`);
       } else if (result === 'unavailable') {
         Alert.alert('Not available yet', "Memberships aren't active in this build. They work once the price tiers are registered as products in RevenueCat.");
       } else if (result === 'error') {
@@ -390,8 +390,8 @@ export default function CreatorProfileScreen() {
               </Text>
               <Text style={styles.memberText}>
                 {hasCreatorAccess
-                  ? `You have access to every premium recipe by ${creator.full_name || 'this creator'}.`
-                  : `Unlock every premium recipe by ${creator.full_name || 'this creator'} — including everything they publish next. Cancel anytime.`}
+                  ? `You have access to every paid recipe by ${creator.full_name || 'this creator'}.`
+                  : `Unlock every paid recipe by ${creator.full_name || 'this creator'} — including everything they publish next. Cancel anytime.`}
               </Text>
               {!hasCreatorAccess && (
                 <>
@@ -505,7 +505,7 @@ export default function CreatorProfileScreen() {
                     <Image source={{ uri: recipe.image }} style={styles.recipeImage} />
                     {recipe.isPaid && (
                       <View style={styles.premiumBadge}>
-                        <Text style={styles.premiumBadgeText}>🔒 Premium</Text>
+                        <Text style={styles.premiumBadgeText}>🔒 Paid</Text>
                       </View>
                     )}
                   </View>

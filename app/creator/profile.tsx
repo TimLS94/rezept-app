@@ -172,7 +172,7 @@ export default function EditCreatorProfileScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.priceTitle}>Profile membership</Text>
               <Text style={styles.priceSub}>
-                Members pay monthly and get <Text style={styles.priceBold}>every premium recipe you have published — and everything you publish later</Text>, for as long as they stay. They never pay per recipe.
+                Members pay monthly and get <Text style={styles.priceBold}>every paid recipe you have published — and everything you publish later</Text>, for as long as they stay. They never pay per recipe.
               </Text>
             </View>
             <TouchableOpacity
@@ -240,7 +240,7 @@ export default function EditCreatorProfileScreen() {
             <FeeRows cents={profile.defaultRecipePriceCents} per="per sale" />
           ) : (
             <Text style={styles.priceSub}>
-              No price set — premium recipes will only be available through subscriptions.
+              No price set — paid recipes will only be available through memberships.
             </Text>
           )}
         </View>

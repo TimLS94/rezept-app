@@ -134,7 +134,7 @@ export default function EditRecipeScreen() {
         nutrition: recipe.nutrition ?? null,
         cuisines: recipe.cuisines.length ? recipe.cuisines : null,
         equipment: cleanEquipment(recipe.equipment).length ? cleanEquipment(recipe.equipment) : null,
-        // Only meaningful on a premium recipe; clearing it on a free one keeps
+        // Only meaningful on a paid recipe; clearing it on a free one keeps
         // a stale price from reappearing if it's flipped back to premium later.
         price_cents: recipe.is_paid ? recipe.price_cents : null,
         tags: recipe.tags,
@@ -402,7 +402,7 @@ export default function EditRecipeScreen() {
         <View style={styles.card}>
           <View style={styles.toggleRow}>
             <View>
-              <Text style={styles.toggleLabel}>Premium Recipe</Text>
+              <Text style={styles.toggleLabel}>Paid recipe</Text>
               <Text style={styles.toggleHint}>Only subscribers can view full recipe</Text>
             </View>
             <TouchableOpacity
