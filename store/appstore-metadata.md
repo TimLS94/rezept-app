@@ -44,18 +44,53 @@ be confirmed.
       email: <fill in>
       password: <fill in>
 
-Review notes:
+Review notes (paste into the version page, replacing whatever is there):
 
-    SpoonDrop is a recipe app with three types of in-app purchases:
-    1. Premium subscription (monthly/yearly) - unlocks unlimited recipe imports
-       and the AI meal planner. Paywall: Profile > Upgrade to Premium.
-    2. Individual recipe purchases (non-consumable) - some creator recipes are
-       paid. Tap any recipe marked with a price in Discover.
-    3. Creator subscriptions - subscribe to a creator for access to all their
-       recipes. Open a creator profile and tap Subscribe.
+    Demo account (consumer):
+      email: apple.review@spoondrop.app
+      password: SpoonDrop-Review-2025
 
-    All purchases are digital content consumed inside the app and are handled
-    through Apple In-App Purchase via RevenueCat.
+    You may also sign in with Apple; both work.
+
+    SpoonDrop has three kinds of in-app purchase. Here is exactly where to
+    find each one.
+
+    1. PREMIUM SUBSCRIPTION (auto-renewable, monthly / yearly)
+       Profile tab > "Upgrade to Premium".
+       Unlocks unlimited recipe imports, the fridge scan and the AI meal
+       planner. Premium does NOT unlock creators' paid recipes — those are
+       bought separately, below.
+
+    2. SINGLE RECIPE UNLOCK (consumable, five price tiers)
+       Discover tab: paid recipes appear in the swipe deck with a lock
+       badge. Open one and tap "Buy this recipe - $X.XX".
+       Or: Search tab > "dadsfoodtoday" > open the creator profile, where
+       paid recipes are marked "Paid".
+       After buying, the recipe is permanently unlocked and appears under
+       Cookbook > Creators, marked "Purchased".
+
+       These are consumables because one price serves many recipes: a
+       customer buying a second $1.99 recipe must be able to pay again. The
+       recipe they bought is recorded on our server, so the unlock is
+       permanent even though the product is consumable.
+
+    3. CREATOR MEMBERSHIP (auto-renewable, five price tiers)
+       On a creator profile, tap "Become a member - $X.XX/mo".
+       Unlocks every paid recipe by that creator for as long as it runs.
+
+    Creators choose their own price from five fixed tiers, which is why
+    there are five products of each kind. Customers are charged the App
+    Store price for their country, so the figure shown in the app may differ
+    from the USD tier the creator picked.
+
+    All purchases are digital content used inside the app, handled by Apple
+    In-App Purchase via RevenueCat.
+
+NOTE on the previous rejection (2.1(b)): the earlier notes sent the reviewer
+to the Discover deck, which at the time filtered paid recipes out. Discover
+now includes them with a lock badge, so the path in the notes above is real.
+If a submission is ever rejected for an unreachable purchase again, check the
+path in these notes against the running app before anything else.
 
 ## Screenshots
 
