@@ -13,11 +13,18 @@ wrong one back at you. Regenerate after changing either screen:
 
     python3 website/_generate.py
 
-## Before this works
+## The Team ID in the association file
 
-`.well-known/apple-app-site-association` contains `TEAMID.com.spoondrop.app`.
-Replace `TEAMID` with the real Apple Team ID — Apple Developer → Membership.
-Until then universal links do nothing; the site itself is unaffected.
+`.well-known/apple-app-site-association` names the app as
+`VUNC3SZN95.com.spoondrop.app`. The prefix is the Apple Team ID, so it is not
+a constant: it belongs to whichever team owns the app, and an app transfer
+changes it. Update it in the same sitting as the transfer, or shared links
+quietly stop opening the app and nothing anywhere reports an error.
+
+It shipped as the literal string `TEAMID` from 2026-08-30 until 2026-11-15,
+with this section telling the reader to replace it. Nobody did, so no shared
+link ever opened the app in that time. A placeholder that has to be noticed by
+a human is a placeholder that stays.
 
 ## Deploying
 

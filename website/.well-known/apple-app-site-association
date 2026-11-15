@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["TEAMID.com.spoondrop.app"],
+        "appIDs": ["VUNC3SZN95.com.spoondrop.app"],
         "components": [
           { "/": "/s/*",      "comment": "shared recipe links" },
           { "/": "/recipe/*", "comment": "creator recipe links" }
