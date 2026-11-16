@@ -128,10 +128,10 @@ export default function TermsOfServiceScreen() {
         <Text style={styles.paragraph}>
           For questions about these Terms, contact us at:{'\n\n'}
           Email: legal@spoondrop.app{'\n\n'}
-          Tim Schäfer{'\n'}
-          Husemannstr. 9{'\n'}
-          10435 Berlin{'\n'}
-          Germany
+          Lion Lane LLC{'\n'}
+          24 N Chenango St{'\n'}
+          Greene, NY 13778{'\n'}
+          United States
         </Text>
 
         <View style={{ height: 60 }} />

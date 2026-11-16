@@ -114,10 +114,10 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.paragraph}>
           If you have questions about this Privacy Policy, please contact us at:{'\n\n'}
           Email: privacy@spoondrop.app{'\n\n'}
-          Tim Schäfer{'\n'}
-          Husemannstr. 9{'\n'}
-          10435 Berlin{'\n'}
-          Germany
+          Lion Lane LLC{'\n'}
+          24 N Chenango St{'\n'}
+          Greene, NY 13778{'\n'}
+          United States
         </Text>
 
         <View style={{ height: 60 }} />

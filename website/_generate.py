@@ -25,7 +25,7 @@ NAV = """<header class="site">
 
 FOOT = """<footer class="site">
   <a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/imprint">Legal notice</a><a href="/support">Support</a>
-  <p>© 2026 Tim Schäfer · Berlin, Germany</p>
+  <p>© 2026 Lion Lane LLC · Greene, New York</p>
 </footer>"""
 
 
